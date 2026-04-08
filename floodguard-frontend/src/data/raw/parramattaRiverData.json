@@ -1,0 +1,79 @@
+{
+    "region": "Parramatta River",
+    "issued_date": "2026-04-09",
+    "source": "Latest River Heights - Central Coast (NSW)",
+    "stations": [
+      {
+        "station_name": "Blacktown Creek (Int. Peace Park)",
+        "station_type": "Automatic",
+        "time_day": "01.16AM Thu",
+        "height_m": 0.28,
+        "gauge_datum": "LGH",
+        "tendency": "steady",
+        "flood_classification": null
+      },
+      {
+        "station_name": "Toongabbie Creek at Johnstons Bridge",
+        "station_type": "Automatic",
+        "time_day": "12.28AM Thu",
+        "height_m": 0.34,
+        "gauge_datum": "AHD",
+        "tendency": "steady",
+        "flood_classification": null
+      },
+      {
+        "station_name": "Toongabbie Creek at Briens Rd",
+        "station_type": "Automatic",
+        "time_day": "01.00AM Thu",
+        "height_m": 0.36,
+        "gauge_datum": "LGH",
+        "tendency": "steady",
+        "flood_classification": null
+      },
+      {
+        "station_name": "Toongabbie Creek at Redbank Road",
+        "station_type": "Automatic",
+        "time_day": "01.23AM Thu",
+        "height_m": 0.32,
+        "gauge_datum": "LGH",
+        "tendency": "steady",
+        "flood_classification": null
+      },
+      {
+        "station_name": "Darling Mills Creek at North Parramatta",
+        "station_type": "Automatic",
+        "time_day": "10.48PM Wed",
+        "height_m": 0.25,
+        "gauge_datum": "LGH",
+        "tendency": "steady",
+        "flood_classification": null
+      },
+      {
+        "station_name": "Parramatta River at Riverside Theatre",
+        "station_type": "Automatic",
+        "time_day": "11.10PM Wed",
+        "height_m": 1.00,
+        "gauge_datum": "LGH",
+        "tendency": "falling",
+        "flood_classification": null
+      },
+      {
+        "station_name": "Parramatta River at Marsden Weir",
+        "station_type": "Automatic",
+        "time_day": "01.12AM Thu",
+        "height_m": 0.46,
+        "gauge_datum": "LGH",
+        "tendency": "steady",
+        "flood_classification": null
+      },
+      {
+        "station_name": "Pendle Creek at Toongabbie",
+        "station_type": "Automatic",
+        "time_day": "01.29AM Thu",
+        "height_m": 0.00,
+        "gauge_datum": "LGH",
+        "tendency": "steady",
+        "flood_classification": null
+      }
+    ]
+  }
