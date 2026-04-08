@@ -11,91 +11,273 @@ import {
   Bar,
 } from "recharts";
 
-import { parramattaSignals } from "./data/parramattaSignals";
+import { parramattaSignals, publicSignalCards, parramattaRiverData} from "./data/parramattaSignals";
+
+const riverSummary = summariseRiverData(parramattaRiverData);
+
+const rainfallTrend = parramattaSignals.rainfallSeries.points.map((point) => ({
+  time: new Date(point.time).toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "short",
+  }),
+  rainfall: point.rainfallMm,
+}));
+
+// Build risk signals for the breakdown chart based on the prototype inputs and some heuristics to combine them into a score out of 100 for each category
+const riskSignals = buildRiskSignals(parramattaSignals);
+
+function clamp(value, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, value));
+}
+
+// helper function to build risk signals based on the prototype inputs, with some simple heuristics to combine them into a score out of 100 for each category
+export function buildRiskSignals(signals) {
+  const weather = signals.weatherObservations ?? {};
+  const rainfallSeries = signals.rainfallSeries ?? {};
+  const riverContext = signals.riverContext ?? {};
+
+  const rainfallPoints = rainfallSeries.points ?? [];
+  const riverStations = riverContext.stations ?? [];
+
+  // ---------- Rainfall ----------
+  // Use recent valid rainfall points and recent max rainfall
+  const validRainfall = rainfallPoints
+    .map((p) => p.rainfallMm)
+    .filter((v) => typeof v === "number" && !Number.isNaN(v));
+
+  const latestRainfall =
+    rainfallSeries.latestValidRainfallMm ??
+    (validRainfall.length > 0 ? validRainfall[validRainfall.length - 1] : 0);
+
+  const maxRecentRainfall =
+    validRainfall.length > 0 ? Math.max(...validRainfall) : 0;
+
+  // Blend latest and recent max
+  const rainfallScore = clamp(
+    Math.round(latestRainfall * 4 + maxRecentRainfall * 3)
+  );
+
+  // ---------- Weather ----------
+  // Use non-zero rain trace, cloudiness, low cloud base, visibility
+  const rainTrace = Number(weather.rainfallTraceMm ?? 0);
+  const cloudOktas = Number(weather.cloudOktas ?? 0);
+  const cloudBaseM =
+    weather.cloudBaseM !== null && weather.cloudBaseM !== undefined
+      ? Number(weather.cloudBaseM)
+      : null;
+  const visibilityKm =
+    weather.visibilityKm !== null && weather.visibilityKm !== undefined
+      ? Number(weather.visibilityKm)
+      : null;
+
+  let weatherScore = 15;
+
+  if (rainTrace > 0) weatherScore += 15;
+  if (cloudOktas >= 6) weatherScore += 15;
+  if (cloudBaseM !== null && cloudBaseM <= 300) weatherScore += 10;
+  if (visibilityKm !== null && visibilityKm <= 15) weatherScore += 5;
+
+  weatherScore = clamp(weatherScore);
+
+  // ---------- River ---------
+  // Rising tendency should contribute the most
+  let riverScore = 20;
+
+  const risingCount = riverStations.filter(
+    (station) => station.tendency?.toLowerCase() === "rising"
+  ).length;
+
+  const steadyCount = riverStations.filter(
+    (station) => station.tendency?.toLowerCase() === "steady"
+  ).length;
+
+  riverScore += risingCount * 25;
+  riverScore += steadyCount * 8;
+
+  riverScore = clamp(riverScore);
+
+  // ---------- Coverage ----------
+  // Measures how complete the prototype inputs are
+  let coverageCount = 0;
+
+  if (weather.stationName) coverageCount += 1;
+  if (rainfallPoints.length > 0) coverageCount += 1;
+  if (riverStations.length > 0) coverageCount += 1;
+  if ((signals.communityReports ?? []).length > 0) coverageCount += 1;
+
+  const coverageScore = clamp(coverageCount * 25);
+
+  return [
+    { name: "Rainfall", value: rainfallScore },
+    { name: "Weather", value: weatherScore },
+    { name: "River", value: riverScore },
+    { name: "Coverage", value: coverageScore },
+  ];
+}
 
 
-const rainfallTrend = [
-  { time: "6am", rainfall: 8 },
-  { time: "8am", rainfall: 14 },
-  { time: "10am", rainfall: 22 },
-  { time: "12pm", rainfall: 31 },
-  { time: "2pm", rainfall: 18 },
-  { time: "4pm", rainfall: 26 },
-];
 
-const riskSignals = [
-  { name: "Rainfall", value: 82 },
-  { name: "Warning", value: 90 },
-  { name: "Water Trend", value: 72 },
-  { name: "Reports", value: 65 },
+function summariseRiverData(riverData) {
+  const stations = riverData.stations || [];
+
+  const primaryStation =
+    stations.find((s) => s.station_name.includes("Parramatta River at Riverside Theatre")) ||
+    stations.find((s) => s.station_name.includes("Parramatta River")) ||
+    stations[0];
+
+  const highestStation = stations.reduce((max, station) => {
+    if (!max || station.height_m > max.height_m) return station;
+    return max;
+  }, null);
+
+  const tendencyCounts = stations.reduce(
+    (acc, station) => {
+      const tendency = station.tendency?.toLowerCase();
+      if (tendency === "rising") acc.rising += 1;
+      else if (tendency === "falling") acc.falling += 1;
+      else acc.steady += 1;
+      return acc;
+    },
+    { rising: 0, steady: 0, falling: 0 }
+  );
+
+  return {
+    issuedDate: riverData.issued_date,
+    stationCount: stations.length,
+    primaryStationName: primaryStation?.station_name || "Unknown station",
+    primaryHeight: primaryStation?.height_m ?? null,
+    primaryTendency: primaryStation?.tendency || "unknown",
+    highestStationName: highestStation?.station_name || "Unknown station",
+    highestHeight: highestStation?.height_m ?? null,
+    tendencyCounts,
+  };
+}
+
+function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards) {
+  const latestRain = parramattaSignals.rainfallSeries.latestValidRainfallMm ?? 0;
+  const risingStations = riverSummary.tendencyCounts.rising;
+  const reportCount = publicSignalCards.length;
+
+  let riskLevel = "Low";
+  const reasons = [];
+
+  if (latestRain >= 5) {
+    riskLevel = "Moderate";
+    reasons.push(`Recent rainfall signal recorded: ${latestRain} mm`);
+  }
+
+  if (risingStations > 0) {
+    riskLevel = "Moderate";
+    reasons.push(`${risingStations} monitored river/creek station(s) are rising`);
+  }
+
+  if (reportCount >= 2) {
+    reasons.push(`${reportCount} public/local signals included in the current prototype`);
+  }
+
+  if (latestRain >= 10 && risingStations > 0) {
+    riskLevel = "High";
+    reasons.push("Rainfall and river signals indicate elevated local flood concern");
+  }
+
+  return {
+    riskLevel,
+    reasons,
+    summary:
+      riskLevel === "High"
+        ? "FloodGuard has identified elevated local flood concern from combined rainfall, river, and public signal inputs."
+        : riskLevel === "Moderate"
+        ? "FloodGuard has identified moderate local flood concern using recent rainfall, public observations, and Parramatta river-context signals."
+        : "FloodGuard currently indicates low immediate flood concern while continuing to monitor rainfall and river conditions.",
+  };
+}
+
+
+// Build the dashboard data structure based on the prototype inputs, transforming and combining them as needed to create a comprehensive view for the dashboard components
+const riskAssessment = buildRiskAssessment(
+  parramattaSignals,
+  riverSummary,
+  publicSignalCards
+);
+
+const latestRain = parramattaSignals.rainfallSeries.latestValidRainfallMm;
+const rainDisplay =
+  latestRain !== null ? `${latestRain} mm` : "No recent reading";
+
+
+
+const reports = [
+  {
+    id: 1,
+    title: "Parramatta weather observation update",
+    time: "04 Apr, 9:00am",
+    severity: "Low",
+    description:
+      "BoM observations recorded cloudy conditions, SSE wind at 7 km/h, visibility of 15 km, and a rain trace of 0.4 mm.",
+  },
+  {
+    id: 2,
+    title: "North Parramatta rainfall gauge update",
+    time: "02 Apr",
+    severity: "Moderate",
+    description:
+      "Nearby rainfall gauge data shows measurable rainfall on 26 Mar (10.5 mm) and 27 Mar (5.0 mm), followed by several low or dry days.",
+  },
+  {
+    id: 3,
+    title: "Parramatta River context pending integration",
+    time: "Latest public river source",
+    severity: "Moderate",
+    description:
+      "River-height context is being prepared for ingestion so the dashboard can show a live local water-trend signal.",
+  },
 ];
 
 const dashboardData = {
-  location: "Parramatta, NSW",
-  riskLevel: "High",
-  summary:
-    "FloodGuard has identified elevated local flood risk based on heavy recent rainfall, an active official warning, and multiple nearby community incident reports.",
+  location: parramattaSignals.location.name,
+  riskLevel: riskAssessment.riskLevel,
+  summary: riskAssessment.summary,
+
   officialSignals: {
-    warningStatus: "Official flood warning active",
-    rainfall24h: "82 mm",
-    waterTrend: "River level rising",
-    forecastOutlook: "Further rainfall expected in next 6 hours",
+    warningStatus: "Public Parramatta rainfall and river signals loaded",
+    rainfall24h: rainDisplay,
+    waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
+    forecastOutlook: `River feed issued ${riverSummary.issuedDate}`,
   },
+
   contributingFactors: [
-    "Heavy rainfall recorded in the last 24 hours",
-    "Active official flood warning for the region",
-    "Rising river-level trend",
-    "Three nearby community reports submitted recently",
+    ...riskAssessment.reasons,
+    `Primary river station: ${riverSummary.primaryStationName} (${riverSummary.primaryHeight} m)`,
+    `${riverSummary.stationCount} monitored river/creek stations included in current feed`,
   ],
+
   recommendedActions: [
-    "Avoid low-lying roads and flood-prone crossings",
-    "Monitor official warnings and prepare essentials",
-    "Use caution when travelling near local creeks and drains",
+    "Monitor flood-prone crossings, creek paths, and river-adjacent walkways",
+    "Check official warnings and local updates before travelling",
+    "Use caution if rainfall resumes or water levels begin rising nearby",
   ],
-  reports: [
-    {
-      id: 1,
-      title: "Road flooding reported near Church Street",
-      time: "1 hour ago",
-      severity: "Moderate",
-      description:
-        "Resident reported shallow flooding across one lane with slow-moving traffic.",
-    },
-    {
-      id: 2,
-      title: "Water rising near local creek pathway",
-      time: "35 mins ago",
-      severity: "High",
-      description:
-        "Pathway near creek becoming unsafe due to rapidly rising water level.",
-    },
-    {
-      id: 3,
-      title: "Stormwater drain overflow observed",
-      time: "20 mins ago",
-      severity: "Low",
-      description:
-        "Local drain overflow visible after intense rainfall, minor surface pooling nearby.",
-    },
-  ],
+
+  reports: reports,
+
   evidence: [
     {
-      label: "Risk Signals Integrated",
-      value: "4",
-      note: "Rainfall, warning status, water trend, and community reports",
+      label: "Target Area",
+      value: "Parramatta",
+      note: "Prototype focused on local suburban flood awareness in Parramatta, NSW",
     },
     {
-      label: "Recent Community Reports",
-      value: "3",
-      note: "Used to strengthen local situational awareness",
+      label: "River Stations",
+      value: String(riverSummary.stationCount),
+      note: `${riverSummary.tendencyCounts.steady} steady, ${riverSummary.tendencyCounts.falling} falling, ${riverSummary.tendencyCounts.rising} rising`,
     },
     {
-      label: "Risk Decision Type",
-      value: "Explainable",
-      note: "Each alert includes contributing factors and action guidance",
+      label: "Current Output",
+      value: riskAssessment.riskLevel,
+      note: "Explainable local flood-risk level derived from visible factors",
     },
   ],
 };
+
 
 function RainfallChart() {
   return (
@@ -250,7 +432,7 @@ function ReportsPanel({ reports }) {
       <div className="section-header compact">
         <div>
           <p className="section-label">Local situational awareness</p>
-          <h3>Recent community reports</h3>
+          <h3>Recent public signals</h3>
         </div>
       </div>
 
