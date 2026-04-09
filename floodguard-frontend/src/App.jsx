@@ -11,9 +11,45 @@ import {
   Bar,
 } from "recharts";
 
-import { parramattaSignals, publicSignalCards, parramattaRiverData} from "./data/parramattaSignals";
+import { parramattaSignals, publicSignalCards } from "./data/parramattaSignals";
 
-const riverSummary = summariseRiverData(parramattaRiverData);
+const riverSummary = summariseRiverData(parramattaSignals.riverContext);
+
+function RiverStatusPanel({ riverSummary }) {
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">River monitoring</p>
+          <h3>Parramatta river status</h3>
+        </div>
+      </div>
+
+      <div className="river-grid">
+        <div className="info-tile">
+          <p className="section-label">Primary station</p>
+          <h3>{riverSummary.primaryStationName}</h3>
+        </div>
+
+        <div className="info-tile">
+          <p className="section-label">Current height</p>
+          <h3>{riverSummary.primaryHeight} m</h3>
+        </div>
+
+        <div className="info-tile">
+          <p className="section-label">Tendency</p>
+          <h3>{riverSummary.primaryTendency}</h3>
+        </div>
+
+        <div className="info-tile">
+          <p className="section-label">Stations in feed</p>
+          <h3>{riverSummary.stationCount}</h3>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 const rainfallTrend = parramattaSignals.rainfallSeries.points.map((point) => ({
   time: new Date(point.time).toLocaleDateString("en-AU", {
@@ -116,17 +152,17 @@ export function buildRiskSignals(signals) {
 }
 
 
-
+/* Helper function to summarise the river data feed, extracting key information like the primary station, its current height and tendency, the highest station, and counts of rising/steady/falling tendencies across all stations. This summary can then be used in the dashboard and risk assessment logic.*/
 function summariseRiverData(riverData) {
   const stations = riverData.stations || [];
 
   const primaryStation =
-    stations.find((s) => s.station_name.includes("Parramatta River at Riverside Theatre")) ||
-    stations.find((s) => s.station_name.includes("Parramatta River")) ||
+    stations.find((s) => s.stationName.includes("Parramatta River at Riverside Theatre")) ||
+    stations.find((s) => s.stationName.includes("Parramatta River")) ||
     stations[0];
 
   const highestStation = stations.reduce((max, station) => {
-    if (!max || station.height_m > max.height_m) return station;
+    if (!max || station.heightM > max.heightM) return station;
     return max;
   }, null);
 
@@ -142,13 +178,13 @@ function summariseRiverData(riverData) {
   );
 
   return {
-    issuedDate: riverData.issued_date,
+    issuedDate: riverData.issuedDate,
     stationCount: stations.length,
-    primaryStationName: primaryStation?.station_name || "Unknown station",
-    primaryHeight: primaryStation?.height_m ?? null,
+    primaryStationName: primaryStation?.stationName || "Unknown station",
+    primaryHeight: primaryStation?.heightM ?? null,
     primaryTendency: primaryStation?.tendency || "unknown",
-    highestStationName: highestStation?.station_name || "Unknown station",
-    highestHeight: highestStation?.height_m ?? null,
+    highestStationName: highestStation?.stationName || "Unknown station",
+    highestHeight: highestStation?.heightM ?? null,
     tendencyCounts,
   };
 }
@@ -257,7 +293,7 @@ const dashboardData = {
     "Use caution if rainfall resumes or water levels begin rising nearby",
   ],
 
-  reports: reports,
+  reports: publicSignalCards,
 
   evidence: [
     {
@@ -271,7 +307,7 @@ const dashboardData = {
       note: `${riverSummary.tendencyCounts.steady} steady, ${riverSummary.tendencyCounts.falling} falling, ${riverSummary.tendencyCounts.rising} rising`,
     },
     {
-      label: "Current Output",
+      label: "Current Risk Level",
       value: riskAssessment.riskLevel,
       note: "Explainable local flood-risk level derived from visible factors",
     },
@@ -536,8 +572,9 @@ export default function App() {
 
         <div className="right-column">
           <ActionsPanel actions={dashboardData.recommendedActions} />
-          <MapPanel />
+          <RiverStatusPanel riverSummary={riverSummary} />
           <RainfallChart />
+          <MapPanel />
           <SignalBreakdownChart />
         </div>
       </div>
