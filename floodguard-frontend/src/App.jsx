@@ -139,7 +139,7 @@ export function buildRiskSignals(signals) {
   if (weather.stationName) coverageCount += 1;
   if (rainfallPoints.length > 0) coverageCount += 1;
   if (riverStations.length > 0) coverageCount += 1;
-  if ((signals.communityReports ?? []).length > 0) coverageCount += 1;
+  if ((signals.riverContext?.stations ?? []).length > 0) coverageCount += 1;
 
   const coverageScore = clamp(coverageCount * 25);
 
@@ -297,19 +297,19 @@ const dashboardData = {
 
   evidence: [
     {
-      label: "Target Area",
-      value: "Parramatta",
-      note: "Prototype focused on local suburban flood awareness in Parramatta, NSW",
+      label: "Public Inputs Integrated",
+      value: "3",
+      note: "Weather observations, rainfall gauge series, and river-height context",
     },
     {
-      label: "River Stations",
+      label: "Current Prototype Output",
+      value: "Explainable",
+      note: "Local public signals are combined into a readable flood-awareness dashboard",
+    },
+    {
+      label: "Current River Feed",
       value: String(riverSummary.stationCount),
       note: `${riverSummary.tendencyCounts.steady} steady, ${riverSummary.tendencyCounts.falling} falling, ${riverSummary.tendencyCounts.rising} rising`,
-    },
-    {
-      label: "Current Risk Level",
-      value: riskAssessment.riskLevel,
-      note: "Explainable local flood-risk level derived from visible factors",
     },
   ],
 };
@@ -574,8 +574,8 @@ export default function App() {
           <ActionsPanel actions={dashboardData.recommendedActions} />
           <RiverStatusPanel riverSummary={riverSummary} />
           <RainfallChart />
-          <MapPanel />
           <SignalBreakdownChart />
+          <MapPanel />
         </div>
       </div>
 

@@ -141,9 +141,9 @@ export const parramattaSignals = {
   },
 
   snapshot: {
-    riskLevel: "Moderate",
+    riskLevel: "Low",
     summary:
-      "FloodGuard combines public weather observations, nearby rainfall-gauge data, and local river-context inputs to support explainable flood awareness.",
+      "FloodGuard currently indicates low immediate flood concern while continuing to monitor rainfall and river conditions.",
   },
 
   weatherObservations,
