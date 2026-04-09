@@ -1,5 +1,68 @@
 import parramattaWeatherRaw from "./raw/parramatta-weather.json";
 import northParramattaRainRaw from "./raw/north-parramatta-rain.json";
+import parramattaRiverRaw from "./raw/parramattaRiverData.json";
+
+
+//create a river normalisation helper
+function normalizeRiverContext(raw) {
+  const stations = (raw?.stations ?? []).map((station) => ({
+    stationName: station.station_name,
+    stationType: station.station_type,
+    timeDay: station.time_day,
+    heightM: station.height_m,
+    gaugeDatum: station.gauge_datum,
+    tendency: station.tendency,
+    statusLabel: station.tendency
+      ? station.tendency.charAt(0).toUpperCase() + station.tendency.slice(1)
+      : "Unknown",
+    floodClassification: station.flood_classification,
+  }));
+
+  const primaryStation =
+    stations.find((station) =>
+      station.stationName.includes("Parramatta River at Riverside Theatre")
+    ) ||
+    stations.find((station) =>
+      station.stationName.includes("Parramatta River")
+    ) ||
+    stations[0] ||
+    null;
+
+  const risingCount = stations.filter(
+    (station) => station.tendency?.toLowerCase() === "rising"
+  ).length;
+
+  const fallingCount = stations.filter(
+    (station) => station.tendency?.toLowerCase() === "falling"
+  ).length;
+
+  const steadyCount = stations.filter(
+    (station) => station.tendency?.toLowerCase() === "steady"
+  ).length;
+
+  let headlineTrend = "No river data available";
+
+  if (primaryStation) {
+    headlineTrend = `${primaryStation.statusLabel} at ${primaryStation.stationName}`;
+  }
+
+  return {
+    sourceLabel: raw?.source || "Latest public river-height context",
+    issuedDate: raw?.issued_date || null,
+    region: raw?.region || "Parramatta River",
+    headlineTrend,
+    stationCount: stations.length,
+    tendencyCounts: {
+      rising: risingCount,
+      falling: fallingCount,
+      steady: steadyCount,
+    },
+    primaryStation,
+    stations,
+  };
+}
+
+
 
 // Normalises the raw BoM weather observations JSON into a consistent format for the signal cards, extracting key parameters such as temperature, rainfall trace, cloud conditions, visibility, and wind information.
 function normalizeWeather(raw) {
@@ -67,6 +130,7 @@ function normalizeRainfall(raw) {
 
 const weatherObservations = normalizeWeather(parramattaWeatherRaw);
 const rainfallSeries = normalizeRainfall(northParramattaRainRaw);
+const riverContext = normalizeRiverContext(parramattaRiverRaw);
 
 export const parramattaSignals = {
   location: {
@@ -83,14 +147,8 @@ export const parramattaSignals = {
   },
 
   weatherObservations,
-
   rainfallSeries,
-
-  riverContext: {
-    sourceLabel: "Latest public river-height context",
-    headlineTrend: "To be added from current Parramatta river-height source",
-    stations: [],
-  },
+  riverContext,
 
   communityReports: [
     {
@@ -121,6 +179,11 @@ export const parramattaSignals = {
       label: "North Parramatta rainfall gauge",
       type: "rainfall",
       note: "Nearby rainfall time series normalized from raw JSON.",
+    },
+    {
+      label: "Parramatta river context",
+      type: "river",
+      note: "Current local river and creek heights normalized from public river-height data.",
     },
   ],
 };
@@ -241,85 +304,3 @@ export function buildPublicSignalCards(signals) {
 }
 
 export const publicSignalCards = buildPublicSignalCards(parramattaSignals);
-
-
-
-export const parramattaRiverData = {
-  region: "Parramatta River",
-  issued_date: "2026-04-09",
-  source: "Latest River Heights - Central Coast (NSW)",
-  stations: [
-    {
-      station_name: "Blacktown Creek (Int. Peace Park)",
-      station_type: "Automatic",
-      time_day: "01.16AM Thu",
-      height_m: 0.28,
-      gauge_datum: "LGH",
-      tendency: "steady",
-      flood_classification: null
-    },
-    {
-      station_name: "Toongabbie Creek at Johnstons Bridge",
-      station_type: "Automatic",
-      time_day: "12.28AM Thu",
-      height_m: 0.34,
-      gauge_datum: "AHD",
-      tendency: "steady",
-      flood_classification: null
-    },
-    {
-      station_name: "Toongabbie Creek at Briens Rd",
-      station_type: "Automatic",
-      time_day: "01.00AM Thu",
-      height_m: 0.36,
-      gauge_datum: "LGH",
-      tendency: "steady",
-      flood_classification: null
-    },
-    {
-      station_name: "Toongabbie Creek at Redbank Road",
-      station_type: "Automatic",
-      time_day: "01.23AM Thu",
-      height_m: 0.32,
-      gauge_datum: "LGH",
-      tendency: "steady",
-      flood_classification: null
-    },
-    {
-      station_name: "Darling Mills Creek at North Parramatta",
-      station_type: "Automatic",
-      time_day: "10.48PM Wed",
-      height_m: 0.25,
-      gauge_datum: "LGH",
-      tendency: "steady",
-      flood_classification: null
-    },
-    {
-      station_name: "Parramatta River at Riverside Theatre",
-      station_type: "Automatic",
-      time_day: "11.10PM Wed",
-      height_m: 1.0,
-      gauge_datum: "LGH",
-      tendency: "falling",
-      flood_classification: null
-    },
-    {
-      station_name: "Parramatta River at Marsden Weir",
-      station_type: "Automatic",
-      time_day: "01.12AM Thu",
-      height_m: 0.46,
-      gauge_datum: "LGH",
-      tendency: "steady",
-      flood_classification: null
-    },
-    {
-      station_name: "Pendle Creek at Toongabbie",
-      station_type: "Automatic",
-      time_day: "01.29AM Thu",
-      height_m: 0.0,
-      gauge_datum: "LGH",
-      tendency: "steady",
-      flood_classification: null
-    }
-  ]
-};
