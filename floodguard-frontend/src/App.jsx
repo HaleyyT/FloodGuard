@@ -136,18 +136,19 @@ export function buildRiskSignals(signals) {
   // Measures how complete the prototype inputs are
   let coverageCount = 0;
 
-  if (weather.stationName) coverageCount += 1;
-  if (rainfallPoints.length > 0) coverageCount += 1;
-  if (riverStations.length > 0) coverageCount += 1;
-  if ((signals.riverContext?.stations ?? []).length > 0) coverageCount += 1;
-
-  const coverageScore = clamp(coverageCount * 25);
+  const integratedLayers = [
+    !!weather.stationName,
+    rainfallPoints.length > 0,
+    riverStations.length > 0,
+  ].filter(Boolean).length;
+  
+  const coverageScore = Math.round((integratedLayers / 3) * 100);
 
   return [
     { name: "Rainfall", value: rainfallScore },
     { name: "Weather", value: weatherScore },
     { name: "River", value: riverScore },
-    { name: "Coverage", value: coverageScore },
+    { name: "Input Coverage", value: coverageScore },
   ];
 }
 
@@ -241,41 +242,13 @@ const rainDisplay =
   latestRain !== null ? `${latestRain} mm` : "No recent reading";
 
 
-
-const reports = [
-  {
-    id: 1,
-    title: "Parramatta weather observation update",
-    time: "04 Apr, 9:00am",
-    severity: "Low",
-    description:
-      "BoM observations recorded cloudy conditions, SSE wind at 7 km/h, visibility of 15 km, and a rain trace of 0.4 mm.",
-  },
-  {
-    id: 2,
-    title: "North Parramatta rainfall gauge update",
-    time: "02 Apr",
-    severity: "Moderate",
-    description:
-      "Nearby rainfall gauge data shows measurable rainfall on 26 Mar (10.5 mm) and 27 Mar (5.0 mm), followed by several low or dry days.",
-  },
-  {
-    id: 3,
-    title: "Parramatta River context pending integration",
-    time: "Latest public river source",
-    severity: "Moderate",
-    description:
-      "River-height context is being prepared for ingestion so the dashboard can show a live local water-trend signal.",
-  },
-];
-
 const dashboardData = {
   location: parramattaSignals.location.name,
   riskLevel: riskAssessment.riskLevel,
   summary: riskAssessment.summary,
 
   officialSignals: {
-    warningStatus: "Public Parramatta rainfall and river signals loaded",
+    warningStatus: "Public Parramatta weather, rainfall, and river signals loaded",
     rainfall24h: rainDisplay,
     waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
     forecastOutlook: `River feed issued ${riverSummary.issuedDate}`,
@@ -409,7 +382,7 @@ function OverviewPanel({ data }) {
           value={data.officialSignals.waterTrend}
         />
         <InfoTile
-          label="Short-Term Outlook"
+          label="Latest Feed Update"
           value={data.officialSignals.forecastOutlook}
         />
       </div>
@@ -544,7 +517,7 @@ function ArchitecturePanel() {
 
       <div className="architecture-footer">
         <div className="mini-box">
-          <h5>Community Reports</h5>
+          <h5>Public Signals</h5>
           <p>Residents submit local incident observations</p>
         </div>
         <div className="mini-box future">
@@ -614,8 +587,7 @@ function MapPanel() {
       </div>
 
       <p className="map-note">
-        Prototype view showing flood-related community reports positioned around
-        the monitored region.
+      Prototype view showing flood-related community reports positioned around the monitored region.
       </p>
     </section>
   );
