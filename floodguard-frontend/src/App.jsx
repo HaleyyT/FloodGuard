@@ -370,7 +370,7 @@ function OverviewPanel({ data }) {
 
       <div className="overview-grid">
         <InfoTile
-          label="Warning Status"
+          label="Data Status"
           value={data.officialSignals.warningStatus}
         />
         <InfoTile
