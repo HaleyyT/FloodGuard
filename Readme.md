@@ -2,6 +2,11 @@
 
 FloodGuard is a flood-awareness prototype focused on **Parramatta, NSW**. It combines **local weather observations, rainfall gauge data, and river-context signals** into a single explainable dashboard to help users understand changing local flood conditions. 
 
+## Prototype Preview
+
+![FloodGuard dashboard prototype](docs/images/floodguard-dashboard-prototype.png)
+
+
 ## Why FloodGuard
 
 Flood-related information is often scattered across multiple public sources. FloodGuard brings key local signals into one place so residents and planners can more easily see:
@@ -51,3 +56,4 @@ git clone https://github.com/HaleyyT/FloodGuard.git
 cd FloodGuard/floodguard-frontend
 npm install
 npm run dev
+```
