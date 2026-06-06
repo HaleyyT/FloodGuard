@@ -4,7 +4,7 @@ FloodGuard is a flood-awareness prototype focused on **Parramatta, NSW**. It com
 
 ## Prototype Preview
 
-![FloodGuard dashboard prototype](docs/images/floodguard-dashboard-prototype.png)
+![FloodGuard dashboard prototype](docs/images/FloodGuard-6-6-screenshot.png)
 
 
 ## Why FloodGuard
