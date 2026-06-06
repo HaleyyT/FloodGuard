@@ -25,6 +25,7 @@ The current prototype includes:
 - river-context integration
 - automatic backend ingestion pipeline
 - unified Parramatta signals API
+- config-based regional pilot for Parramatta, North Parramatta, and Toongabbie
 - explainable signal summary
 - evidence and action-oriented dashboard panels
 
@@ -35,6 +36,7 @@ The current prototype includes:
 - Recharts
 - Node.js backend using native HTTP
 - Normalised public weather, rainfall, and river data
+- Area-specific station relevance mapping
 
 ## Data Approach
 
@@ -42,11 +44,22 @@ FloodGuard uses a **real-data-informed prototype pipeline**:
 
 1. Public source files or configured API URLs are fetched by the backend
 2. Raw weather, rainfall, and river data is normalised into a consistent internal format
-3. The backend stores the latest processed Parramatta signal snapshot
-4. API routes serve clean JSON to the dashboard
-5. The frontend reads from the API first, then falls back to local JSON if the backend is not running
+3. Area relevance rules select the weather, rainfall, and river stations that matter for each pilot suburb
+4. The backend stores the latest processed regional signal snapshot
+5. API routes serve clean JSON to the dashboard
+6. The frontend reads from the API first, then falls back to local JSON if the backend is not running
 
 This makes the prototype easier to explain, maintain, and extend.
+
+## Regional Pilot
+
+FloodGuard is now multi-area ready without jumping straight to PostGIS. The current pilot uses a simple config mapping to connect each area to relevant public stations:
+
+- Parramatta
+- North Parramatta
+- Toongabbie
+
+This is the practical middle step between a single-location prototype and a broader Western Sydney system. It keeps the logic explainable while making the backend reusable for more suburbs and catchments later.
 
 ## Run Locally
 
@@ -74,6 +87,10 @@ The API runs at `http://127.0.0.1:5174` by default.
 Useful routes:
 
 - `GET /api/health`
+- `GET /api/areas`
+- `GET /api/signals?area=parramatta`
+- `GET /api/signals?area=north-parramatta`
+- `GET /api/signals?area=toongabbie`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`
@@ -84,3 +101,5 @@ Optional remote source environment variables:
 - `FLOODGUARD_WEATHER_URL`
 - `FLOODGUARD_RAINFALL_URL`
 - `FLOODGUARD_RIVER_URL`
+- `VITE_FLOODGUARD_API_URL`
+- `VITE_FLOODGUARD_AREAS_API_URL`
