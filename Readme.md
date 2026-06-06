@@ -23,6 +23,8 @@ The current prototype includes:
 - weather observation integration
 - nearby rainfall trend visualisation
 - river-context integration
+- automatic backend ingestion pipeline
+- unified Parramatta signals API
 - explainable signal summary
 - evidence and action-oriented dashboard panels
 
@@ -31,16 +33,18 @@ The current prototype includes:
 - React
 - Vite
 - Recharts
-- Normalised local JSON data
+- Node.js backend using native HTTP
+- Normalised public weather, rainfall, and river data
 
 ## Data Approach
 
 FloodGuard uses a **real-data-informed prototype pipeline**:
 
-1. Public source files are collected
-2. Raw data is normalised into a consistent internal format
-3. The frontend reads from this unified structure
-4. Dashboard cards, charts, and summaries are generated from those signals
+1. Public source files or configured API URLs are fetched by the backend
+2. Raw weather, rainfall, and river data is normalised into a consistent internal format
+3. The backend stores the latest processed Parramatta signal snapshot
+4. API routes serve clean JSON to the dashboard
+5. The frontend reads from the API first, then falls back to local JSON if the backend is not running
 
 This makes the prototype easier to explain, maintain, and extend.
 
@@ -57,3 +61,26 @@ cd FloodGuard/floodguard-frontend
 npm install
 npm run dev
 ```
+
+### Start the ingestion API
+```bash
+cd FloodGuard/floodguard-frontend
+npm run ingest
+npm run api
+```
+
+The API runs at `http://127.0.0.1:5174` by default.
+
+Useful routes:
+
+- `GET /api/health`
+- `GET /api/signals/parramatta`
+- `GET /api/rainfall/parramatta`
+- `GET /api/river/parramatta`
+- `GET /api/risk/parramatta`
+
+Optional remote source environment variables:
+
+- `FLOODGUARD_WEATHER_URL`
+- `FLOODGUARD_RAINFALL_URL`
+- `FLOODGUARD_RIVER_URL`
