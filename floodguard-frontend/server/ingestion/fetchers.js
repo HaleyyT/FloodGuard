@@ -21,6 +21,7 @@ async function readFallbackJson(filePath) {
 
 export async function loadSource(source) {
   const configuredUrl = process.env[source.envUrl];
+  const fetchedAt = new Date().toISOString();
 
   if (configuredUrl) {
     try {
@@ -30,7 +31,8 @@ export async function loadSource(source) {
           label: source.label,
           mode: "remote",
           source: configuredUrl,
-          fetchedAt: new Date().toISOString(),
+          fetchedAt,
+          status: "ok",
         },
       };
     } catch (error) {
@@ -40,13 +42,28 @@ export async function loadSource(source) {
     }
   }
 
-  return {
-    data: await readFallbackJson(source.fallbackFile),
-    metadata: {
-      label: source.label,
-      mode: "local-fallback",
-      source: source.fallbackFile,
-      fetchedAt: new Date().toISOString(),
-    },
-  };
+  try {
+    return {
+      data: await readFallbackJson(source.fallbackFile),
+      metadata: {
+        label: source.label,
+        mode: "local-fallback",
+        source: source.fallbackFile,
+        fetchedAt,
+        status: "ok",
+      },
+    };
+  } catch (error) {
+    return {
+      data: null,
+      metadata: {
+        label: source.label,
+        mode: "unavailable",
+        source: source.fallbackFile,
+        fetchedAt,
+        status: "failed",
+        note: error.message,
+      },
+    };
+  }
 }

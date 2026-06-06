@@ -24,4 +24,4 @@ export const sourceConfig = {
   },
 };
 
-export const latestSignalsPath = path.join(storageDir, "latest-parramatta-signals.json");
+export const latestSignalsPath = path.join(storageDir, "latest-signals.json");

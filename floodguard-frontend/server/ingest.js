@@ -1,7 +1,9 @@
-import { runParramattaIngestion } from "./ingestion/parramattaPipeline.js";
+import { runRegionalIngestion } from "./ingestion/aggregators.js";
 
-const signals = await runParramattaIngestion();
+const signals = await runRegionalIngestion();
 
 console.log(
-  `Ingested ${signals.location.name}: ${signals.riskAssessment.concernLevel} concern from ${signals.sourceMetadata.length} sources`,
+  `Ingested ${signals.areaList.length} area(s): ${signals.areaList
+    .map((area) => area.name)
+    .join(", ")}`,
 );

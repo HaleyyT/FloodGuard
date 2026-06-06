@@ -28,3 +28,5 @@ pnpm-debug.log*
 # misc
 coverage/
 *.tsbuildinfo
+
+roadmap/
