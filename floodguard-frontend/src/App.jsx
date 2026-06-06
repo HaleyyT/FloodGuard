@@ -13,7 +13,29 @@ import {
 } from "recharts";
 
 import { buildPublicSignalCards } from "./data/parramattaSignals";
-import { fetchParramattaSignals, localParramattaSignals } from "./data/apiSignals";
+import {
+  fetchFloodguardAreas,
+  fetchParramattaSignals,
+  localParramattaSignals,
+} from "./data/apiSignals";
+
+const fallbackAreas = [
+  {
+    id: "parramatta",
+    name: "Parramatta, NSW",
+    catchment: "Parramatta River",
+  },
+  {
+    id: "north-parramatta",
+    name: "North Parramatta, NSW",
+    catchment: "Darling Mills Creek / Parramatta River",
+  },
+  {
+    id: "toongabbie",
+    name: "Toongabbie, NSW",
+    catchment: "Toongabbie Creek",
+  },
+];
 
 function RiverStatusPanel({ riverSummary }) {
   return (
@@ -296,14 +318,14 @@ function buildDashboardData(signals, sourceStatus) {
   };
 }
 
-function useParramattaSignals() {
+function useParramattaSignals(selectedAreaId) {
   const [signals, setSignals] = useState(localParramattaSignals);
   const [sourceStatus, setSourceStatus] = useState("local");
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchParramattaSignals({ signal: controller.signal })
+    fetchParramattaSignals({ areaId: selectedAreaId, signal: controller.signal })
       .then((apiSignals) => {
         setSignals(apiSignals);
         setSourceStatus("api");
@@ -315,9 +337,29 @@ function useParramattaSignals() {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [selectedAreaId]);
 
   return { signals, sourceStatus };
+}
+
+function useFloodguardAreas() {
+  const [areas, setAreas] = useState(fallbackAreas);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchFloodguardAreas({ signal: controller.signal })
+      .then(setAreas)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setAreas(fallbackAreas);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  return areas;
 }
 
 function RainfallChart({ rainfallTrend }) {
@@ -382,6 +424,33 @@ function Header() {
         <span>Decision Support Prototype</span>
       </div>
     </header>
+  );
+}
+
+function AreaSelector({ areas, selectedAreaId, onAreaChange }) {
+  const selectedArea = areas.find((area) => area.id === selectedAreaId);
+
+  return (
+    <section className="area-selector card">
+      <div>
+        <p className="section-label">Regional pilot area</p>
+        <h3>{selectedArea?.catchment || "Parramatta River"}</h3>
+      </div>
+
+      <div className="area-tabs" role="tablist" aria-label="Regional pilot areas">
+        {areas.map((area) => (
+          <button
+            aria-selected={selectedAreaId === area.id}
+            className={selectedAreaId === area.id ? "active" : ""}
+            key={area.id}
+            onClick={() => onAreaChange(area.id)}
+            type="button"
+          >
+            {area.name.replace(", NSW", "")}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -562,12 +631,19 @@ function ArchitecturePanel() {
 }
 
 export default function App() {
-  const { signals, sourceStatus } = useParramattaSignals();
+  const areas = useFloodguardAreas();
+  const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
+  const { signals, sourceStatus } = useParramattaSignals(selectedAreaId);
   const dashboardData = buildDashboardData(signals, sourceStatus);
 
   return (
     <div className="app-shell">
       <Header />
+      <AreaSelector
+        areas={areas}
+        selectedAreaId={selectedAreaId}
+        onAreaChange={setSelectedAreaId}
+      />
 
       <OverviewPanel data={dashboardData} />
 
