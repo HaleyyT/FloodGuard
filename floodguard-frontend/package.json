@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "api": "node server/server.js",
     "dev": "vite",
+    "ingest": "node server/ingest.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
