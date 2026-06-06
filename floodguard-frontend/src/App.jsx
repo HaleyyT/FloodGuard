@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import "./App.css";
 import {
   ResponsiveContainer,
@@ -11,9 +12,8 @@ import {
   Bar,
 } from "recharts";
 
-import { parramattaSignals, publicSignalCards } from "./data/parramattaSignals";
-
-const riverSummary = summariseRiverData(parramattaSignals.riverContext);
+import { buildPublicSignalCards } from "./data/parramattaSignals";
+import { fetchParramattaSignals, localParramattaSignals } from "./data/apiSignals";
 
 function RiverStatusPanel({ riverSummary }) {
   return (
@@ -51,23 +51,12 @@ function RiverStatusPanel({ riverSummary }) {
 }
 
 
-const rainfallTrend = parramattaSignals.rainfallSeries.points.map((point) => ({
-  time: new Date(point.time).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-  }),
-  rainfall: point.rainfallMm,
-}));
-
-// Build risk signals for the breakdown chart based on the prototype inputs and some heuristics to combine them into a score out of 100 for each category
-const riskSignals = buildRiskSignals(parramattaSignals);
-
 function clamp(value, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
 
 // helper function to build risk signals based on the prototype inputs, with some simple heuristics to combine them into a score out of 100 for each category
-export function buildRiskSignals(signals) {
+function buildRiskSignals(signals) {
   const weather = signals.weatherObservations ?? {};
   const rainfallSeries = signals.rainfallSeries ?? {};
   const riverContext = signals.riverContext ?? {};
@@ -134,8 +123,6 @@ export function buildRiskSignals(signals) {
 
   // ---------- Coverage ----------
   // Measures how complete the prototype inputs are
-  let coverageCount = 0;
-
   const integratedLayers = [
     !!weather.stationName,
     rainfallPoints.length > 0,
@@ -191,6 +178,14 @@ function summariseRiverData(riverData) {
 }
 
 function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards) {
+  if (parramattaSignals.riskAssessment) {
+    return {
+      riskLevel: parramattaSignals.riskAssessment.concernLevel,
+      reasons: parramattaSignals.riskAssessment.reasons,
+      summary: parramattaSignals.riskAssessment.summary,
+    };
+  }
+
   const latestRain = parramattaSignals.rainfallSeries.latestValidRainfallMm ?? 0;
   const risingStations = riverSummary.tendencyCounts.rising;
   const reportCount = publicSignalCards.length;
@@ -229,66 +224,103 @@ function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards)
   };
 }
 
+function buildRainfallTrend(signals) {
+  return (signals.rainfallSeries?.points ?? []).map((point) => ({
+    time: new Date(point.time).toLocaleDateString("en-AU", {
+      day: "numeric",
+      month: "short",
+    }),
+    rainfall: point.rainfallMm,
+  }));
+}
 
-// Build the dashboard data structure based on the prototype inputs, transforming and combining them as needed to create a comprehensive view for the dashboard components
-const riskAssessment = buildRiskAssessment(
-  parramattaSignals,
-  riverSummary,
-  publicSignalCards
-);
+function buildDashboardData(signals, sourceStatus) {
+  const riverSummary = summariseRiverData(signals.riverContext);
+  const publicSignalCards = buildPublicSignalCards(signals);
+  const riskAssessment = buildRiskAssessment(signals, riverSummary, publicSignalCards);
+  const latestRain = signals.rainfallSeries.latestValidRainfallMm;
+  const rainDisplay = latestRain !== null ? `${latestRain} mm` : "No recent reading";
+  const dataStatus =
+    sourceStatus === "api"
+      ? "API ingestion pipeline synced"
+      : "Local fallback signals loaded";
 
-const latestRain = parramattaSignals.rainfallSeries.latestValidRainfallMm;
-const rainDisplay =
-  latestRain !== null ? `${latestRain} mm` : "No recent reading";
+  return {
+    location: signals.location.name,
+    riskLevel: riskAssessment.riskLevel,
+    summary: riskAssessment.summary,
+    riverSummary,
+    rainfallTrend: buildRainfallTrend(signals),
+    riskSignals: buildRiskSignals(signals),
 
-
-const dashboardData = {
-  location: parramattaSignals.location.name,
-  riskLevel: riskAssessment.riskLevel,
-  summary: riskAssessment.summary,
-
-  officialSignals: {
-    warningStatus: "Public Parramatta weather, rainfall, and river signals loaded",
-    rainfall24h: rainDisplay,
-    waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
-    forecastOutlook: `River feed issued ${riverSummary.issuedDate}`,
-  },
-
-  contributingFactors: [
-    ...riskAssessment.reasons,
-    `Primary river station: ${riverSummary.primaryStationName} (${riverSummary.primaryHeight} m)`,
-    `${riverSummary.stationCount} monitored river/creek stations included in current feed`,
-  ],
-
-  recommendedActions: [
-    "Monitor flood-prone crossings, creek paths, and river-adjacent walkways",
-    "Check official warnings and local updates before travelling",
-    "Use caution if rainfall resumes or water levels begin rising nearby",
-  ],
-
-  reports: publicSignalCards,
-
-  evidence: [
-    {
-      label: "Public Inputs Integrated",
-      value: "3",
-      note: "Weather observations, rainfall gauge series, and river-height context",
+    officialSignals: {
+      warningStatus: dataStatus,
+      rainfall24h: rainDisplay,
+      waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
+      forecastOutlook: signals.ingestedAt
+        ? `Ingested ${new Date(signals.ingestedAt).toLocaleString("en-AU")}`
+        : `River feed issued ${riverSummary.issuedDate}`,
     },
-    {
-      label: "Current Prototype Output",
-      value: "Explainable",
-      note: "Local public signals are combined into a readable flood-awareness dashboard",
-    },
-    {
-      label: "Current River Feed",
-      value: String(riverSummary.stationCount),
-      note: `${riverSummary.tendencyCounts.steady} steady, ${riverSummary.tendencyCounts.falling} falling, ${riverSummary.tendencyCounts.rising} rising`,
-    },
-  ],
-};
 
+    contributingFactors: [
+      ...riskAssessment.reasons,
+      `Primary river station: ${riverSummary.primaryStationName} (${riverSummary.primaryHeight} m)`,
+      `${riverSummary.stationCount} monitored river/creek stations included in current feed`,
+    ],
 
-function RainfallChart() {
+    recommendedActions: [
+      "Monitor flood-prone crossings, creek paths, and river-adjacent walkways",
+      "Check official warnings and local updates before travelling",
+      "Use caution if rainfall resumes or water levels begin rising nearby",
+    ],
+
+    reports: publicSignalCards,
+
+    evidence: [
+      {
+        label: "Public Inputs Integrated",
+        value: "3",
+        note: "Weather observations, rainfall gauge series, and river-height context",
+      },
+      {
+        label: "Current Prototype Output",
+        value: "Explainable",
+        note: "Local public signals are combined into a readable flood-awareness dashboard",
+      },
+      {
+        label: "Current River Feed",
+        value: String(riverSummary.stationCount),
+        note: `${riverSummary.tendencyCounts.steady} steady, ${riverSummary.tendencyCounts.falling} falling, ${riverSummary.tendencyCounts.rising} rising`,
+      },
+    ],
+  };
+}
+
+function useParramattaSignals() {
+  const [signals, setSignals] = useState(localParramattaSignals);
+  const [sourceStatus, setSourceStatus] = useState("local");
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchParramattaSignals({ signal: controller.signal })
+      .then((apiSignals) => {
+        setSignals(apiSignals);
+        setSourceStatus("api");
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setSourceStatus("local");
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  return { signals, sourceStatus };
+}
+
+function RainfallChart({ rainfallTrend }) {
   return (
     <section className="card">
       <div className="section-header compact">
@@ -312,7 +344,7 @@ function RainfallChart() {
   );
 }
 
-function SignalBreakdownChart() {
+function SignalBreakdownChart({ riskSignals }) {
   return (
     <section className="card">
       <div className="section-header compact">
@@ -530,6 +562,9 @@ function ArchitecturePanel() {
 }
 
 export default function App() {
+  const { signals, sourceStatus } = useParramattaSignals();
+  const dashboardData = buildDashboardData(signals, sourceStatus);
+
   return (
     <div className="app-shell">
       <Header />
@@ -545,9 +580,9 @@ export default function App() {
 
         <div className="right-column">
           <ActionsPanel actions={dashboardData.recommendedActions} />
-          <RiverStatusPanel riverSummary={riverSummary} />
-          <RainfallChart />
-          <SignalBreakdownChart />
+          <RiverStatusPanel riverSummary={dashboardData.riverSummary} />
+          <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
+          <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
           <MapPanel />
         </div>
       </div>
@@ -592,4 +627,3 @@ function MapPanel() {
     </section>
   );
 }
-

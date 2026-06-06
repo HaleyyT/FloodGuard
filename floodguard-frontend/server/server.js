@@ -2,6 +2,7 @@ import http from "node:http";
 import { readOrRefreshParramattaSignals, runParramattaIngestion } from "./ingestion/parramattaPipeline.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
+const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
 
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, {
@@ -81,6 +82,6 @@ const server = http.createServer((request, response) => {
   });
 });
 
-server.listen(port, () => {
-  console.log(`FloodGuard API listening at http://localhost:${port}`);
+server.listen(port, host, () => {
+  console.log(`FloodGuard API listening at http://${host}:${port}`);
 });
