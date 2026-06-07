@@ -728,7 +728,7 @@ export default function App() {
           />
           <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
-          <MapPanel />
+          <MapPanel areaName={dashboardData.areaName} />
         </div>
       </div>
 
@@ -737,7 +737,9 @@ export default function App() {
   );
 }
 
-function MapPanel() {
+function MapPanel({ areaName }) {
+  const shortAreaName = areaName.replace(", NSW", "");
+
   return (
     <section className="card">
       <div className="section-header compact">
@@ -750,7 +752,7 @@ function MapPanel() {
       <div className="map-panel">
         <div className="map-river"></div>
 
-        <div className="map-label suburb">Parramatta, NSW</div>
+        <div className="map-label suburb">{areaName}</div>
 
         <div className="map-pin high" style={{ top: "28%", left: "68%" }}>
           !
@@ -767,7 +769,7 @@ function MapPanel() {
       </div>
 
       <p className="map-note">
-      Prototype view showing flood-related community reports positioned around the monitored region.
+      Prototype view showing flood-related community reports positioned around {shortAreaName}.
       </p>
     </section>
   );

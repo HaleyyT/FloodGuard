@@ -52,6 +52,9 @@ export function buildRiskSignals(signals) {
 
 export function assessRisk(signals) {
   const riskSignals = buildRiskSignals(signals);
+  const areaName = signals.area?.name || signals.location?.name || "the selected area";
+  const shortAreaName = areaName.replace(", NSW", "");
+  const catchmentName = signals.area?.catchment || signals.riverContext?.region || "local waterways";
   const latestRain = signals.rainfallSeries?.latestValidRainfallMm ?? 0;
   const risingStations = signals.riverContext?.tendencyCounts?.rising ?? 0;
   const reasons = [];
@@ -60,31 +63,31 @@ export function assessRisk(signals) {
 
   if (latestRain >= 5 || riskSignals.rainfallPressure >= 50) {
     concernLevel = "Moderate";
-    reasons.push(`Recent rainfall signal recorded: ${latestRain} mm`);
+    reasons.push(`${shortAreaName} rainfall signal recorded: ${latestRain} mm`);
   }
 
   if (risingStations > 0) {
     concernLevel = "Moderate";
-    reasons.push(`${risingStations} monitored river/creek station(s) are rising`);
+    reasons.push(`${risingStations} ${catchmentName} river/creek station(s) are rising`);
   }
 
   if (latestRain >= 10 && risingStations > 0) {
     concernLevel = "High";
-    reasons.push("Rainfall and river signals indicate elevated local flood concern");
+    reasons.push(`${shortAreaName} rainfall and river signals indicate elevated local flood concern`);
   }
 
   if (reasons.length === 0) {
-    reasons.push("Current rainfall and river-height signals remain below concern thresholds");
+    reasons.push(`${shortAreaName} rainfall and river-height signals remain below concern thresholds`);
   }
 
   return {
     concernLevel,
     summary:
       concernLevel === "High"
-        ? "FloodGuard has identified elevated local flood concern from combined rainfall and river signals."
+        ? `FloodGuard has identified elevated local flood concern for ${shortAreaName} from combined rainfall and river signals.`
         : concernLevel === "Moderate"
-          ? "FloodGuard has identified moderate local flood concern using recent rainfall and Parramatta river-context signals."
-          : "FloodGuard currently indicates low immediate flood concern while continuing to monitor rainfall and river conditions.",
+          ? `FloodGuard has identified moderate local flood concern for ${shortAreaName} using recent rainfall and ${catchmentName} river-context signals.`
+          : `FloodGuard currently indicates low immediate flood concern for ${shortAreaName} while continuing to monitor rainfall and ${catchmentName} conditions.`,
     reasons,
     signals: riskSignals,
   };
