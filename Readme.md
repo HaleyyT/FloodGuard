@@ -91,6 +91,7 @@ Useful routes:
 - `GET /api/signals?area=parramatta`
 - `GET /api/signals?area=north-parramatta`
 - `GET /api/signals?area=toongabbie`
+- `GET /api/signals?area=toongabbie&refresh=true`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`
@@ -103,3 +104,6 @@ Optional remote source environment variables:
 - `FLOODGUARD_RIVER_URL`
 - `VITE_FLOODGUARD_API_URL`
 - `VITE_FLOODGUARD_AREAS_API_URL`
+- `VITE_FLOODGUARD_REFRESH_MS`
+
+The dashboard refreshes the selected area automatically. Set `VITE_FLOODGUARD_REFRESH_MS` to control the polling interval; the default is 60 seconds.

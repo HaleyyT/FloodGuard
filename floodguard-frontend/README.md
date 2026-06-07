@@ -52,6 +52,10 @@ Environment variables:
 - `FLOODGUARD_API_HOST`
 - `FLOODGUARD_API_PORT`
 - `VITE_FLOODGUARD_API_URL`
+- `VITE_FLOODGUARD_AREAS_API_URL`
+- `VITE_FLOODGUARD_REFRESH_MS`
+
+`VITE_FLOODGUARD_REFRESH_MS` controls how often the dashboard refreshes the selected area. It defaults to 60 seconds.
 
 ## API Routes
 
@@ -60,6 +64,7 @@ Environment variables:
 - `GET /api/signals?area=parramatta`
 - `GET /api/signals?area=north-parramatta`
 - `GET /api/signals?area=toongabbie`
+- `GET /api/signals?area=toongabbie&refresh=true`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`
