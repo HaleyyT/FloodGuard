@@ -1,10 +1,10 @@
 # FloodGuard
 
-FloodGuard is a flood-awareness prototype focused on **Parramatta, NSW**. It combines **local weather observations, rainfall gauge data, and river-context signals** into a single explainable dashboard to help users understand changing local flood conditions. 
+FloodGuard is a flood-awareness prototype focused on **GWS** related suburbs - **Parramatta, North Parramatta and Toongabbie**. It combines **local weather observations, rainfall gauge data, and river-context signals** into a single explainable dashboard to help users understand changing local flood conditions. 
 
 ## Prototype Preview
 
-![FloodGuard dashboard prototype](docs/images/FloodGuard-6-6-screenshot.png)
+![FloodGuard dashboard prototype](docs/images/floodGuard-7-6-screenshot.png)
 
 
 ## Why FloodGuard
