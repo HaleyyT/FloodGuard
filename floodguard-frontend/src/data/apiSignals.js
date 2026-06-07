@@ -8,7 +8,7 @@ export const parramattaSignalsApiUrl =
 export const floodguardAreasApiUrl =
   import.meta.env.VITE_FLOODGUARD_AREAS_API_URL || defaultAreasUrl;
 
-function buildSignalsUrl(areaId) {
+function buildSignalsUrl(areaId, refresh = false) {
   const url = new URL(parramattaSignalsApiUrl);
 
   if (areaId) {
@@ -16,11 +16,15 @@ function buildSignalsUrl(areaId) {
     url.searchParams.set("area", areaId);
   }
 
+  if (refresh) {
+    url.searchParams.set("refresh", "true");
+  }
+
   return url.toString();
 }
 
-export async function fetchParramattaSignals({ areaId, signal } = {}) {
-  const response = await fetch(buildSignalsUrl(areaId), { signal });
+export async function fetchParramattaSignals({ areaId, refresh = false, signal } = {}) {
+  const response = await fetch(buildSignalsUrl(areaId, refresh), { signal });
 
   if (!response.ok) {
     throw new Error(`FloodGuard API returned ${response.status}`);

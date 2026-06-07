@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import {
   ResponsiveContainer,
@@ -37,13 +37,17 @@ const fallbackAreas = [
   },
 ];
 
-function RiverStatusPanel({ riverSummary }) {
+const liveRefreshIntervalMs = Number(
+  import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
+);
+
+function RiverStatusPanel({ areaName, riverSummary }) {
   return (
     <section className="card">
       <div className="section-header compact">
         <div>
           <p className="section-label">River monitoring</p>
-          <h3>Parramatta river status</h3>
+          <h3>{areaName.replace(", NSW", "")} river status</h3>
         </div>
       </div>
 
@@ -256,7 +260,8 @@ function buildRainfallTrend(signals) {
   }));
 }
 
-function buildDashboardData(signals, sourceStatus) {
+function buildDashboardData(signals, sourceStatus, liveStatus) {
+  const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
   const publicSignalCards = buildPublicSignalCards(signals);
   const riskAssessment = buildRiskAssessment(signals, riverSummary, publicSignalCards);
@@ -268,6 +273,7 @@ function buildDashboardData(signals, sourceStatus) {
       : "Local fallback signals loaded";
 
   return {
+    areaName,
     location: signals.location.name,
     riskLevel: riskAssessment.riskLevel,
     summary: riskAssessment.summary,
@@ -276,12 +282,15 @@ function buildDashboardData(signals, sourceStatus) {
     riskSignals: buildRiskSignals(signals),
 
     officialSignals: {
-      warningStatus: dataStatus,
+      warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
       rainfall24h: rainDisplay,
       waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
-      forecastOutlook: signals.ingestedAt
-        ? `Ingested ${new Date(signals.ingestedAt).toLocaleString("en-AU")}`
-        : `River feed issued ${riverSummary.issuedDate}`,
+      forecastOutlook:
+        liveStatus.lastUpdated || signals.ingestedAt
+          ? `Updated ${new Date(
+              liveStatus.lastUpdated || signals.ingestedAt
+            ).toLocaleString("en-AU")}`
+          : `River feed issued ${riverSummary.issuedDate}`,
     },
 
     contributingFactors: [
@@ -305,9 +314,11 @@ function buildDashboardData(signals, sourceStatus) {
         note: "Weather observations, rainfall gauge series, and river-height context",
       },
       {
-        label: "Current Prototype Output",
-        value: "Explainable",
-        note: "Local public signals are combined into a readable flood-awareness dashboard",
+        label: "Area Data Quality",
+        value: signals.dataQuality?.status || "Prototype",
+        note: signals.freshness?.status
+          ? `${signals.dataQuality?.coverageScore ?? "Unknown"}% coverage, freshness ${signals.freshness.status}`
+          : "Local public signals are combined into a readable flood-awareness dashboard",
       },
       {
         label: "Current River Feed",
@@ -321,25 +332,62 @@ function buildDashboardData(signals, sourceStatus) {
 function useParramattaSignals(selectedAreaId) {
   const [signals, setSignals] = useState(localParramattaSignals);
   const [sourceStatus, setSourceStatus] = useState("local");
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  const loadAreaSignals = useCallback(
+    async ({ forceRefresh = false, signal } = {}) => {
+      setIsRefreshing(true);
+
+      try {
+        const apiSignals = await fetchParramattaSignals({
+          areaId: selectedAreaId,
+          refresh: forceRefresh,
+          signal,
+        });
+
+        setSignals(apiSignals);
+        setSourceStatus("api");
+        setLastUpdated(apiSignals.ingestedAt || new Date().toISOString());
+        setErrorMessage(null);
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setSourceStatus("local");
+          setErrorMessage(error.message);
+        }
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [selectedAreaId]
+  );
 
   useEffect(() => {
     const controller = new AbortController();
+    let intervalId;
 
-    fetchParramattaSignals({ areaId: selectedAreaId, signal: controller.signal })
-      .then((apiSignals) => {
-        setSignals(apiSignals);
-        setSourceStatus("api");
-      })
-      .catch((error) => {
-        if (error.name !== "AbortError") {
-          setSourceStatus("local");
-        }
-      });
+    loadAreaSignals({ signal: controller.signal });
+    intervalId = window.setInterval(() => {
+      loadAreaSignals({ forceRefresh: true });
+    }, liveRefreshIntervalMs);
 
-    return () => controller.abort();
-  }, [selectedAreaId]);
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalId);
+    };
+  }, [loadAreaSignals]);
 
-  return { signals, sourceStatus };
+  return {
+    signals,
+    sourceStatus,
+    liveStatus: {
+      errorMessage,
+      isRefreshing,
+      lastUpdated,
+      refresh: () => loadAreaSignals({ forceRefresh: true }),
+    },
+  };
 }
 
 function useFloodguardAreas() {
@@ -427,7 +475,7 @@ function Header() {
   );
 }
 
-function AreaSelector({ areas, selectedAreaId, onAreaChange }) {
+function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
   const selectedArea = areas.find((area) => area.id === selectedAreaId);
 
   return (
@@ -435,20 +483,37 @@ function AreaSelector({ areas, selectedAreaId, onAreaChange }) {
       <div>
         <p className="section-label">Regional pilot area</p>
         <h3>{selectedArea?.catchment || "Parramatta River"}</h3>
+        <p className="live-status">
+          {liveStatus.errorMessage
+            ? "Using local fallback while the live API reconnects"
+            : liveStatus.lastUpdated
+            ? `Live data updated ${new Date(liveStatus.lastUpdated).toLocaleTimeString("en-AU")}`
+            : "Waiting for live area data"}
+        </p>
       </div>
 
-      <div className="area-tabs" role="tablist" aria-label="Regional pilot areas">
-        {areas.map((area) => (
-          <button
-            aria-selected={selectedAreaId === area.id}
-            className={selectedAreaId === area.id ? "active" : ""}
-            key={area.id}
-            onClick={() => onAreaChange(area.id)}
-            type="button"
-          >
-            {area.name.replace(", NSW", "")}
-          </button>
-        ))}
+      <div className="area-controls">
+        <div className="area-tabs" role="tablist" aria-label="Regional pilot areas">
+          {areas.map((area) => (
+            <button
+              aria-selected={selectedAreaId === area.id}
+              className={selectedAreaId === area.id ? "active" : ""}
+              key={area.id}
+              onClick={() => onAreaChange(area.id)}
+              type="button"
+            >
+              {area.name.replace(", NSW", "")}
+            </button>
+          ))}
+        </div>
+        <button
+          className="refresh-button"
+          disabled={liveStatus.isRefreshing}
+          onClick={liveStatus.refresh}
+          type="button"
+        >
+          {liveStatus.isRefreshing ? "Refreshing" : "Refresh now"}
+        </button>
       </div>
     </section>
   );
@@ -633,8 +698,8 @@ function ArchitecturePanel() {
 export default function App() {
   const areas = useFloodguardAreas();
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
-  const { signals, sourceStatus } = useParramattaSignals(selectedAreaId);
-  const dashboardData = buildDashboardData(signals, sourceStatus);
+  const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
+  const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
 
   return (
     <div className="app-shell">
@@ -642,6 +707,7 @@ export default function App() {
       <AreaSelector
         areas={areas}
         selectedAreaId={selectedAreaId}
+        liveStatus={liveStatus}
         onAreaChange={setSelectedAreaId}
       />
 
@@ -656,7 +722,10 @@ export default function App() {
 
         <div className="right-column">
           <ActionsPanel actions={dashboardData.recommendedActions} />
-          <RiverStatusPanel riverSummary={dashboardData.riverSummary} />
+          <RiverStatusPanel
+            areaName={dashboardData.areaName}
+            riverSummary={dashboardData.riverSummary}
+          />
           <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
           <MapPanel />

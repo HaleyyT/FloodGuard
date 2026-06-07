@@ -94,6 +94,19 @@ p {
   color: #19345a;
 }
 
+.live-status {
+  color: #42546f;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.area-controls {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .area-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -118,6 +131,23 @@ p {
   background: #184e9f;
   border-color: #184e9f;
   color: #ffffff;
+}
+
+.refresh-button {
+  border: 1px solid #c8d7e8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #184e9f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 7px 12px;
+}
+
+.refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .section-label {
@@ -415,6 +445,10 @@ p {
 
   .area-tabs {
     justify-content: flex-start;
+  }
+
+  .area-controls {
+    align-items: flex-start;
   }
 }
 

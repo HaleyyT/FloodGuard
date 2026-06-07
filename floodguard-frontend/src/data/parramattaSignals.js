@@ -227,6 +227,8 @@ function getMaxRainfallPoint(points = []) {
 export function buildPublicSignalCards(signals) {
   const cards = [];
 
+  const areaName = signals.area?.name || signals.location?.name || "Parramatta, NSW";
+  const shortAreaName = areaName.replace(", NSW", "");
   const weather = signals.weatherObservations ?? {};
   const rainfall = signals.rainfallSeries ?? {};
   const river = signals.riverContext ?? {};
@@ -239,7 +241,7 @@ export function buildPublicSignalCards(signals) {
 
     cards.push({
       id: 1,
-      title: "Parramatta weather observation update",
+      title: `${shortAreaName} weather observation update`,
       time: formatSignalTime(weather.observedAt, "Latest observation"),
       severity: weatherSeverity,
       description: `Observed ${weather.cloud?.toLowerCase() || "weather conditions"} with ${weather.visibilityKm ?? "unknown"} km visibility, ${weather.windDirection || "variable"} wind at ${weather.windSpeedKmh ?? "unknown"} km/h, and a rain trace of ${weather.rainfallTraceMm ?? 0} mm.`,
@@ -259,7 +261,7 @@ export function buildPublicSignalCards(signals) {
 
     cards.push({
       id: 2,
-      title: "North Parramatta rainfall gauge update",
+      title: `${shortAreaName} rainfall gauge update`,
       time: latestPoint
         ? formatSignalTime(latestPoint.time, "Latest gauge update")
         : "Latest gauge update",
@@ -284,7 +286,7 @@ export function buildPublicSignalCards(signals) {
 
     cards.push({
       id: 3,
-      title: "Parramatta river context update",
+      title: `${shortAreaName} river context update`,
       time: "Latest river-height context",
       severity: riverSeverity,
       description:
