@@ -10,6 +10,7 @@ export const sourceConfig = {
   weather: {
     label: "Parramatta weather observations",
     envUrl: "FLOODGUARD_WEATHER_URL",
+    defaultUrl: "https://www.bom.gov.au/fwo/IDN60801/IDN60801.94764.json",
     fallbackFile: path.join(rawDataDir, "parramatta-weather.json"),
   },
   rainfall: {

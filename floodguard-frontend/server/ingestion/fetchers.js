@@ -20,7 +20,7 @@ async function readFallbackJson(filePath) {
 }
 
 export async function loadSource(source) {
-  const configuredUrl = process.env[source.envUrl];
+  const configuredUrl = process.env[source.envUrl] || source.defaultUrl;
   const fetchedAt = new Date().toISOString();
 
   if (configuredUrl) {

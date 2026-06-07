@@ -44,6 +44,8 @@ The backend reads configured remote JSON URLs when environment variables are pre
 
 After normalising the shared public feeds, the backend applies area-specific station mapping from `server/ingestion/areaConfig.js`. This keeps the first regional pilot explainable before adding heavier spatial tooling such as PostGIS.
 
+The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is not configured, the rainfall graph uses live BoM rain-trace observations instead of the older local rainfall file. River context still uses local fallback data until `FLOODGUARD_RIVER_URL` is connected to a live source.
+
 Environment variables:
 
 - `FLOODGUARD_WEATHER_URL`

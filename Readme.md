@@ -107,3 +107,5 @@ Optional remote source environment variables:
 - `VITE_FLOODGUARD_REFRESH_MS`
 
 The dashboard refreshes the selected area automatically. Set `VITE_FLOODGUARD_REFRESH_MS` to control the polling interval; the default is 60 seconds.
+
+By default, FloodGuard now fetches live BoM Parramatta weather observations directly from BoM JSON and derives the rainfall graph from BoM rain-trace observations when no WaterNSW rainfall API URL is configured. `FLOODGUARD_RAINFALL_URL` and `FLOODGUARD_RIVER_URL` are still needed for fully live gauge rainfall and river-height feeds.

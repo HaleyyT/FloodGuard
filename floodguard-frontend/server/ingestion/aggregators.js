@@ -1,7 +1,12 @@
 import { areaConfigs, defaultAreaId, getAreaConfig, listAreas } from "./areaConfig.js";
 import { latestSignalsPath, sourceConfig } from "./config.js";
 import { loadSource } from "./fetchers.js";
-import { normalizeRainfall, normalizeRiverContext, normalizeWeather } from "./normalisers.js";
+import {
+  normalizeRainfall,
+  normalizeRiverContext,
+  normalizeWeather,
+  normalizeWeatherRainfall,
+} from "./normalisers.js";
 import { assessRisk } from "./riskEngine.js";
 import { readLatestSignals, writeLatestSignals } from "./store.js";
 
@@ -11,8 +16,10 @@ function matchesRelevantStation(value, relevantNames = []) {
 
 function filterRainfallForArea(rainfallSeries, area) {
   const relevantStationNumbers = area.relevantStations.rainfall ?? [];
+  const isDerivedWeatherRainfall = rainfallSeries.aggregation === "Observation rain trace";
 
   if (
+    isDerivedWeatherRainfall ||
     relevantStationNumbers.length === 0 ||
     relevantStationNumbers.includes(rainfallSeries.stationNumber)
   ) {
@@ -21,7 +28,9 @@ function filterRainfallForArea(rainfallSeries, area) {
       areaRelevance: {
         areaId: area.id,
         matched: true,
-        reason: "Rainfall station is mapped to this area.",
+        reason: isDerivedWeatherRainfall
+          ? "Live BoM rain-trace observations are used while the mapped rainfall gauge API is not configured."
+          : "Rainfall station is mapped to this area.",
       },
     };
   }
@@ -93,6 +102,7 @@ function buildAreaSourceMetadata(area, sourceMetadata) {
 
 function buildFreshnessSummary(sourceMetadata) {
   const failedSources = sourceMetadata.filter((metadata) => metadata.status === "failed");
+  const fallbackSources = sourceMetadata.filter((metadata) => metadata.mode === "local-fallback");
   const fetchedTimes = sourceMetadata
     .map((metadata) => metadata.fetchedAt)
     .filter(Boolean)
@@ -102,10 +112,13 @@ function buildFreshnessSummary(sourceMetadata) {
     latestFetchedAt: fetchedTimes.at(-1) ?? null,
     sourceCount: sourceMetadata.length,
     failedSourceCount: failedSources.length,
-    status: failedSources.length > 0 ? "partial" : "ok",
+    fallbackSourceCount: fallbackSources.length,
+    status: failedSources.length > 0 ? "partial" : fallbackSources.length > 0 ? "mixed" : "ok",
     notes:
       failedSources.length > 0
         ? failedSources.map((metadata) => `${metadata.label}: ${metadata.note}`)
+        : fallbackSources.length > 0
+          ? fallbackSources.map((metadata) => `${metadata.label} is using local fallback data.`)
         : ["All configured signal sources were available."],
   };
 }
@@ -115,10 +128,19 @@ function buildDataQuality(signals) {
   if (!signals.weatherObservations?.stationName) missing.push("weather");
   if ((signals.rainfallSeries?.points ?? []).length === 0) missing.push("rainfall");
   if ((signals.riverContext?.stations ?? []).length === 0) missing.push("river");
+  const fallbackSources = (signals.sourceMetadata ?? []).filter(
+    (metadata) => metadata.mode === "local-fallback",
+  );
 
   return {
-    status: missing.length === 0 ? "complete" : "partial",
+    status:
+      missing.length > 0
+        ? "partial"
+        : fallbackSources.length > 0
+          ? "mixed-source"
+          : "live",
     missing,
+    fallbackSources: fallbackSources.map((metadata) => metadata.label),
     coverageScore: Math.round(((3 - missing.length) / 3) * 100),
   };
 }
@@ -174,6 +196,26 @@ export async function buildRegionalSignals() {
     loadSource(sourceConfig.rainfall),
     loadSource(sourceConfig.river),
   ]);
+  let rainfallSeries = normalizeRainfall(rainfallSource.data);
+  let rainfallMetadata = {
+    label: "North Parramatta rainfall gauge",
+    type: "rainfall",
+    note: "Nearby rainfall time series normalised from the ingestion pipeline.",
+    ...rainfallSource.metadata,
+  };
+
+  if (rainfallSource.metadata.mode !== "remote" && weatherSource.metadata.mode === "remote") {
+    rainfallSeries = normalizeWeatherRainfall(weatherSource.data);
+    rainfallMetadata = {
+      label: "BoM Parramatta rain trace observations",
+      type: "rainfall",
+      note: "Live BoM rain-trace observations are used for the graph until a WaterNSW rainfall URL is configured.",
+      ...weatherSource.metadata,
+      mode: "remote-derived",
+      derivedFrom: weatherSource.metadata.source,
+    };
+  }
+
   const sourceMetadata = [
     {
       label: "Parramatta weather observations",
@@ -181,12 +223,7 @@ export async function buildRegionalSignals() {
       note: "Current local weather observations normalised from the ingestion pipeline.",
       ...weatherSource.metadata,
     },
-    {
-      label: "North Parramatta rainfall gauge",
-      type: "rainfall",
-      note: "Nearby rainfall time series normalised from the ingestion pipeline.",
-      ...rainfallSource.metadata,
-    },
+    rainfallMetadata,
     {
       label: "Parramatta river context",
       type: "river",
@@ -196,7 +233,7 @@ export async function buildRegionalSignals() {
   ];
   const normalizedSources = {
     weatherObservations: normalizeWeather(weatherSource.data),
-    rainfallSeries: normalizeRainfall(rainfallSource.data),
+    rainfallSeries,
     riverContext: normalizeRiverContext(riverSource.data),
   };
   const areas = Object.fromEntries(

@@ -251,6 +251,10 @@ export function buildPublicSignalCards(signals) {
   if ((rainfall.points ?? []).length > 0) {
     const latestPoint = getLatestRainfallPoint(rainfall.points);
     const maxPoint = getMaxRainfallPoint(rainfall.points);
+    const rainfallSeriesLabel =
+      rainfall.aggregation === "Observation rain trace"
+        ? "the latest BoM observation series"
+        : "the selected daily series";
 
     const rainfallSeverity =
       maxPoint && maxPoint.rainfallMm >= 10
@@ -269,8 +273,8 @@ export function buildPublicSignalCards(signals) {
       description: maxPoint
         ? `Nearby rainfall gauge data shows a recent maximum of ${maxPoint.rainfallMm.toFixed(
             1
-          )} mm on ${formatSignalTime(maxPoint.time)} across the selected daily series.`
-        : "Nearby rainfall gauge data has been ingested for the selected daily series.",
+          )} mm on ${formatSignalTime(maxPoint.time)} across ${rainfallSeriesLabel}.`
+        : `Nearby rainfall data has been ingested for ${rainfallSeriesLabel}.`,
     });
   }
 

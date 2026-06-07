@@ -268,8 +268,10 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
   const latestRain = signals.rainfallSeries.latestValidRainfallMm;
   const rainDisplay = latestRain !== null ? `${latestRain} mm` : "No recent reading";
   const dataStatus =
-    sourceStatus === "api"
-      ? "API ingestion pipeline synced"
+    sourceStatus === "api" && signals.freshness?.status === "mixed"
+      ? "Live API with fallback source"
+      : sourceStatus === "api"
+      ? "Live API ingestion synced"
       : "Local fallback signals loaded";
 
   return {

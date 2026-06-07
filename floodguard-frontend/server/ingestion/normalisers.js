@@ -10,6 +10,19 @@ function normaliseStatusLabel(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function parseBomLocalTimestamp(value) {
+  if (!value || value.length < 14) return null;
+
+  const year = value.slice(0, 4);
+  const month = value.slice(4, 6);
+  const day = value.slice(6, 8);
+  const hour = value.slice(8, 10);
+  const minute = value.slice(10, 12);
+  const second = value.slice(12, 14);
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}+10:00`;
+}
+
 export function normalizeWeather(raw) {
   const header = raw?.observations?.header?.[0] ?? {};
   const latest = raw?.observations?.data?.[0] ?? {};
@@ -31,6 +44,37 @@ export function normalizeWeather(raw) {
     visibilityKm: toNumber(latest.vis_km),
     windDirection: latest.wind_dir || null,
     windSpeedKmh: toNumber(latest.wind_spd_kmh),
+  };
+}
+
+export function normalizeWeatherRainfall(raw) {
+  const header = raw?.observations?.header?.[0] ?? {};
+  const latest = raw?.observations?.data?.[0] ?? {};
+  const rows = raw?.observations?.data ?? [];
+
+  const points = rows
+    .map((row) => ({
+      time: parseBomLocalTimestamp(row.local_date_time_full),
+      rainfallMm: toNumber(row.rain_trace),
+      qualityCode: null,
+      interpolationType: null,
+    }))
+    .filter((point) => point.time && point.rainfallMm !== null)
+    .reverse();
+
+  const latestPoint = points.at(-1) ?? null;
+
+  return {
+    stationName: latest.name || header.name || "Parramatta",
+    stationNumber: latest.wmo ? String(latest.wmo) : null,
+    sourceLabel: "BoM Parramatta rain trace observations",
+    parameterType: "Rainfall trace",
+    timeseriesName: "BoM latest weather observations",
+    unit: "millimeter",
+    dataOwner: "Bureau of Meteorology",
+    aggregation: "Observation rain trace",
+    latestValidRainfallMm: latestPoint ? latestPoint.rainfallMm : null,
+    points,
   };
 }
 
