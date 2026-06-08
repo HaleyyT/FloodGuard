@@ -160,7 +160,7 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
     },
   };
 
-  const signals = {
+  const baseSignals = {
     area: {
       id: area.id,
       name: area.name,
@@ -180,11 +180,16 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
     sourceMetadata: buildAreaSourceMetadata(area, sourceMetadata),
     ingestedAt,
   };
+  const freshness = buildFreshnessSummary(baseSignals.sourceMetadata);
+  const dataQuality = buildDataQuality(baseSignals);
+  const signals = {
+    ...baseSignals,
+    freshness,
+    dataQuality,
+  };
 
   return {
     ...signals,
-    freshness: buildFreshnessSummary(signals.sourceMetadata),
-    dataQuality: buildDataQuality(signals),
     riskAssessment: assessRisk(signals),
   };
 }

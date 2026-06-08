@@ -51,6 +51,18 @@ FloodGuard uses a **real-data-informed prototype pipeline**:
 
 This makes the prototype easier to explain, maintain, and extend.
 
+## Risk Logic
+
+FloodGuard now uses a more explainable rule-based risk engine. The backend computes:
+
+- rainfall pressure
+- river pressure
+- wetness pressure
+- source confidence
+- rainfall windows for the latest 24h and 72h
+
+These features are combined into a 0-100 risk score and a Low / Moderate / High concern level.
+
 ## Regional Pilot
 
 FloodGuard is now multi-area ready without jumping straight to PostGIS. The current pilot uses a simple config mapping to connect each area to relevant public stations:
