@@ -46,6 +46,10 @@ After normalising the shared public feeds, the backend applies area-specific sta
 
 The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is not configured, the rainfall graph uses live BoM rain-trace observations instead of the older local rainfall file. River context still uses local fallback data until `FLOODGUARD_RIVER_URL` is connected to a live source.
 
+## Risk Engine
+
+The backend risk engine computes rainfall pressure, river pressure, wetness pressure, and source confidence. It also tracks rainfall in the latest 24h and 72h windows so the dashboard can explain why an area is Low, Moderate, or High risk.
+
 Environment variables:
 
 - `FLOODGUARD_WEATHER_URL`

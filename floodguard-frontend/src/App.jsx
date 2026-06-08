@@ -83,6 +83,17 @@ function clamp(value, min = 0, max = 100) {
 
 // helper function to build risk signals based on the prototype inputs, with some simple heuristics to combine them into a score out of 100 for each category
 function buildRiskSignals(signals) {
+  const backendSignals = signals.riskAssessment?.signals;
+
+  if (backendSignals) {
+    return [
+      { name: "Rainfall", value: backendSignals.rainfallPressure ?? 0 },
+      { name: "River", value: backendSignals.riverPressure ?? 0 },
+      { name: "Wetness", value: backendSignals.wetnessPressure ?? 0 },
+      { name: "Confidence", value: backendSignals.confidence ?? 0 },
+    ];
+  }
+
   const weather = signals.weatherObservations ?? {};
   const rainfallSeries = signals.rainfallSeries ?? {};
   const riverContext = signals.riverContext ?? {};
@@ -207,6 +218,7 @@ function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards)
   if (parramattaSignals.riskAssessment) {
     return {
       riskLevel: parramattaSignals.riskAssessment.concernLevel,
+      score: parramattaSignals.riskAssessment.score,
       reasons: parramattaSignals.riskAssessment.reasons,
       summary: parramattaSignals.riskAssessment.summary,
     };
@@ -240,6 +252,7 @@ function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards)
 
   return {
     riskLevel,
+    score: null,
     reasons,
     summary:
       riskLevel === "High"
@@ -316,11 +329,12 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
         note: "Weather observations, rainfall gauge series, and river-height context",
       },
       {
-        label: "Area Data Quality",
-        value: signals.dataQuality?.status || "Prototype",
-        note: signals.freshness?.status
-          ? `${signals.dataQuality?.coverageScore ?? "Unknown"}% coverage, freshness ${signals.freshness.status}`
-          : "Local public signals are combined into a readable flood-awareness dashboard",
+        label: "Risk Score",
+        value:
+          typeof riskAssessment.score === "number"
+            ? `${riskAssessment.score}/100`
+            : riskAssessment.riskLevel,
+        note: "Rainfall, river, wetness, and confidence are combined into one explainable score",
       },
       {
         label: "Current River Feed",
