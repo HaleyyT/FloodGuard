@@ -63,6 +63,17 @@ FloodGuard now uses a more explainable rule-based risk engine. The backend compu
 
 These features are combined into a 0-100 risk score and a Low / Moderate / High concern level.
 
+## Historical Storage
+
+Each ingestion run now stores compact area-level history records. These records preserve:
+
+- risk level and score
+- rainfall features
+- river station summary
+- source freshness and confidence
+
+This gives FloodGuard the memory needed for future baselines, rolling comparisons, and ML-ready feature datasets.
+
 ## Regional Pilot
 
 FloodGuard is now multi-area ready without jumping straight to PostGIS. The current pilot uses a simple config mapping to connect each area to relevant public stations:
@@ -104,6 +115,7 @@ Useful routes:
 - `GET /api/signals?area=north-parramatta`
 - `GET /api/signals?area=toongabbie`
 - `GET /api/signals?area=toongabbie&refresh=true`
+- `GET /api/history?area=parramatta`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

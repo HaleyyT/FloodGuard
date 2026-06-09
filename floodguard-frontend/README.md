@@ -50,6 +50,10 @@ The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is n
 
 The backend risk engine computes rainfall pressure, river pressure, wetness pressure, and source confidence. It also tracks rainfall in the latest 24h and 72h windows so the dashboard can explain why an area is Low, Moderate, or High risk.
 
+## Historical Storage
+
+Every refreshed ingestion appends compact area snapshots under `server/storage/history`. The files are ignored by git, but the API can read them back so the dashboard can show recent signal memory for the selected area.
+
 Environment variables:
 
 - `FLOODGUARD_WEATHER_URL`
@@ -71,6 +75,7 @@ Environment variables:
 - `GET /api/signals?area=north-parramatta`
 - `GET /api/signals?area=toongabbie`
 - `GET /api/signals?area=toongabbie&refresh=true`
+- `GET /api/history?area=parramatta`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

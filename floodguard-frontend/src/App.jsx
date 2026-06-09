@@ -14,6 +14,7 @@ import {
 
 import { buildPublicSignalCards } from "./data/parramattaSignals";
 import {
+  fetchAreaHistory,
   fetchFloodguardAreas,
   fetchParramattaSignals,
   localParramattaSignals,
@@ -426,6 +427,45 @@ function useFloodguardAreas() {
   return areas;
 }
 
+function useAreaHistory(selectedAreaId, lastUpdated) {
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchAreaHistory({
+      areaId: selectedAreaId,
+      limit: 12,
+      signal: controller.signal,
+    })
+      .then(setHistory)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setHistory([]);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return history;
+}
+
+function buildHistorySummary(history = []) {
+  const latest = history[0] ?? null;
+  const previous = history[1] ?? null;
+  const scoreDelta =
+    latest && previous && typeof latest.riskScore === "number" && typeof previous.riskScore === "number"
+      ? latest.riskScore - previous.riskScore
+      : null;
+
+  return {
+    latest,
+    scoreDelta,
+    snapshotCount: history.length,
+  };
+}
+
 function RainfallChart({ rainfallTrend }) {
   return (
     <section className="card">
@@ -670,6 +710,46 @@ function EvidencePanel({ evidence }) {
   );
 }
 
+function HistoryPanel({ history }) {
+  const summary = buildHistorySummary(history);
+  const latest = summary.latest;
+  const scoreDeltaLabel =
+    summary.scoreDelta === null
+      ? "No previous score yet"
+      : `${summary.scoreDelta >= 0 ? "+" : ""}${summary.scoreDelta} since previous snapshot`;
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Historical storage</p>
+          <h3>Signal memory</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Stored snapshots" value={String(summary.snapshotCount)} />
+        <InfoTile
+          label="Latest risk score"
+          value={latest ? `${latest.riskScore}/100` : "No history yet"}
+        />
+      </div>
+
+      <ul className="factor-list history-list">
+        <li>{scoreDeltaLabel}</li>
+        <li>
+          Latest rainfall: {latest?.rainfall.latestValidRainfallMm ?? "unknown"} mm from{" "}
+          {latest?.rainfall.sourceLabel ?? "no stored source"}
+        </li>
+        <li>
+          River memory: {latest?.river.stationCount ?? 0} station(s), primary tendency{" "}
+          {latest?.river.primaryTendency ?? "unknown"}
+        </li>
+      </ul>
+    </section>
+  );
+}
+
 function ArchitecturePanel() {
   return (
     <section className="card">
@@ -715,6 +795,7 @@ export default function App() {
   const areas = useFloodguardAreas();
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
+  const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
 
   return (
@@ -734,6 +815,7 @@ export default function App() {
           <FactorsPanel factors={dashboardData.contributingFactors} />
           <ReportsPanel reports={dashboardData.reports} />
           <EvidencePanel evidence={dashboardData.evidence} />
+          <HistoryPanel history={history} />
         </div>
 
         <div className="right-column">

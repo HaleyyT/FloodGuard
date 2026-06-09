@@ -1,6 +1,7 @@
 import http from "node:http";
 import {
   readOrRefreshRegionalSignals,
+  readHistoricalSignals,
   runRegionalIngestion,
   selectAreaSignals,
 } from "./ingestion/aggregators.js";
@@ -26,6 +27,7 @@ function routes() {
     "/api/signals?area=parramatta",
     "/api/signals?area=north-parramatta",
     "/api/signals?area=toongabbie",
+    "/api/history?area=parramatta",
     "/api/signals/parramatta",
     "/api/rainfall/parramatta",
     "/api/river/parramatta",
@@ -84,6 +86,22 @@ async function routeRequest(request, response) {
 
   if (url.pathname === "/api/areas") {
     sendJson(response, 200, regionalSignals.areaList);
+    return;
+  }
+
+  if (url.pathname === "/api/history") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 24);
+
+    if (!selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await readHistoricalSignals(areaId, limit));
     return;
   }
 

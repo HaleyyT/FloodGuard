@@ -5,6 +5,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.
 
 export const rawDataDir = path.join(rootDir, "src/data/raw");
 export const storageDir = path.join(rootDir, "server/storage");
+export const historyDir = path.join(storageDir, "history");
 
 export const sourceConfig = {
   weather: {

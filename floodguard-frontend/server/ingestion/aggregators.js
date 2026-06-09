@@ -1,5 +1,5 @@
 import { areaConfigs, defaultAreaId, getAreaConfig, listAreas } from "./areaConfig.js";
-import { latestSignalsPath, sourceConfig } from "./config.js";
+import { historyDir, latestSignalsPath, sourceConfig } from "./config.js";
 import { loadSource } from "./fetchers.js";
 import {
   normalizeRainfall,
@@ -8,7 +8,7 @@ import {
   normalizeWeatherRainfall,
 } from "./normalisers.js";
 import { assessRisk } from "./riskEngine.js";
-import { readLatestSignals, writeLatestSignals } from "./store.js";
+import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
 
 function matchesRelevantStation(value, relevantNames = []) {
   return relevantNames.some((name) => value?.toLowerCase() === name.toLowerCase());
@@ -260,6 +260,7 @@ export async function buildRegionalSignals() {
 export async function runRegionalIngestion() {
   const signals = await buildRegionalSignals();
   await writeLatestSignals(latestSignalsPath, signals);
+  await appendRegionalHistory(historyDir, signals);
   return signals;
 }
 
@@ -278,4 +279,8 @@ export function selectAreaSignals(regionalSignals, areaId = defaultAreaId) {
 
 export function areaExists(areaId) {
   return Boolean(getAreaConfig(areaId));
+}
+
+export async function readHistoricalSignals(areaId = defaultAreaId, limit = 24) {
+  return readAreaHistory(historyDir, areaId, limit);
 }
