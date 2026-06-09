@@ -332,6 +332,17 @@ p {
   gap: 14px;
 }
 
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.history-list {
+  font-size: 0.95rem;
+}
+
 .evidence-card {
   margin-top: 28px;
   background: #ebf0f9;
