@@ -4,7 +4,7 @@ FloodGuard is a flood-awareness prototype focused on **GWS** related suburbs - *
 
 ## Prototype Preview
 
-![FloodGuard dashboard prototype](docs/images/floodGuard-7-6-screenshot.png)
+![FloodGuard dashboard prototype](docs/images/floodguard-10-6.png)
 
 
 ## Why FloodGuard
