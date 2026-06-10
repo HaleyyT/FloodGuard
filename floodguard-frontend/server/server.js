@@ -1,11 +1,13 @@
 import http from "node:http";
 import {
+  readAreaFeatureDataset,
   readOrRefreshRegionalSignals,
   readHistoricalSignals,
   runRegionalIngestion,
   selectAreaSignals,
 } from "./ingestion/aggregators.js";
 import { defaultAreaId } from "./ingestion/areaConfig.js";
+import { featureRowsToCsv } from "./ingestion/features.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
 const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
@@ -20,6 +22,16 @@ function sendJson(response, statusCode, body) {
   response.end(JSON.stringify(body, null, 2));
 }
 
+function sendText(response, statusCode, body, contentType = "text/plain; charset=utf-8") {
+  response.writeHead(statusCode, {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,OPTIONS",
+    "access-control-allow-headers": "content-type",
+    "content-type": contentType,
+  });
+  response.end(body);
+}
+
 function routes() {
   return [
     "/api/health",
@@ -28,6 +40,8 @@ function routes() {
     "/api/signals?area=north-parramatta",
     "/api/signals?area=toongabbie",
     "/api/history?area=parramatta",
+    "/api/features?area=parramatta",
+    "/api/features?area=parramatta&format=csv",
     "/api/signals/parramatta",
     "/api/rainfall/parramatta",
     "/api/river/parramatta",
@@ -102,6 +116,30 @@ async function routeRequest(request, response) {
     }
 
     sendJson(response, 200, await readHistoricalSignals(areaId, limit));
+    return;
+  }
+
+  if (url.pathname === "/api/features") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    const format = url.searchParams.get("format") ?? "json";
+
+    if (!selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    const dataset = await readAreaFeatureDataset(areaId, limit);
+
+    if (format === "csv") {
+      sendText(response, 200, featureRowsToCsv(dataset.rows), "text/csv; charset=utf-8");
+      return;
+    }
+
+    sendJson(response, 200, dataset);
     return;
   }
 

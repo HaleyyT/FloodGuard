@@ -14,6 +14,7 @@ import {
 
 import { buildPublicSignalCards } from "./data/parramattaSignals";
 import {
+  fetchAreaFeatures,
   fetchAreaHistory,
   fetchFloodguardAreas,
   fetchParramattaSignals,
@@ -451,6 +452,46 @@ function useAreaHistory(selectedAreaId, lastUpdated) {
   return history;
 }
 
+function useAreaFeatures(selectedAreaId, lastUpdated) {
+  const [featureDataset, setFeatureDataset] = useState({
+    rows: [],
+    summary: {
+      rowCount: 0,
+      elevatedCount: 0,
+      readyForTraining: false,
+      readinessNote: "Waiting for feature rows.",
+    },
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchAreaFeatures({
+      areaId: selectedAreaId,
+      limit: 100,
+      signal: controller.signal,
+    })
+      .then(setFeatureDataset)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setFeatureDataset({
+            rows: [],
+            summary: {
+              rowCount: 0,
+              elevatedCount: 0,
+              readyForTraining: false,
+              readinessNote: "Feature API is unavailable.",
+            },
+          });
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return featureDataset;
+}
+
 function buildHistorySummary(history = []) {
   const latest = history[0] ?? null;
   const previous = history[1] ?? null;
@@ -750,6 +791,39 @@ function HistoryPanel({ history }) {
   );
 }
 
+function FeatureReadinessPanel({ dataset }) {
+  const summary = dataset.summary;
+  const latest = summary.latest;
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">ML readiness</p>
+          <h3>Feature table</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Feature rows" value={String(summary.rowCount)} />
+        <InfoTile label="Elevated examples" value={String(summary.elevatedCount)} />
+      </div>
+
+      <ul className="factor-list history-list">
+        <li>{summary.readinessNote}</li>
+        <li>
+          Latest row: score {latest?.riskScore ?? "unknown"}, confidence{" "}
+          {latest?.confidence ?? "unknown"}%
+        </li>
+        <li>
+          Model target: classify whether local concern is elevated from rainfall, river,
+          wetness, and source confidence features
+        </li>
+      </ul>
+    </section>
+  );
+}
+
 function ArchitecturePanel() {
   return (
     <section className="card">
@@ -796,6 +870,7 @@ export default function App() {
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
+  const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
 
   return (
@@ -816,6 +891,7 @@ export default function App() {
           <ReportsPanel reports={dashboardData.reports} />
           <EvidencePanel evidence={dashboardData.evidence} />
           <HistoryPanel history={history} />
+          <FeatureReadinessPanel dataset={featureDataset} />
         </div>
 
         <div className="right-column">

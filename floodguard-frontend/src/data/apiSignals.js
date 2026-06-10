@@ -3,6 +3,7 @@ import { parramattaSignals as localParramattaSignals } from "./parramattaSignals
 const defaultApiUrl = "http://localhost:5174/api/signals/parramatta";
 const defaultAreasUrl = "http://localhost:5174/api/areas";
 const defaultHistoryUrl = "http://localhost:5174/api/history";
+const defaultFeaturesUrl = "http://localhost:5174/api/features";
 
 export const parramattaSignalsApiUrl =
   import.meta.env.VITE_FLOODGUARD_API_URL || defaultApiUrl;
@@ -10,6 +11,8 @@ export const floodguardAreasApiUrl =
   import.meta.env.VITE_FLOODGUARD_AREAS_API_URL || defaultAreasUrl;
 export const floodguardHistoryApiUrl =
   import.meta.env.VITE_FLOODGUARD_HISTORY_API_URL || defaultHistoryUrl;
+export const floodguardFeaturesApiUrl =
+  import.meta.env.VITE_FLOODGUARD_FEATURES_API_URL || defaultFeaturesUrl;
 
 function buildSignalsUrl(areaId, refresh = false) {
   const url = new URL(parramattaSignalsApiUrl);
@@ -55,6 +58,20 @@ export async function fetchAreaHistory({ areaId, limit = 12, signal } = {}) {
 
   if (!response.ok) {
     throw new Error(`FloodGuard history API returned ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchAreaFeatures({ areaId, limit = 100, signal } = {}) {
+  const url = new URL(floodguardFeaturesApiUrl);
+  if (areaId) url.searchParams.set("area", areaId);
+  url.searchParams.set("limit", String(limit));
+
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    throw new Error(`FloodGuard features API returned ${response.status}`);
   }
 
   return response.json();

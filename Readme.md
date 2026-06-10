@@ -74,6 +74,19 @@ Each ingestion run now stores compact area-level history records. These records 
 
 This gives FloodGuard the memory needed for future baselines, rolling comparisons, and ML-ready feature datasets.
 
+## ML-Ready Features
+
+FloodGuard can now convert stored history into tabular feature rows. These rows include:
+
+- rainfall features
+- river tendency features
+- wetness and pressure scores
+- source confidence
+- lagged risk score change
+- target label for elevated local concern
+
+This prepares the project for a future baseline classifier without pretending that the current small history is enough for a real model yet.
+
 ## Regional Pilot
 
 FloodGuard is now multi-area ready without jumping straight to PostGIS. The current pilot uses a simple config mapping to connect each area to relevant public stations:
@@ -116,6 +129,8 @@ Useful routes:
 - `GET /api/signals?area=toongabbie`
 - `GET /api/signals?area=toongabbie&refresh=true`
 - `GET /api/history?area=parramatta`
+- `GET /api/features?area=parramatta`
+- `GET /api/features?area=parramatta&format=csv`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

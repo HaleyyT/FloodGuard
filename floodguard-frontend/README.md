@@ -54,6 +54,10 @@ The backend risk engine computes rainfall pressure, river pressure, wetness pres
 
 Every refreshed ingestion appends compact area snapshots under `server/storage/history`. The files are ignored by git, but the API can read them back so the dashboard can show recent signal memory for the selected area.
 
+## ML-Ready Features
+
+`GET /api/features?area=parramatta` transforms stored history into tabular rows with rainfall, river, wetness, confidence, lagged score, and elevated-concern target fields. Use `format=csv` to inspect or export the feature table.
+
 Environment variables:
 
 - `FLOODGUARD_WEATHER_URL`
@@ -76,6 +80,8 @@ Environment variables:
 - `GET /api/signals?area=toongabbie`
 - `GET /api/signals?area=toongabbie&refresh=true`
 - `GET /api/history?area=parramatta`
+- `GET /api/features?area=parramatta`
+- `GET /api/features?area=parramatta&format=csv`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

@@ -8,6 +8,7 @@ import {
   normalizeWeatherRainfall,
 } from "./normalisers.js";
 import { assessRisk } from "./riskEngine.js";
+import { buildFeatureRows, buildFeatureSummary } from "./features.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
 
 function matchesRelevantStation(value, relevantNames = []) {
@@ -283,4 +284,15 @@ export function areaExists(areaId) {
 
 export async function readHistoricalSignals(areaId = defaultAreaId, limit = 24) {
   return readAreaHistory(historyDir, areaId, limit);
+}
+
+export async function readAreaFeatureDataset(areaId = defaultAreaId, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaId, limit);
+  const rows = buildFeatureRows(history);
+
+  return {
+    areaId,
+    summary: buildFeatureSummary(rows),
+    rows,
+  };
 }
