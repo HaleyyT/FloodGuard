@@ -475,20 +475,28 @@ p {
 
 
 /* #signal visualisation and decision evidence charts */
+.signal-chart-card .chart-box {
+  height: 235px;
+}
+
 .chart-box {
   width: 100%;
   height: 220px;
 }
 
 /* #location context map */
+.location-card {
+  padding-bottom: 18px;
+}
+
 .map-panel {
   position: relative;
-  height: 180px;
+  height: 210px;
   border-radius: 14px;
   background: linear-gradient(180deg, #eef6ff, #e4f0fb);
   border: 1px solid #d9e7f5;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin: 2px 0 14px;
 }
 
 .map-river {
@@ -576,6 +584,10 @@ p {
 }
 
 /* #river monitoring metric tiles */
+.river-status-card {
+  padding-bottom: 36px;
+}
+
 .river-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -46,7 +46,7 @@ const liveRefreshIntervalMs = Number(
 // #river monitoring card
 function RiverStatusPanel({ areaName, riverSummary }) {
   return (
-    <section className="card">
+    <section className="card river-status-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">River monitoring</p>
@@ -511,7 +511,7 @@ function buildHistorySummary(history = []) {
 // #signal visualisation rainfall chart
 function RainfallChart({ rainfallTrend }) {
   return (
-    <section className="card">
+    <section className="card signal-chart-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Signal visualisation</p>
@@ -519,7 +519,7 @@ function RainfallChart({ rainfallTrend }) {
         </div>
       </div>
       <div className="chart-box">
-        <ResponsiveContainer width="100%" height={240}>
+        <ResponsiveContainer width="100%" height={255}>
           <LineChart data={rainfallTrend}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="time" />
@@ -536,7 +536,7 @@ function RainfallChart({ rainfallTrend }) {
 // #decision evidence risk chart
 function SignalBreakdownChart({ riskSignals }) {
   return (
-    <section className="card">
+    <section className="card signal-chart-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Decision evidence</p>
@@ -544,7 +544,7 @@ function SignalBreakdownChart({ riskSignals }) {
         </div>
       </div>
       <div className="chart-box">
-        <ResponsiveContainer width="100%" height={240}>
+        <ResponsiveContainer width="100%" height={255}>
           <BarChart data={riskSignals}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
@@ -905,6 +905,8 @@ export default function App() {
           <FactorsPanel factors={dashboardData.contributingFactors} />
           <ReportsPanel reports={dashboardData.reports} />
           <EvidencePanel evidence={dashboardData.evidence} />
+          <HistoryPanel history={history} />
+          <FeatureReadinessPanel dataset={featureDataset} />
         </div>
 
         <div className="right-column">
@@ -916,8 +918,6 @@ export default function App() {
           <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
           <MapPanel areaName={dashboardData.areaName} />
-          <HistoryPanel history={history} />
-          <FeatureReadinessPanel dataset={featureDataset} />
         </div>
       </div>
 
@@ -931,7 +931,7 @@ function MapPanel({ areaName }) {
   const shortAreaName = areaName.replace(", NSW", "");
 
   return (
-    <section className="card">
+    <section className="card location-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Location context</p>
