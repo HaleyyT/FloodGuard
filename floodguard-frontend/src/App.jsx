@@ -43,6 +43,7 @@ const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
 
+// #river monitoring card
 function RiverStatusPanel({ areaName, riverSummary }) {
   return (
     <section className="card">
@@ -507,6 +508,7 @@ function buildHistorySummary(history = []) {
   };
 }
 
+// #signal visualisation rainfall chart
 function RainfallChart({ rainfallTrend }) {
   return (
     <section className="card">
@@ -531,6 +533,7 @@ function RainfallChart({ rainfallTrend }) {
   );
 }
 
+// #decision evidence risk chart
 function SignalBreakdownChart({ riskSignals }) {
   return (
     <section className="card">
@@ -555,6 +558,7 @@ function SignalBreakdownChart({ riskSignals }) {
   );
 }
 
+// #hero / project header
 function Header() {
   return (
     <header className="hero">
@@ -572,6 +576,7 @@ function Header() {
   );
 }
 
+// #regional pilot selector
 function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
   const selectedArea = areas.find((area) => area.id === selectedAreaId);
 
@@ -616,6 +621,7 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
   );
 }
 
+// #monitored region overview
 function OverviewPanel({ data }) {
   return (
     <section className="overview-panel card">
@@ -653,6 +659,7 @@ function OverviewPanel({ data }) {
   );
 }
 
+// #shared metric tile
 function InfoTile({ label, value }) {
   return (
     <div className="info-tile">
@@ -662,6 +669,7 @@ function InfoTile({ label, value }) {
   );
 }
 
+// #contributing factors card
 function FactorsPanel({ factors }) {
   return (
     <section className="card">
@@ -680,6 +688,7 @@ function FactorsPanel({ factors }) {
   );
 }
 
+// #recommended actions card
 function ActionsPanel({ actions }) {
   return (
     <section className="card">
@@ -698,6 +707,7 @@ function ActionsPanel({ actions }) {
   );
 }
 
+// #local situational awareness card
 function ReportsPanel({ reports }) {
   return (
     <section className="card">
@@ -728,6 +738,7 @@ function ReportsPanel({ reports }) {
   );
 }
 
+// #prototype evidence card
 function EvidencePanel({ evidence }) {
   return (
     <section className="card">
@@ -751,6 +762,7 @@ function EvidencePanel({ evidence }) {
   );
 }
 
+// #historical storage card
 function HistoryPanel({ history }) {
   const summary = buildHistorySummary(history);
   const latest = summary.latest;
@@ -791,6 +803,7 @@ function HistoryPanel({ history }) {
   );
 }
 
+// #ML readiness card
 function FeatureReadinessPanel({ dataset }) {
   const summary = dataset.summary;
   const latest = summary.latest;
@@ -824,6 +837,7 @@ function FeatureReadinessPanel({ dataset }) {
   );
 }
 
+// #system flow card
 function ArchitecturePanel() {
   return (
     <section className="card">
@@ -865,6 +879,7 @@ function ArchitecturePanel() {
   );
 }
 
+// #dashboard composition
 export default function App() {
   const areas = useFloodguardAreas();
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
@@ -911,6 +926,7 @@ export default function App() {
   );
 }
 
+// #location context map card
 function MapPanel({ areaName }) {
   const shortAreaName = areaName.replace(", NSW", "");
 
