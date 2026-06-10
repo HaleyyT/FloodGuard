@@ -890,8 +890,6 @@ export default function App() {
           <FactorsPanel factors={dashboardData.contributingFactors} />
           <ReportsPanel reports={dashboardData.reports} />
           <EvidencePanel evidence={dashboardData.evidence} />
-          <HistoryPanel history={history} />
-          <FeatureReadinessPanel dataset={featureDataset} />
         </div>
 
         <div className="right-column">
@@ -903,6 +901,8 @@ export default function App() {
           <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
           <MapPanel areaName={dashboardData.areaName} />
+          <HistoryPanel history={history} />
+          <FeatureReadinessPanel dataset={featureDataset} />
         </div>
       </div>
 
