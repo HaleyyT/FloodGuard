@@ -4,7 +4,7 @@ FloodGuard is a flood-awareness prototype focused on **GWS** related suburbs - *
 
 ## Prototype Preview
 
-![FloodGuard dashboard prototype](docs/images/floodguard-11-6.png)
+![FloodGuard dashboard prototype](docs/images/db-12-6.png)
 
 
 ## Why FloodGuard
@@ -96,6 +96,17 @@ FloodGuard is now multi-area ready without jumping straight to PostGIS. The curr
 - Toongabbie
 
 This is the practical middle step between a single-location prototype and a broader Western Sydney system. It keeps the logic explainable while making the backend reusable for more suburbs and catchments later.
+
+## Location-Aware Relevance
+
+The backend now scores how well the current weather, rainfall, and river feeds match the selected area configuration. Each area response includes:
+
+- matched versus expected station signals
+- source-level fit for weather, rainfall, and river stations
+- missing configured river or creek stations
+- an area relevance score shown on the dashboard
+
+This gives FloodGuard a clear pre-PostGIS relevance layer: the dashboard can explain why a signal belongs to Parramatta, North Parramatta, or Toongabbie before moving to automatic spatial joins later.
 
 ## Run Locally
 
