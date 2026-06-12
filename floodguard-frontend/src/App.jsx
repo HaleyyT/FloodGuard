@@ -276,6 +276,19 @@ function buildRainfallTrend(signals) {
   }));
 }
 
+function formatAreaSignalFit(areaRelevance) {
+  if (!areaRelevance) return "Config mapped";
+
+  const label =
+    areaRelevance.status === "complete"
+      ? "complete"
+      : areaRelevance.status === "partial"
+        ? "partial"
+        : "limited";
+
+  return `${areaRelevance.score}% ${label}`;
+}
+
 function buildDashboardData(signals, sourceStatus, liveStatus) {
   const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
@@ -301,6 +314,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
 
     officialSignals: {
       warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
+      areaSignalFit: formatAreaSignalFit(signals.areaRelevance),
       rainfall24h: rainDisplay,
       waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
       forecastOutlook:
@@ -313,6 +327,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
 
     contributingFactors: [
       ...riskAssessment.reasons,
+      ...(signals.areaRelevance?.notes ?? []),
       `Primary river station: ${riverSummary.primaryStationName} (${riverSummary.primaryHeight} m)`,
       `${riverSummary.stationCount} monitored river/creek stations included in current feed`,
     ],
@@ -641,6 +656,10 @@ function OverviewPanel({ data }) {
         <InfoTile
           label="Data Status"
           value={data.officialSignals.warningStatus}
+        />
+        <InfoTile
+          label="Area Signal Fit"
+          value={data.officialSignals.areaSignalFit}
         />
         <InfoTile
           label="Rainfall (24h)"

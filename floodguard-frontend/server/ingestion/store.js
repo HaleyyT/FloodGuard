@@ -38,6 +38,14 @@ export function buildAreaHistoryRecord(areaSignals) {
     },
     dataQuality: areaSignals.dataQuality,
     freshness: areaSignals.freshness,
+    areaRelevance: {
+      status: areaSignals.areaRelevance?.status ?? "unknown",
+      score: areaSignals.areaRelevance?.score ?? 0,
+      matchedSignals: areaSignals.areaRelevance?.matchedSignals ?? 0,
+      expectedSignals: areaSignals.areaRelevance?.expectedSignals ?? 0,
+      matchedRiverStationCount: areaSignals.areaRelevance?.matchedRiverStations?.length ?? 0,
+      missingRiverStationCount: areaSignals.areaRelevance?.missingRiverStations?.length ?? 0,
+    },
   };
 }
 

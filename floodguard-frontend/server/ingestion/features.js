@@ -42,7 +42,13 @@ export function buildFeatureRows(historyRecords = []) {
       confidence: record.riskSignals?.confidence ?? 0,
       fallbackSourceCount: record.riskFeatures?.fallbackSourceCount ?? 0,
       failedSourceCount: record.riskFeatures?.failedSourceCount ?? 0,
+      areaRelevanceScore: record.areaRelevance?.score ?? 0,
+      matchedAreaSignals: record.areaRelevance?.matchedSignals ?? 0,
+      expectedAreaSignals: record.areaRelevance?.expectedSignals ?? 0,
+      matchedRiverStationCount: record.areaRelevance?.matchedRiverStationCount ?? 0,
+      missingRiverStationCount: record.areaRelevance?.missingRiverStationCount ?? 0,
       dataQualityStatus: record.dataQuality?.status ?? "unknown",
+      areaRelevanceStatus: record.areaRelevance?.status ?? "unknown",
       freshnessStatus: record.freshness?.status ?? "unknown",
     };
   });

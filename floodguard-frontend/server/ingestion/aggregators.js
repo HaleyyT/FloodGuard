@@ -146,6 +146,68 @@ function buildDataQuality(signals) {
   };
 }
 
+function buildSourceFit({ expected = 0, matched = 0, label }) {
+  return {
+    label,
+    expected,
+    matched,
+    missing: Math.max(expected - matched, 0),
+    score: expected > 0 ? Math.round((matched / expected) * 100) : 100,
+  };
+}
+
+function buildAreaRelevance(area, weatherObservations, rainfallSeries, riverContext) {
+  const configuredWeatherCount = area.relevantStations.weather?.length ?? 0;
+  const configuredRainfallCount = area.relevantStations.rainfall?.length ?? 0;
+  const configuredRiverCount = area.relevantStations.river?.length ?? 0;
+  const weatherMatched = weatherObservations.areaRelevance?.matched ? 1 : 0;
+  const rainfallMatched = rainfallSeries.areaRelevance?.matched ? 1 : 0;
+  const matchedRiverCount = riverContext.areaRelevance?.matchedStations?.length ?? 0;
+  const sourceFit = {
+    weather: buildSourceFit({
+      expected: configuredWeatherCount,
+      matched: weatherMatched,
+      label: "Weather observation station",
+    }),
+    rainfall: buildSourceFit({
+      expected: configuredRainfallCount,
+      matched: rainfallMatched,
+      label: "Rainfall gauge or proxy",
+    }),
+    river: buildSourceFit({
+      expected: configuredRiverCount,
+      matched: matchedRiverCount,
+      label: "River and creek stations",
+    }),
+  };
+  const expectedSignals =
+    sourceFit.weather.expected + sourceFit.rainfall.expected + sourceFit.river.expected;
+  const matchedSignals =
+    sourceFit.weather.matched + sourceFit.rainfall.matched + sourceFit.river.matched;
+  const score = expectedSignals > 0 ? Math.round((matchedSignals / expectedSignals) * 100) : 100;
+  const missingRiverStations = riverContext.areaRelevance?.missingStations ?? [];
+  const status = score >= 90 ? "complete" : score >= 60 ? "partial" : "limited";
+
+  return {
+    areaId: area.id,
+    areaName: area.name,
+    catchment: area.catchment,
+    status,
+    score,
+    matchedSignals,
+    expectedSignals,
+    sourceFit,
+    matchedRiverStations: riverContext.areaRelevance?.matchedStations ?? [],
+    missingRiverStations,
+    notes: [
+      `${matchedSignals}/${expectedSignals} configured station signals currently map to ${area.name}.`,
+      missingRiverStations.length > 0
+        ? `${missingRiverStations.length} configured river/creek station(s) are not present in the current feed.`
+        : "All configured river/creek stations for this area are present in the current feed.",
+    ],
+  };
+}
+
 function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
   const rainfallSeries = filterRainfallForArea(normalizedSources.rainfallSeries, area);
   const riverContext = filterRiverForArea(normalizedSources.riverContext, area);
@@ -160,6 +222,7 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
       reason: "Weather station is used as the nearest configured public observation feed.",
     },
   };
+  const areaRelevance = buildAreaRelevance(area, weatherObservations, rainfallSeries, riverContext);
 
   const baseSignals = {
     area: {
@@ -178,6 +241,7 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
     weatherObservations,
     rainfallSeries,
     riverContext,
+    areaRelevance,
     sourceMetadata: buildAreaSourceMetadata(area, sourceMetadata),
     ingestedAt,
   };
