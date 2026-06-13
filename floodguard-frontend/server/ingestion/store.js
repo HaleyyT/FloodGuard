@@ -38,6 +38,14 @@ export function buildAreaHistoryRecord(areaSignals) {
     },
     dataQuality: areaSignals.dataQuality,
     freshness: areaSignals.freshness,
+    sourceFreshness: areaSignals.sourceMetadata.map((metadata) => ({
+      label: metadata.label,
+      type: metadata.type,
+      mode: metadata.mode,
+      observedAt: metadata.observedAt,
+      ageHours: metadata.ageHours,
+      freshnessStatus: metadata.freshnessStatus,
+    })),
     areaRelevance: {
       status: areaSignals.areaRelevance?.status ?? "unknown",
       score: areaSignals.areaRelevance?.score ?? 0,

@@ -289,6 +289,17 @@ function formatAreaSignalFit(areaRelevance) {
   return `${areaRelevance.score}% ${label}`;
 }
 
+function formatSourceFreshness(freshness) {
+  if (!freshness) return "Unknown";
+  if (freshness.staleSourceCount > 0) {
+    return `${freshness.staleSourceCount} stale source`;
+  }
+  if (freshness.fallbackSourceCount > 0) {
+    return `${freshness.fallbackSourceCount} fallback source`;
+  }
+  return "Current";
+}
+
 function buildDashboardData(signals, sourceStatus, liveStatus) {
   const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
@@ -297,7 +308,9 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
   const latestRain = signals.rainfallSeries.latestValidRainfallMm;
   const rainDisplay = latestRain !== null ? `${latestRain} mm` : "No recent reading";
   const dataStatus =
-    sourceStatus === "api" && signals.freshness?.status === "mixed"
+    sourceStatus === "api" && signals.freshness?.status === "stale"
+      ? "Live API with stale source"
+      : sourceStatus === "api" && signals.freshness?.status === "mixed"
       ? "Live API with fallback source"
       : sourceStatus === "api"
       ? "Live API ingestion synced"
@@ -315,6 +328,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     officialSignals: {
       warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
       areaSignalFit: formatAreaSignalFit(signals.areaRelevance),
+      sourceFreshness: formatSourceFreshness(signals.freshness),
       rainfall24h: rainDisplay,
       waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
       forecastOutlook:
@@ -660,6 +674,10 @@ function OverviewPanel({ data }) {
         <InfoTile
           label="Area Signal Fit"
           value={data.officialSignals.areaSignalFit}
+        />
+        <InfoTile
+          label="Source Freshness"
+          value={data.officialSignals.sourceFreshness}
         />
         <InfoTile
           label="Rainfall (24h)"

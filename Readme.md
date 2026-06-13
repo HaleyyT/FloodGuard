@@ -108,6 +108,15 @@ The backend now scores how well the current weather, rainfall, and river feeds m
 
 This gives FloodGuard a clear pre-PostGIS relevance layer: the dashboard can explain why a signal belongs to Parramatta, North Parramatta, or Toongabbie before moving to automatic spatial joins later.
 
+## Source Freshness
+
+FloodGuard now checks the source observation date, not only the time the backend fetched the file. This matters when a fallback feed is available but old. Stale sources are:
+
+- counted in the API freshness summary
+- shown on the dashboard
+- stored in history and feature rows
+- used to reduce risk confidence
+
 ## Run Locally
 
 ### Requirements

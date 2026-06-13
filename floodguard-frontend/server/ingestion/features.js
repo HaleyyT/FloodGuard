@@ -41,6 +41,7 @@ export function buildFeatureRows(historyRecords = []) {
       wetnessPressure: record.riskSignals?.wetnessPressure ?? 0,
       confidence: record.riskSignals?.confidence ?? 0,
       fallbackSourceCount: record.riskFeatures?.fallbackSourceCount ?? 0,
+      staleSourceCount: record.riskFeatures?.staleSourceCount ?? 0,
       failedSourceCount: record.riskFeatures?.failedSourceCount ?? 0,
       areaRelevanceScore: record.areaRelevance?.score ?? 0,
       matchedAreaSignals: record.areaRelevance?.matchedSignals ?? 0,

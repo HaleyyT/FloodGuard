@@ -50,6 +50,10 @@ The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is n
 
 Each area response includes an `areaRelevance` summary that compares the configured station mapping with the current feed. The dashboard uses this to show an Area Signal Fit tile, while stored history and feature rows keep the relevance score for future modelling.
 
+## Source Freshness
+
+The backend compares each source observation timestamp with the ingestion time. If a fallback river or rainfall file is old, the API marks it as stale, the dashboard shows Source Freshness, and the risk engine lowers confidence.
+
 ## Risk Engine
 
 The backend risk engine computes rainfall pressure, river pressure, wetness pressure, and source confidence. It also tracks rainfall in the latest 24h and 72h windows so the dashboard can explain why an area is Low, Moderate, or High risk.

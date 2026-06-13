@@ -39,6 +39,7 @@ export function buildRiskSignals(signals) {
   const riverStations = riverContext.stations ?? [];
   const fallbackSourceCount = signals.freshness?.fallbackSourceCount ?? 0;
   const failedSourceCount = signals.freshness?.failedSourceCount ?? 0;
+  const staleSourceCount = signals.freshness?.staleSourceCount ?? 0;
   const coverageScore = signals.dataQuality?.coverageScore ?? 0;
   const rainfall24h = rainfallWindowTotal(rainfallSeries.points, 24);
   const rainfall72h = rainfallWindowTotal(rainfallSeries.points, 72);
@@ -67,7 +68,9 @@ export function buildRiskSignals(signals) {
     (rainfallSeries.points ?? []).length > 0,
     riverStations.length > 0,
   ].filter(Boolean).length;
-  const confidence = clamp(coverageScore - fallbackSourceCount * 18 - failedSourceCount * 30);
+  const confidence = clamp(
+    coverageScore - fallbackSourceCount * 18 - staleSourceCount * 22 - failedSourceCount * 30,
+  );
 
   return {
     rainfallPressure,
@@ -86,6 +89,7 @@ export function buildRiskSignals(signals) {
       steadyRiverStations: steadyCount,
       fallingRiverStations: fallingCount,
       fallbackSourceCount,
+      staleSourceCount,
       failedSourceCount,
     },
   };
@@ -130,7 +134,9 @@ export function assessRisk(signals) {
   }
 
   if (riskSignals.confidence < 80) {
-    reasons.push(`Confidence is ${riskSignals.confidence}% because one or more sources are fallback or incomplete`);
+    reasons.push(
+      `Confidence is ${riskSignals.confidence}% because one or more sources are fallback, stale, or incomplete`,
+    );
   }
 
   if (reasons.length === 0) {

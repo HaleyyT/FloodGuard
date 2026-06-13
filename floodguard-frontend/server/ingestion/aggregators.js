@@ -101,9 +101,77 @@ function buildAreaSourceMetadata(area, sourceMetadata) {
   }));
 }
 
+function parseSourceTimestamp(value) {
+  if (!value) return null;
+
+  if (/^\d{14}$/.test(value)) {
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}T${value.slice(
+      8,
+      10,
+    )}:${value.slice(10, 12)}:${value.slice(12, 14)}+10:00`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return `${value}T00:00:00+10:00`;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : new Date(timestamp).toISOString();
+}
+
+function hoursBetween(start, end) {
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return null;
+
+  return Math.max(0, Math.round(((endMs - startMs) / (60 * 60 * 1000)) * 10) / 10);
+}
+
+function sourceObservedAt(metadata, signals) {
+  if (metadata.type === "weather") {
+    return parseSourceTimestamp(signals.weatherObservations?.observedAt);
+  }
+
+  if (metadata.type === "rainfall") {
+    return parseSourceTimestamp(signals.rainfallSeries?.points?.at(-1)?.time);
+  }
+
+  if (metadata.type === "river") {
+    return parseSourceTimestamp(signals.riverContext?.issuedDate);
+  }
+
+  return null;
+}
+
+function staleAfterHours(type) {
+  if (type === "weather") return 12;
+  if (type === "rainfall") return 48;
+  if (type === "river") return 24;
+  return 24;
+}
+
+function buildAreaSourceFreshness(area, sourceMetadata, signals, ingestedAt) {
+  return buildAreaSourceMetadata(area, sourceMetadata).map((metadata) => {
+    const observedAt = sourceObservedAt(metadata, signals);
+    const ageHours = observedAt ? hoursBetween(observedAt, ingestedAt) : null;
+    const staleLimitHours = staleAfterHours(metadata.type);
+    const isStale = ageHours !== null && ageHours > staleLimitHours;
+
+    return {
+      ...metadata,
+      observedAt,
+      ageHours,
+      staleAfterHours: staleLimitHours,
+      freshnessStatus: observedAt === null ? "unknown" : isStale ? "stale" : "current",
+    };
+  });
+}
+
 function buildFreshnessSummary(sourceMetadata) {
   const failedSources = sourceMetadata.filter((metadata) => metadata.status === "failed");
   const fallbackSources = sourceMetadata.filter((metadata) => metadata.mode === "local-fallback");
+  const staleSources = sourceMetadata.filter((metadata) => metadata.freshnessStatus === "stale");
   const fetchedTimes = sourceMetadata
     .map((metadata) => metadata.fetchedAt)
     .filter(Boolean)
@@ -114,10 +182,23 @@ function buildFreshnessSummary(sourceMetadata) {
     sourceCount: sourceMetadata.length,
     failedSourceCount: failedSources.length,
     fallbackSourceCount: fallbackSources.length,
-    status: failedSources.length > 0 ? "partial" : fallbackSources.length > 0 ? "mixed" : "ok",
+    staleSourceCount: staleSources.length,
+    status:
+      failedSources.length > 0
+        ? "partial"
+        : staleSources.length > 0
+          ? "stale"
+          : fallbackSources.length > 0
+            ? "mixed"
+            : "ok",
     notes:
       failedSources.length > 0
         ? failedSources.map((metadata) => `${metadata.label}: ${metadata.note}`)
+        : staleSources.length > 0
+          ? staleSources.map(
+              (metadata) =>
+                `${metadata.label} source data is ${metadata.ageHours}h old; expected within ${metadata.staleAfterHours}h.`,
+            )
         : fallbackSources.length > 0
           ? fallbackSources.map((metadata) => `${metadata.label} is using local fallback data.`)
         : ["All configured signal sources were available."],
@@ -132,16 +213,22 @@ function buildDataQuality(signals) {
   const fallbackSources = (signals.sourceMetadata ?? []).filter(
     (metadata) => metadata.mode === "local-fallback",
   );
+  const staleSources = (signals.sourceMetadata ?? []).filter(
+    (metadata) => metadata.freshnessStatus === "stale",
+  );
 
   return {
     status:
       missing.length > 0
         ? "partial"
+        : staleSources.length > 0
+          ? "stale-source"
         : fallbackSources.length > 0
           ? "mixed-source"
           : "live",
     missing,
     fallbackSources: fallbackSources.map((metadata) => metadata.label),
+    staleSources: staleSources.map((metadata) => metadata.label),
     coverageScore: Math.round(((3 - missing.length) / 3) * 100),
   };
 }
@@ -242,7 +329,12 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
     rainfallSeries,
     riverContext,
     areaRelevance,
-    sourceMetadata: buildAreaSourceMetadata(area, sourceMetadata),
+    sourceMetadata: buildAreaSourceFreshness(
+      area,
+      sourceMetadata,
+      { weatherObservations, rainfallSeries, riverContext },
+      ingestedAt,
+    ),
     ingestedAt,
   };
   const freshness = buildFreshnessSummary(baseSignals.sourceMetadata);
