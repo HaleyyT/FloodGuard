@@ -42,6 +42,7 @@ function routes() {
     "/api/history?area=parramatta",
     "/api/features?area=parramatta",
     "/api/features?area=parramatta&format=csv",
+    "/api/source-health?area=parramatta",
     "/api/signals/parramatta",
     "/api/rainfall/parramatta",
     "/api/river/parramatta",
@@ -53,8 +54,32 @@ function resolveAreaId(url) {
   const queryArea = url.searchParams.get("area");
   if (queryArea) return queryArea;
 
-  const pathMatch = url.pathname.match(/^\/api\/(?:signals|rainfall|river|risk)\/([^/]+)$/);
+  const pathMatch = url.pathname.match(
+    /^\/api\/(?:signals|rainfall|river|risk|source-health)\/([^/]+)$/,
+  );
   return pathMatch?.[1] ?? defaultAreaId;
+}
+
+function buildSourceHealth(areaSignals) {
+  return {
+    area: areaSignals.area,
+    freshness: areaSignals.freshness,
+    dataQuality: areaSignals.dataQuality,
+    sources: areaSignals.sourceMetadata.map((metadata) => ({
+      label: metadata.label,
+      type: metadata.type,
+      mode: metadata.mode,
+      status: metadata.status ?? "ok",
+      source: metadata.source,
+      fetchedAt: metadata.fetchedAt,
+      observedAt: metadata.observedAt,
+      ageHours: metadata.ageHours,
+      staleAfterHours: metadata.staleAfterHours,
+      freshnessStatus: metadata.freshnessStatus,
+      note: metadata.note,
+      areaRelevance: metadata.areaRelevance,
+    })),
+  };
 }
 
 function sendAreaSignals(response, regionalSignals, areaId, selector) {
@@ -143,6 +168,11 @@ async function routeRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/source-health") {
+    sendAreaSignals(response, regionalSignals, resolveAreaId(url), buildSourceHealth);
+    return;
+  }
+
   if (url.pathname === "/api/signals") {
     sendAreaSignals(response, regionalSignals, resolveAreaId(url), (signals) => signals);
     return;
@@ -165,6 +195,11 @@ async function routeRequest(request, response) {
 
   if (url.pathname.startsWith("/api/risk/")) {
     sendAreaSignals(response, regionalSignals, resolveAreaId(url), (signals) => signals.riskAssessment);
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/source-health/")) {
+    sendAreaSignals(response, regionalSignals, resolveAreaId(url), buildSourceHealth);
     return;
   }
 

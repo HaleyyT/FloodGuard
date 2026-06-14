@@ -151,6 +151,7 @@ Useful routes:
 - `GET /api/history?area=parramatta`
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
+- `GET /api/source-health?area=parramatta`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

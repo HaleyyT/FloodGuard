@@ -54,6 +54,8 @@ Each area response includes an `areaRelevance` summary that compares the configu
 
 The backend compares each source observation timestamp with the ingestion time. If a fallback river or rainfall file is old, the API marks it as stale, the dashboard shows Source Freshness, and the risk engine lowers confidence.
 
+`GET /api/source-health?area=parramatta` returns the same source diagnostics in a compact API shape for debugging.
+
 ## Risk Engine
 
 The backend risk engine computes rainfall pressure, river pressure, wetness pressure, and source confidence. It also tracks rainfall in the latest 24h and 72h windows so the dashboard can explain why an area is Low, Moderate, or High risk.
@@ -90,6 +92,7 @@ Environment variables:
 - `GET /api/history?area=parramatta`
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
+- `GET /api/source-health?area=parramatta`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

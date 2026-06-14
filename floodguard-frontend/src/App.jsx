@@ -300,6 +300,21 @@ function formatSourceFreshness(freshness) {
   return "Current";
 }
 
+function formatSourceAge(ageHours) {
+  if (ageHours === null || ageHours === undefined) return "age unknown";
+  if (ageHours < 1) return "under 1h old";
+  return `${Math.round(ageHours)}h old`;
+}
+
+function formatObservedAt(value) {
+  if (!value) return "No source timestamp";
+
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return "No source timestamp";
+
+  return new Date(timestamp).toLocaleString("en-AU");
+}
+
 function buildDashboardData(signals, sourceStatus, liveStatus) {
   const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
@@ -324,6 +339,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     riverSummary,
     rainfallTrend: buildRainfallTrend(signals),
     riskSignals: buildRiskSignals(signals),
+    sourceHealth: signals.sourceMetadata ?? [],
 
     officialSignals: {
       warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
@@ -537,6 +553,19 @@ function buildHistorySummary(history = []) {
   };
 }
 
+function sourceStatusLabel(status) {
+  if (status === "stale") return "Stale";
+  if (status === "current") return "Current";
+  return "Unknown";
+}
+
+function sourceModeLabel(mode) {
+  if (mode === "remote-derived") return "Live derived";
+  if (mode === "remote") return "Live";
+  if (mode === "local-fallback") return "Fallback";
+  return mode || "Unknown";
+}
+
 // #signal visualisation rainfall chart
 function RainfallChart({ rainfallTrend }) {
   return (
@@ -740,6 +769,53 @@ function ActionsPanel({ actions }) {
           <li key={index}>{action}</li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+// #source health diagnostics card
+function SourceHealthPanel({ sources }) {
+  const rows =
+    sources.length > 0
+      ? sources
+      : [
+          {
+            label: "Local fallback signals",
+            type: "static",
+            mode: "local",
+            freshnessStatus: "unknown",
+            observedAt: null,
+            ageHours: null,
+          },
+        ];
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Source diagnostics</p>
+          <h3>Source health</h3>
+        </div>
+      </div>
+
+      <div className="source-health-list">
+        {rows.map((source) => (
+          <div className="source-health-item" key={`${source.type}-${source.label}`}>
+            <div className="source-health-top">
+              <div>
+                <h4>{source.label}</h4>
+                <p>{sourceModeLabel(source.mode)} {source.type}</p>
+              </div>
+              <span className={`source-badge ${source.freshnessStatus || "unknown"}`}>
+                {sourceStatusLabel(source.freshnessStatus)}
+              </span>
+            </div>
+            <p className="source-health-meta">
+              {formatObservedAt(source.observedAt)} - {formatSourceAge(source.ageHours)}
+            </p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -948,6 +1024,7 @@ export default function App() {
 
         <div className="right-column">
           <ActionsPanel actions={dashboardData.recommendedActions} />
+          <SourceHealthPanel sources={dashboardData.sourceHealth} />
           <RiverStatusPanel
             areaName={dashboardData.areaName}
             riverSummary={dashboardData.riverSummary}

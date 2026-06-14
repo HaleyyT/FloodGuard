@@ -268,6 +268,63 @@ p {
   margin-bottom: 7px;
 }
 
+/* #source health diagnostics */
+.source-health-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-health-item {
+  background: #fbfdff;
+  border: 1px solid #e5ecf6;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.source-health-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.source-health-top h4 {
+  color: #10213a;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.source-health-top p,
+.source-health-meta {
+  color: #4c5f79;
+  font-size: 0.82rem;
+  margin-bottom: 0;
+}
+
+.source-badge {
+  border-radius: 999px;
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 8px;
+}
+
+.source-badge.current {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
+.source-badge.stale {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.source-badge.unknown {
+  background: #e8eef7;
+  color: #42546f;
+}
+
 /* #local situational awareness cards */
 .reports-list {
   margin-top: 10px;
