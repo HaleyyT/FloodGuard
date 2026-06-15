@@ -25,6 +25,8 @@ export function buildFeatureRows(historyRecords = []) {
       targetRiskLevel: record.riskLevel,
       targetElevatedConcern: elevatedRiskLevels.has(record.riskLevel) ? 1 : 0,
       riskScore: record.riskScore,
+      decisionReliabilityScore: record.decisionReliability?.score ?? null,
+      decisionReliabilityLevel: record.decisionReliability?.level ?? "unknown",
       previousRiskScore,
       scoreDelta,
       rainfallLatestMm: record.rainfall.latestValidRainfallMm ?? 0,

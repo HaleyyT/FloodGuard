@@ -340,6 +340,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     rainfallTrend: buildRainfallTrend(signals),
     riskSignals: buildRiskSignals(signals),
     sourceHealth: signals.sourceMetadata ?? [],
+    decisionAudit: signals.riskAssessment?.decisionAudit ?? null,
 
     officialSignals: {
       warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
@@ -566,6 +567,11 @@ function sourceModeLabel(mode) {
   return mode || "Unknown";
 }
 
+function reliabilityLabel(audit) {
+  if (!audit) return "Waiting";
+  return `${audit.reliability.level} (${audit.reliability.score}/100)`;
+}
+
 // #signal visualisation rainfall chart
 function RainfallChart({ rainfallTrend }) {
   return (
@@ -612,6 +618,69 @@ function SignalBreakdownChart({ riskSignals }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </section>
+  );
+}
+
+// #decision audit card
+function DecisionAuditPanel({ audit }) {
+  if (!audit) {
+    return (
+      <section className="card">
+        <div className="section-header compact">
+          <div>
+            <p className="section-label">Decision audit</p>
+            <h3>Reliability trace</h3>
+          </div>
+        </div>
+        <p className="audit-note">Waiting for API decision audit.</p>
+      </section>
+    );
+  }
+
+  const auditWarnings = [...audit.reliability.blockers, ...audit.reliability.warnings];
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Decision audit</p>
+          <h3>Reliability trace</h3>
+        </div>
+        <span className={`source-badge ${audit.reliability.level.toLowerCase()}`}>
+          {reliabilityLabel(audit)}
+        </span>
+      </div>
+
+      <div className="audit-score-row">
+        <div>
+          <p className="section-label">Risk score</p>
+          <h3>{audit.score}/100</h3>
+        </div>
+        <p className="audit-note">{audit.scoreFormula}</p>
+      </div>
+
+      <div className="audit-component-list">
+        {audit.components.map((component) => (
+          <div className="audit-component" key={component.label}>
+            <div className="audit-component-top">
+              <span>{component.label}</span>
+              <strong>{component.contribution}</strong>
+            </div>
+            <div className="audit-bar">
+              <span style={{ width: `${Math.min(component.value, 100)}%` }}></span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <ul className="factor-list history-list audit-warning-list">
+        {auditWarnings.length > 0 ? (
+          auditWarnings.map((warning) => <li key={warning}>{warning}</li>)
+        ) : (
+          <li>Decision inputs are complete and current enough for the current prototype.</li>
+        )}
+      </ul>
     </section>
   );
 }
@@ -1031,6 +1100,7 @@ export default function App() {
           />
           <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
+          <DecisionAuditPanel audit={dashboardData.decisionAudit} />
           <MapPanel areaName={dashboardData.areaName} />
         </div>
       </div>

@@ -117,6 +117,15 @@ FloodGuard now checks the source observation date, not only the time the backend
 - stored in history and feature rows
 - used to reduce risk confidence
 
+## Decision Audit
+
+FloodGuard now returns a decision audit with the weighted risk-score components and a reliability rating. This makes the rule engine easier to inspect because the dashboard can show:
+
+- rainfall, river, wetness, and weather score contributions
+- Low / Medium / High reliability
+- stale, fallback, missing, or failed source warnings
+- the thresholds used for Low, Moderate, and High concern
+
 ## Run Locally
 
 ### Requirements
@@ -152,6 +161,7 @@ Useful routes:
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
 - `GET /api/source-health?area=parramatta`
+- `GET /api/decision-audit?area=parramatta`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

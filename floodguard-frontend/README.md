@@ -60,6 +60,8 @@ The backend compares each source observation timestamp with the ingestion time. 
 
 The backend risk engine computes rainfall pressure, river pressure, wetness pressure, and source confidence. It also tracks rainfall in the latest 24h and 72h windows so the dashboard can explain why an area is Low, Moderate, or High risk.
 
+`GET /api/decision-audit?area=parramatta` exposes the weighted score components, concern thresholds, and decision reliability checks used by the dashboard reliability trace.
+
 ## Historical Storage
 
 Every refreshed ingestion appends compact area snapshots under `server/storage/history`. The files are ignored by git, but the API can read them back so the dashboard can show recent signal memory for the selected area.
@@ -93,6 +95,7 @@ Environment variables:
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
 - `GET /api/source-health?area=parramatta`
+- `GET /api/decision-audit?area=parramatta`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

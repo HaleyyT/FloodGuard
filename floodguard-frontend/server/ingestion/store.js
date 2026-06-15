@@ -21,6 +21,7 @@ export function buildAreaHistoryRecord(areaSignals) {
     riskScore: areaSignals.riskAssessment.score,
     riskSignals: areaSignals.riskAssessment.signals,
     riskFeatures: areaSignals.riskAssessment.features,
+    decisionReliability: areaSignals.riskAssessment.decisionAudit?.reliability ?? null,
     rainfall: {
       latestValidRainfallMm: areaSignals.rainfallSeries.latestValidRainfallMm,
       pointCount: areaSignals.rainfallSeries.points.length,

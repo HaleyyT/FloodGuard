@@ -31,6 +31,99 @@ function countByTendency(stations = [], tendency) {
   return stations.filter((station) => station.tendency?.toLowerCase() === tendency).length;
 }
 
+function buildScoreComponents(riskSignals) {
+  return [
+    {
+      label: "Rainfall pressure",
+      value: riskSignals.rainfallPressure,
+      weight: 0.35,
+    },
+    {
+      label: "River pressure",
+      value: riskSignals.riverPressure,
+      weight: 0.3,
+    },
+    {
+      label: "Wetness pressure",
+      value: riskSignals.wetnessPressure,
+      weight: 0.2,
+    },
+    {
+      label: "Weather pressure",
+      value: riskSignals.weatherPressure,
+      weight: 0.15,
+    },
+  ].map((component) => ({
+    ...component,
+    contribution: Number((component.value * component.weight).toFixed(1)),
+  }));
+}
+
+function buildReliability(signals, riskSignals) {
+  const areaRelevanceScore = signals.areaRelevance?.score ?? 100;
+  const coverageScore = signals.dataQuality?.coverageScore ?? 0;
+  const reliabilityScore = clamp(
+    Math.round(riskSignals.confidence * 0.55 + areaRelevanceScore * 0.25 + coverageScore * 0.2),
+  );
+  const warnings = [];
+  const blockers = [];
+
+  if ((signals.freshness?.staleSourceCount ?? 0) > 0) {
+    warnings.push(`${signals.freshness.staleSourceCount} stale source(s) reduce decision reliability`);
+  }
+
+  if ((signals.freshness?.fallbackSourceCount ?? 0) > 0) {
+    warnings.push(`${signals.freshness.fallbackSourceCount} source(s) are using fallback data`);
+  }
+
+  if ((signals.freshness?.failedSourceCount ?? 0) > 0) {
+    blockers.push(`${signals.freshness.failedSourceCount} source(s) failed during ingestion`);
+  }
+
+  if ((signals.dataQuality?.missing ?? []).length > 0) {
+    blockers.push(`Missing signal layer(s): ${signals.dataQuality.missing.join(", ")}`);
+  }
+
+  if (areaRelevanceScore < 80) {
+    warnings.push(`Area signal fit is ${areaRelevanceScore}%`);
+  }
+
+  return {
+    score: reliabilityScore,
+    level: reliabilityScore >= 80 ? "High" : reliabilityScore >= 55 ? "Medium" : "Low",
+    inputs: {
+      confidence: riskSignals.confidence,
+      areaRelevanceScore,
+      coverageScore,
+    },
+    warnings,
+    blockers,
+  };
+}
+
+function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
+  const components = buildScoreComponents(riskSignals);
+  const reliability = buildReliability(signals, riskSignals);
+
+  return {
+    concernLevel,
+    score,
+    scoreFormula: "rainfall 35% + river 30% + wetness 20% + weather 15%",
+    thresholds: {
+      moderate: 45,
+      high: 70,
+    },
+    components,
+    reliability,
+    sourceSummary: {
+      status: signals.freshness?.status ?? "unknown",
+      staleSourceCount: signals.freshness?.staleSourceCount ?? 0,
+      fallbackSourceCount: signals.freshness?.fallbackSourceCount ?? 0,
+      failedSourceCount: signals.freshness?.failedSourceCount ?? 0,
+    },
+  };
+}
+
 export function buildRiskSignals(signals) {
   const weather = signals.weatherObservations ?? {};
   const rainfallSeries = signals.rainfallSeries ?? {};
@@ -104,11 +197,9 @@ export function assessRisk(signals) {
   const rainfall72h = riskSignals.features.rainfall72hMm;
   const risingStations = riskSignals.features.risingRiverStations;
   const reasons = [];
+  const scoreComponents = buildScoreComponents(riskSignals);
   const score = Math.round(
-    riskSignals.rainfallPressure * 0.35 +
-      riskSignals.riverPressure * 0.3 +
-      riskSignals.wetnessPressure * 0.2 +
-      riskSignals.weatherPressure * 0.15,
+    scoreComponents.reduce((total, component) => total + component.contribution, 0),
   );
 
   let concernLevel = score >= 70 ? "High" : score >= 45 ? "Moderate" : "Low";
@@ -160,5 +251,6 @@ export function assessRisk(signals) {
       confidence: riskSignals.confidence,
     },
     features: riskSignals.features,
+    decisionAudit: buildDecisionAudit(signals, riskSignals, score, concernLevel),
   };
 }

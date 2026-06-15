@@ -47,6 +47,7 @@ function routes() {
     "/api/rainfall/parramatta",
     "/api/river/parramatta",
     "/api/risk/parramatta",
+    "/api/decision-audit?area=parramatta",
   ];
 }
 
@@ -55,7 +56,7 @@ function resolveAreaId(url) {
   if (queryArea) return queryArea;
 
   const pathMatch = url.pathname.match(
-    /^\/api\/(?:signals|rainfall|river|risk|source-health)\/([^/]+)$/,
+    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit)\/([^/]+)$/,
   );
   return pathMatch?.[1] ?? defaultAreaId;
 }
@@ -173,6 +174,16 @@ async function routeRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/decision-audit") {
+    sendAreaSignals(
+      response,
+      regionalSignals,
+      resolveAreaId(url),
+      (signals) => signals.riskAssessment.decisionAudit,
+    );
+    return;
+  }
+
   if (url.pathname === "/api/signals") {
     sendAreaSignals(response, regionalSignals, resolveAreaId(url), (signals) => signals);
     return;
@@ -200,6 +211,16 @@ async function routeRequest(request, response) {
 
   if (url.pathname.startsWith("/api/source-health/")) {
     sendAreaSignals(response, regionalSignals, resolveAreaId(url), buildSourceHealth);
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/decision-audit/")) {
+    sendAreaSignals(
+      response,
+      regionalSignals,
+      resolveAreaId(url),
+      (signals) => signals.riskAssessment.decisionAudit,
+    );
     return;
   }
 
