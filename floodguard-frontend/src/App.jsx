@@ -14,6 +14,7 @@ import {
 
 import { buildPublicSignalCards } from "./data/parramattaSignals";
 import {
+  fetchBaselinePrediction,
   fetchAreaFeatures,
   fetchAreaHistory,
   fetchFloodguardAreas,
@@ -539,6 +540,55 @@ function useAreaFeatures(selectedAreaId, lastUpdated) {
   return featureDataset;
 }
 
+function useBaselinePrediction(selectedAreaId, lastUpdated) {
+  const [baselinePrediction, setBaselinePrediction] = useState({
+    modelName: "transparent feature baseline",
+    status: "unavailable",
+    prediction: null,
+    evaluation: {
+      sampleSize: 0,
+      accuracy: null,
+      truePositive: 0,
+      trueNegative: 0,
+      falsePositive: 0,
+      falseNegative: 0,
+    },
+    readiness: {
+      readyForExperiment: false,
+      rowCount: 0,
+      elevatedExamples: 0,
+      note: "Baseline API is unavailable.",
+    },
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchBaselinePrediction({
+      areaId: selectedAreaId,
+      limit: 100,
+      signal: controller.signal,
+    })
+      .then(setBaselinePrediction)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setBaselinePrediction((current) => ({
+            ...current,
+            status: "unavailable",
+            readiness: {
+              ...current.readiness,
+              note: "Baseline API is unavailable.",
+            },
+          }));
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return baselinePrediction;
+}
+
 function buildHistorySummary(history = []) {
   const latest = history[0] ?? null;
   const previous = history[1] ?? null;
@@ -1019,6 +1069,50 @@ function FeatureReadinessPanel({ dataset }) {
   );
 }
 
+// #baseline prediction card
+function BaselinePredictionPanel({ baseline }) {
+  const prediction = baseline.prediction;
+  const accuracy =
+    baseline.evaluation.accuracy === null
+      ? baseline.evaluation.accuracyStatus === "single-class-history"
+        ? "Needs elevated examples"
+        : "Not enough history"
+      : `${baseline.evaluation.accuracy}%`;
+  const agreement = prediction
+    ? prediction.agreesWithRuleEngine
+      ? "Agrees with rule engine"
+      : "Differs from rule engine"
+    : "Waiting for prediction";
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Baseline modelling</p>
+          <h3>Transparent predictor</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile
+          label="Prediction"
+          value={prediction ? prediction.label : "Waiting"}
+        />
+        <InfoTile
+          label="Baseline Score"
+          value={prediction ? `${prediction.score}/100` : "No score"}
+        />
+      </div>
+
+      <ul className="factor-list history-list">
+        <li>{agreement}</li>
+        <li>Holdout accuracy: {accuracy} across {baseline.evaluation.sampleSize} previous row(s)</li>
+        <li>{baseline.readiness.note}</li>
+      </ul>
+    </section>
+  );
+}
+
 // #system flow card
 function ArchitecturePanel() {
   return (
@@ -1068,6 +1162,7 @@ export default function App() {
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
   const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
+  const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
 
   return (
@@ -1089,6 +1184,7 @@ export default function App() {
           <EvidencePanel evidence={dashboardData.evidence} />
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />
+          <BaselinePredictionPanel baseline={baselinePrediction} />
         </div>
 
         <div className="right-column">

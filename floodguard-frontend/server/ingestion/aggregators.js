@@ -9,6 +9,7 @@ import {
 } from "./normalisers.js";
 import { assessRisk } from "./riskEngine.js";
 import { buildFeatureRows, buildFeatureSummary } from "./features.js";
+import { buildBaselinePrediction } from "./baselineModel.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
 
 function matchesRelevantStation(value, relevantNames = []) {
@@ -450,5 +451,15 @@ export async function readAreaFeatureDataset(areaId = defaultAreaId, limit = 100
     areaId,
     summary: buildFeatureSummary(rows),
     rows,
+  };
+}
+
+export async function readAreaBaselinePrediction(areaId = defaultAreaId, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaId, limit);
+  const rows = buildFeatureRows(history);
+
+  return {
+    areaId,
+    ...buildBaselinePrediction(rows),
   };
 }

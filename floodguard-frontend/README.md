@@ -70,6 +70,8 @@ Every refreshed ingestion appends compact area snapshots under `server/storage/h
 
 `GET /api/features?area=parramatta` transforms stored history into tabular rows with rainfall, river, wetness, confidence, lagged score, and elevated-concern target fields. Use `format=csv` to inspect or export the feature table.
 
+`GET /api/baseline-prediction?area=parramatta` runs a transparent feature baseline over the stored rows. It reports the latest prediction, agreement with the rule engine, holdout accuracy over previous rows, and whether the history is ready for a real baseline experiment.
+
 Environment variables:
 
 - `FLOODGUARD_WEATHER_URL`
@@ -79,6 +81,7 @@ Environment variables:
 - `FLOODGUARD_API_PORT`
 - `VITE_FLOODGUARD_API_URL`
 - `VITE_FLOODGUARD_AREAS_API_URL`
+- `VITE_FLOODGUARD_BASELINE_API_URL`
 - `VITE_FLOODGUARD_REFRESH_MS`
 
 `VITE_FLOODGUARD_REFRESH_MS` controls how often the dashboard refreshes the selected area. It defaults to 60 seconds.
@@ -94,6 +97,7 @@ Environment variables:
 - `GET /api/history?area=parramatta`
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
+- `GET /api/baseline-prediction?area=parramatta`
 - `GET /api/source-health?area=parramatta`
 - `GET /api/decision-audit?area=parramatta`
 - `GET /api/signals/parramatta`

@@ -87,6 +87,10 @@ FloodGuard can now convert stored history into tabular feature rows. These rows 
 
 This prepares the project for a future baseline classifier without pretending that the current small history is enough for a real model yet.
 
+## Baseline Prediction
+
+FloodGuard now includes a transparent feature baseline that scores the latest stored feature row and compares it with the rule-engine label. It is deliberately simple and inspectable, so it acts as a bridge between rule-based decisions and future trained ML models.
+
 ## Regional Pilot
 
 FloodGuard is now multi-area ready without jumping straight to PostGIS. The current pilot uses a simple config mapping to connect each area to relevant public stations:
@@ -160,6 +164,7 @@ Useful routes:
 - `GET /api/history?area=parramatta`
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
+- `GET /api/baseline-prediction?area=parramatta`
 - `GET /api/source-health?area=parramatta`
 - `GET /api/decision-audit?area=parramatta`
 - `GET /api/signals/parramatta`
@@ -174,6 +179,7 @@ Optional remote source environment variables:
 - `FLOODGUARD_RIVER_URL`
 - `VITE_FLOODGUARD_API_URL`
 - `VITE_FLOODGUARD_AREAS_API_URL`
+- `VITE_FLOODGUARD_BASELINE_API_URL`
 - `VITE_FLOODGUARD_REFRESH_MS`
 
 The dashboard refreshes the selected area automatically. Set `VITE_FLOODGUARD_REFRESH_MS` to control the polling interval; the default is 60 seconds.

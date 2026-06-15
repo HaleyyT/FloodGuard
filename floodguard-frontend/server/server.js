@@ -1,5 +1,6 @@
 import http from "node:http";
 import {
+  readAreaBaselinePrediction,
   readAreaFeatureDataset,
   readOrRefreshRegionalSignals,
   readHistoricalSignals,
@@ -42,6 +43,7 @@ function routes() {
     "/api/history?area=parramatta",
     "/api/features?area=parramatta",
     "/api/features?area=parramatta&format=csv",
+    "/api/baseline-prediction?area=parramatta",
     "/api/source-health?area=parramatta",
     "/api/signals/parramatta",
     "/api/rainfall/parramatta",
@@ -56,7 +58,7 @@ function resolveAreaId(url) {
   if (queryArea) return queryArea;
 
   const pathMatch = url.pathname.match(
-    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit)\/([^/]+)$/,
+    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction)\/([^/]+)$/,
   );
   return pathMatch?.[1] ?? defaultAreaId;
 }
@@ -169,6 +171,22 @@ async function routeRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/baseline-prediction") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+
+    if (!selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await readAreaBaselinePrediction(areaId, limit));
+    return;
+  }
+
   if (url.pathname === "/api/source-health") {
     sendAreaSignals(response, regionalSignals, resolveAreaId(url), buildSourceHealth);
     return;
@@ -221,6 +239,22 @@ async function routeRequest(request, response) {
       resolveAreaId(url),
       (signals) => signals.riskAssessment.decisionAudit,
     );
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/baseline-prediction/")) {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+
+    if (!selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await readAreaBaselinePrediction(areaId, limit));
     return;
   }
 
