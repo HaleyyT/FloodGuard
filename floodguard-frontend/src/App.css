@@ -438,6 +438,67 @@ p {
   font-size: 0.88rem;
 }
 
+/* #community report intake */
+.report-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.report-form-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.report-form label {
+  color: #19345a;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.report-form select,
+.report-form textarea {
+  background: #fbfdff;
+  border: 1px solid #d9e7f5;
+  border-radius: 10px;
+  color: #19345a;
+  font: inherit;
+  padding: 9px 10px;
+}
+
+.report-form textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.report-submit {
+  align-self: flex-start;
+}
+
+.report-form-message {
+  color: #42546f;
+  font-size: 0.84rem;
+  margin-bottom: 0;
+}
+
+.community-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.community-report-item {
+  background: #fbfdff;
+  border: 1px solid #e5ecf6;
+  border-radius: 12px;
+  padding: 12px;
+}
+
 .severity {
   border-radius: 999px;
   padding: 5px 9px;

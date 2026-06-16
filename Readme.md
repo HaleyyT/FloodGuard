@@ -15,6 +15,10 @@ Flood-related information is often scattered across multiple public sources. Flo
 - which signals are contributing to risk
 - what actions may matter next
 
+## Community Reports
+
+FloodGuard now includes a small resident-report intake path. The dashboard can save area-specific community observations, and the backend stores them locally as unverified signals so they can later support validation, moderation, and image-assisted evidence.
+
 ## Current MVP
 
 The current prototype includes:
@@ -157,6 +161,8 @@ Useful routes:
 
 - `GET /api/health`
 - `GET /api/areas`
+- `GET /api/community-reports?area=parramatta`
+- `POST /api/community-reports`
 - `GET /api/signals?area=parramatta`
 - `GET /api/signals?area=north-parramatta`
 - `GET /api/signals?area=toongabbie`
@@ -180,6 +186,7 @@ Optional remote source environment variables:
 - `VITE_FLOODGUARD_API_URL`
 - `VITE_FLOODGUARD_AREAS_API_URL`
 - `VITE_FLOODGUARD_BASELINE_API_URL`
+- `VITE_FLOODGUARD_COMMUNITY_REPORTS_API_URL`
 - `VITE_FLOODGUARD_REFRESH_MS`
 
 The dashboard refreshes the selected area automatically. Set `VITE_FLOODGUARD_REFRESH_MS` to control the polling interval; the default is 60 seconds.

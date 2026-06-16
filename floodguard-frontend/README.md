@@ -42,6 +42,8 @@ Fetcher -> Normaliser -> Store -> Risk Engine -> API -> Frontend
 
 The backend reads configured remote JSON URLs when environment variables are present. If a URL is not configured or fetch fails, it uses the checked-in local raw JSON files so the demo remains stable.
 
+Community observations are accepted through `POST /api/community-reports` and stored as local unverified report records. The dashboard reads them back with `GET /api/community-reports?area=parramatta`.
+
 After normalising the shared public feeds, the backend applies area-specific station mapping from `server/ingestion/areaConfig.js`. This keeps the first regional pilot explainable before adding heavier spatial tooling such as PostGIS.
 
 The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is not configured, the rainfall graph uses live BoM rain-trace observations instead of the older local rainfall file. River context still uses local fallback data until `FLOODGUARD_RIVER_URL` is connected to a live source.
@@ -82,6 +84,7 @@ Environment variables:
 - `VITE_FLOODGUARD_API_URL`
 - `VITE_FLOODGUARD_AREAS_API_URL`
 - `VITE_FLOODGUARD_BASELINE_API_URL`
+- `VITE_FLOODGUARD_COMMUNITY_REPORTS_API_URL`
 - `VITE_FLOODGUARD_REFRESH_MS`
 
 `VITE_FLOODGUARD_REFRESH_MS` controls how often the dashboard refreshes the selected area. It defaults to 60 seconds.
@@ -90,6 +93,8 @@ Environment variables:
 
 - `GET /api/health`
 - `GET /api/areas`
+- `GET /api/community-reports?area=parramatta`
+- `POST /api/community-reports`
 - `GET /api/signals?area=parramatta`
 - `GET /api/signals?area=north-parramatta`
 - `GET /api/signals?area=toongabbie`

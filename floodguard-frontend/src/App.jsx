@@ -17,9 +17,11 @@ import {
   fetchBaselinePrediction,
   fetchAreaFeatures,
   fetchAreaHistory,
+  fetchCommunityReports,
   fetchFloodguardAreas,
   fetchParramattaSignals,
   localParramattaSignals,
+  submitCommunityReport,
 } from "./data/apiSignals";
 
 const fallbackAreas = [
@@ -500,6 +502,64 @@ function useAreaHistory(selectedAreaId, lastUpdated) {
   return history;
 }
 
+function useCommunityReports(selectedAreaId, lastUpdated) {
+  const [reports, setReports] = useState([]);
+  const [status, setStatus] = useState("idle");
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchCommunityReports({
+      areaId: selectedAreaId,
+      limit: 6,
+      signal: controller.signal,
+    })
+      .then((apiReports) => {
+        setReports(apiReports);
+        setStatus("ready");
+        setErrorMessage(null);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setStatus("unavailable");
+          setErrorMessage(error.message);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  const submitReport = useCallback(
+    async (report) => {
+      setStatus("submitting");
+
+      try {
+        const savedReport = await submitCommunityReport({
+          ...report,
+          areaId: selectedAreaId,
+        });
+        setReports((current) => [savedReport, ...current].slice(0, 6));
+        setStatus("ready");
+        setErrorMessage(null);
+        return savedReport;
+      } catch (error) {
+        setStatus("unavailable");
+        setErrorMessage(error.message);
+        throw error;
+      }
+    },
+    [selectedAreaId],
+  );
+
+  return {
+    errorMessage,
+    reports,
+    status,
+    submitReport,
+  };
+}
+
 function useAreaFeatures(selectedAreaId, lastUpdated) {
   const [featureDataset, setFeatureDataset] = useState({
     rows: [],
@@ -970,6 +1030,115 @@ function ReportsPanel({ reports }) {
   );
 }
 
+// #community report intake card
+function CommunityReportPanel({ reportState }) {
+  const [form, setForm] = useState({
+    description: "",
+    severity: "low",
+    signalType: "local observation",
+  });
+  const [submitMessage, setSubmitMessage] = useState(null);
+  const isSubmitting = reportState.status === "submitting";
+
+  const updateForm = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitMessage(null);
+
+    try {
+      await reportState.submitReport(form);
+      setForm({
+        description: "",
+        severity: "low",
+        signalType: "local observation",
+      });
+      setSubmitMessage("Report saved for the selected area.");
+    } catch (error) {
+      setSubmitMessage(error.message);
+    }
+  };
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Community input</p>
+          <h3>Resident reports</h3>
+        </div>
+      </div>
+
+      <form className="report-form" onSubmit={handleSubmit}>
+        <div className="report-form-grid">
+          <label>
+            <span>Signal</span>
+            <select name="signalType" onChange={updateForm} value={form.signalType}>
+              <option value="local observation">Local observation</option>
+              <option value="road pooling">Road pooling</option>
+              <option value="creek level">Creek level</option>
+              <option value="blocked drain">Blocked drain</option>
+              <option value="walkway flooding">Walkway flooding</option>
+            </select>
+          </label>
+          <label>
+            <span>Severity</span>
+            <select name="severity" onChange={updateForm} value={form.severity}>
+              <option value="low">Low</option>
+              <option value="moderate">Moderate</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          <span>Observation</span>
+          <textarea
+            name="description"
+            onChange={updateForm}
+            placeholder="Water over footpath near the creek"
+            required
+            rows={3}
+            value={form.description}
+          />
+        </label>
+        <button className="refresh-button report-submit" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Saving" : "Save report"}
+        </button>
+        {submitMessage && <p className="report-form-message">{submitMessage}</p>}
+        {reportState.errorMessage && (
+          <p className="report-form-message">{reportState.errorMessage}</p>
+        )}
+      </form>
+
+      <div className="community-report-list">
+        {reportState.reports.length > 0 ? (
+          reportState.reports.map((report) => (
+            <div className="community-report-item" key={report.id}>
+              <div className="report-top">
+                <div>
+                  <h4>{report.title}</h4>
+                  <p className="report-time">
+                    {new Date(report.createdAt).toLocaleString("en-AU")}
+                  </p>
+                </div>
+                <span className={`severity ${report.severity}`}>{report.severity}</span>
+              </div>
+              <p className="report-description">{report.description}</p>
+            </div>
+          ))
+        ) : (
+          <p className="report-description">No stored resident reports for this area yet.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // #prototype evidence card
 function EvidencePanel({ evidence }) {
   return (
@@ -1161,6 +1330,7 @@ export default function App() {
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
+  const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
   const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
   const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
@@ -1181,6 +1351,7 @@ export default function App() {
         <div className="left-column">
           <FactorsPanel factors={dashboardData.contributingFactors} />
           <ReportsPanel reports={dashboardData.reports} />
+          <CommunityReportPanel reportState={communityReportState} />
           <EvidencePanel evidence={dashboardData.evidence} />
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />
