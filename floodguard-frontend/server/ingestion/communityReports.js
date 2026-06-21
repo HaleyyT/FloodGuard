@@ -43,6 +43,42 @@ function reportConfidence(severity) {
   return 40;
 }
 
+function normaliseDuplicateKey(report) {
+  return `${report.areaId}:${report.signalType}:${report.description.toLowerCase()}`;
+}
+
+function buildValidation(report) {
+  const flags = [];
+  const hasLocationDetail = /\b(near|at|on|beside|outside|under|around|crossing|creek|road|street|drain)\b/i.test(
+    report.description,
+  );
+
+  if (report.description.length < 25) flags.push("short-description");
+  if (!hasLocationDetail) flags.push("needs-location-detail");
+  if (report.severity === "high") flags.push("high-severity-unverified");
+
+  const qualityScore = Math.max(20, Math.min(100, report.confidence + (hasLocationDetail ? 15 : 0) - flags.length * 5));
+
+  return {
+    qualityScore,
+    flags,
+    actionable: qualityScore >= 55,
+  };
+}
+
+async function isDuplicateReport(report) {
+  const recentReports = await readCommunityReports(report.areaId, 50);
+  const duplicateWindowMs = 15 * 60 * 1000;
+  const reportKey = normaliseDuplicateKey(report);
+  const now = new Date(report.createdAt).getTime();
+
+  return recentReports.some((recentReport) => {
+    const recentTime = new Date(recentReport.createdAt).getTime();
+    if (Number.isNaN(recentTime) || now - recentTime > duplicateWindowMs) return false;
+    return normaliseDuplicateKey(recentReport) === reportKey;
+  });
+}
+
 export function validateCommunityReport(input = {}) {
   const areaId = cleanText(input.areaId || defaultAreaId, 80);
   const area = getAreaConfig(areaId);
@@ -62,27 +98,39 @@ export function validateCommunityReport(input = {}) {
     cleanText(input.title, 80) ||
     `${signalType.replace(/^\w/, (letter) => letter.toUpperCase())} report`;
 
+  const report = {
+    id: randomUUID(),
+    areaId: area.id,
+    areaName: area.name,
+    catchment: area.catchment,
+    title,
+    description,
+    severity,
+    signalType,
+    status: "unverified",
+    source: "community",
+    confidence: reportConfidence(severity),
+    createdAt: new Date().toISOString(),
+  };
+
   return {
     area,
     report: {
-      id: randomUUID(),
-      areaId: area.id,
-      areaName: area.name,
-      catchment: area.catchment,
-      title,
-      description,
-      severity,
-      signalType,
-      status: "unverified",
-      source: "community",
-      confidence: reportConfidence(severity),
-      createdAt: new Date().toISOString(),
+      ...report,
+      validation: buildValidation(report),
     },
   };
 }
 
 export async function createCommunityReport(input = {}) {
   const { report } = validateCommunityReport(input);
+
+  if (await isDuplicateReport(report)) {
+    const error = validationError("Duplicate report received recently for this area.");
+    error.statusCode = 409;
+    throw error;
+  }
+
   await mkdir(storageDir, { recursive: true });
   await appendFile(reportsPath, `${JSON.stringify(report)}\n`, "utf8");
   return report;

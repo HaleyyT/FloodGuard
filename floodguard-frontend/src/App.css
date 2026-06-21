@@ -499,6 +499,13 @@ p {
   padding: 12px;
 }
 
+.report-quality {
+  color: #19345a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin: 8px 0 0;
+}
+
 .severity {
   border-radius: 999px;
   padding: 5px 9px;

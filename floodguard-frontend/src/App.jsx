@@ -1129,6 +1129,9 @@ function CommunityReportPanel({ reportState }) {
                 <span className={`severity ${report.severity}`}>{report.severity}</span>
               </div>
               <p className="report-description">{report.description}</p>
+              <p className="report-quality">
+                Quality {report.validation?.qualityScore ?? report.confidence}/100 - {report.status}
+              </p>
             </div>
           ))
         ) : (

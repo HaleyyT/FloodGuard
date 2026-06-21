@@ -19,6 +19,8 @@ Flood-related information is often scattered across multiple public sources. Flo
 
 FloodGuard now includes a small resident-report intake path. The dashboard can save area-specific community observations, and the backend stores them locally as unverified signals so they can later support validation, moderation, and image-assisted evidence.
 
+Report intake includes JSON validation, request size limits, duplicate detection, basic rate limiting, and a quality score so community input is useful without being treated as automatically verified.
+
 ## Current MVP
 
 The current prototype includes:

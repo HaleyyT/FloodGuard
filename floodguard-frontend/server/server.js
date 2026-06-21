@@ -13,6 +13,9 @@ import { featureRowsToCsv } from "./ingestion/features.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
 const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
+const reportRateLimits = new Map();
+const reportRateLimitWindowMs = 10 * 60 * 1000;
+const maxReportsPerWindow = 5;
 
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, {
@@ -84,6 +87,42 @@ function readJsonBody(request) {
   });
 }
 
+function clientKey(request) {
+  const forwardedFor = request.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.length > 0) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return request.socket.remoteAddress || "unknown-client";
+}
+
+function checkReportRateLimit(request) {
+  const key = clientKey(request);
+  const now = Date.now();
+  const current = reportRateLimits.get(key) ?? {
+    count: 0,
+    resetAt: now + reportRateLimitWindowMs,
+  };
+
+  if (now > current.resetAt) {
+    current.count = 0;
+    current.resetAt = now + reportRateLimitWindowMs;
+  }
+
+  current.count += 1;
+  reportRateLimits.set(key, current);
+
+  return {
+    allowed: current.count <= maxReportsPerWindow,
+    retryAfterSeconds: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
+  };
+}
+
+function acceptsJson(request) {
+  const contentType = request.headers["content-type"] || "";
+  return contentType.toLowerCase().includes("application/json");
+}
+
 function resolveAreaId(url) {
   const queryArea = url.searchParams.get("area");
   if (queryArea) return queryArea;
@@ -140,6 +179,20 @@ async function routeRequest(request, response) {
 
   if (request.method === "POST" && url.pathname === "/api/community-reports") {
     try {
+      if (!acceptsJson(request)) {
+        sendJson(response, 415, { error: "Content-Type must be application/json." });
+        return;
+      }
+
+      const rateLimit = checkReportRateLimit(request);
+      if (!rateLimit.allowed) {
+        sendJson(response, 429, {
+          error: "Too many community reports. Please wait before submitting again.",
+          retryAfterSeconds: rateLimit.retryAfterSeconds,
+        });
+        return;
+      }
+
       const body = await readJsonBody(request);
       const report = await createCommunityReport(body);
       sendJson(response, 201, report);
