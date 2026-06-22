@@ -54,8 +54,12 @@ export function buildFeatureRows(historyRecords = []) {
       expectedAreaSignals: record.areaRelevance?.expectedSignals ?? 0,
       matchedRiverStationCount: record.areaRelevance?.matchedRiverStationCount ?? 0,
       missingRiverStationCount: record.areaRelevance?.missingRiverStationCount ?? 0,
+      spatialStationCount: record.spatialRelevance?.stationCount ?? 0,
+      nearestStationDistanceKm: record.spatialRelevance?.nearestStationDistanceKm ?? null,
+      spatialCoverageRadiusKm: record.spatialRelevance?.coverageRadiusKm ?? null,
       dataQualityStatus: record.dataQuality?.status ?? "unknown",
       areaRelevanceStatus: record.areaRelevance?.status ?? "unknown",
+      spatialRelevanceStatus: record.spatialRelevance?.status ?? "unknown",
       freshnessStatus: record.freshness?.status ?? "unknown",
     };
   });

@@ -4,6 +4,7 @@ import {
   readAreaFeatureDataset,
   readOrRefreshRegionalSignals,
   readHistoricalSignals,
+  readSpatialRelevance,
   runRegionalIngestion,
   selectAreaSignals,
 } from "./ingestion/aggregators.js";
@@ -50,6 +51,8 @@ function routes() {
     "/api/features?area=parramatta&format=csv",
     "/api/baseline-prediction?area=parramatta",
     "/api/source-health?area=parramatta",
+    "/api/spatial-relevance?area=parramatta",
+    "/api/spatial-relevance?lat=-33.8&lon=151",
     "/api/signals/parramatta",
     "/api/rainfall/parramatta",
     "/api/river/parramatta",
@@ -131,6 +134,12 @@ function resolveAreaId(url) {
     /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction)\/([^/]+)$/,
   );
   return pathMatch?.[1] ?? defaultAreaId;
+}
+
+function parseCoordinate(value) {
+  if (value === null) return null;
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) ? coordinate : null;
 }
 
 function buildSourceHealth(areaSignals) {
@@ -301,6 +310,24 @@ async function routeRequest(request, response) {
 
   if (url.pathname === "/api/source-health") {
     sendAreaSignals(response, regionalSignals, resolveAreaId(url), buildSourceHealth);
+    return;
+  }
+
+  if (url.pathname === "/api/spatial-relevance") {
+    const areaId = url.searchParams.get("area");
+    const lat = parseCoordinate(url.searchParams.get("lat"));
+    const lon = parseCoordinate(url.searchParams.get("lon"));
+    const result = readSpatialRelevance({ areaId, lat, lon });
+
+    if (!result) {
+      sendJson(response, 400, {
+        error: "Provide a known area or valid lat/lon coordinates.",
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, result);
     return;
   }
 

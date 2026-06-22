@@ -310,6 +310,11 @@ function formatSourceAge(ageHours) {
   return `${Math.round(ageHours)}h old`;
 }
 
+function formatDistanceKm(value) {
+  if (value === null || value === undefined) return "Unknown";
+  return `${value} km`;
+}
+
 function formatObservedAt(value) {
   if (!value) return "No source timestamp";
 
@@ -357,6 +362,8 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
       warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
       areaSignalFit: formatAreaSignalFit(signals.areaRelevance),
       sourceFreshness: formatSourceFreshness(signals.freshness),
+      spatialRadius: formatDistanceKm(signals.spatialRelevance?.coverageRadiusKm),
+      nearestStation: formatDistanceKm(signals.spatialRelevance?.nearestStationDistanceKm),
       rainfall24h: rainDisplay,
       waterTrend: `${riverSummary.primaryTendency} at ${riverSummary.primaryStationName}`,
       forecastOutlook:
@@ -370,6 +377,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     contributingFactors: [
       ...riskAssessment.reasons,
       ...(signals.areaRelevance?.notes ?? []),
+      ...(signals.spatialRelevance?.notes ?? []),
       `Primary river station: ${riverSummary.primaryStationName} (${riverSummary.primaryHeight} m)`,
       `${riverSummary.stationCount} monitored river/creek stations included in current feed`,
     ],
@@ -899,6 +907,14 @@ function OverviewPanel({ data }) {
         <InfoTile
           label="Source Freshness"
           value={data.officialSignals.sourceFreshness}
+        />
+        <InfoTile
+          label="Spatial Radius"
+          value={data.officialSignals.spatialRadius}
+        />
+        <InfoTile
+          label="Nearest Station"
+          value={data.officialSignals.nearestStation}
         />
         <InfoTile
           label="Rainfall (24h)"

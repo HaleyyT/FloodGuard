@@ -12,6 +12,7 @@ import { buildFeatureRows, buildFeatureSummary } from "./features.js";
 import { buildBaselinePrediction } from "./baselineModel.js";
 import { readCommunityReports, summariseCommunityReports } from "./communityReports.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
+import { buildSpatialRelevance, resolveSpatialQuery } from "./spatialRelevance.js";
 
 function matchesRelevantStation(value, relevantNames = []) {
   return relevantNames.some((name) => value?.toLowerCase() === name.toLowerCase());
@@ -275,6 +276,7 @@ function buildAreaRelevance(area, weatherObservations, rainfallSeries, riverCont
     sourceFit.weather.matched + sourceFit.rainfall.matched + sourceFit.river.matched;
   const score = expectedSignals > 0 ? Math.round((matchedSignals / expectedSignals) * 100) : 100;
   const missingRiverStations = riverContext.areaRelevance?.missingStations ?? [];
+  const spatialRelevance = buildSpatialRelevance(area);
   const status = score >= 90 ? "complete" : score >= 60 ? "partial" : "limited";
 
   return {
@@ -288,8 +290,18 @@ function buildAreaRelevance(area, weatherObservations, rainfallSeries, riverCont
     sourceFit,
     matchedRiverStations: riverContext.areaRelevance?.matchedStations ?? [],
     missingRiverStations,
+    spatial: {
+      method: spatialRelevance.method,
+      status: spatialRelevance.status,
+      nearestStationDistanceKm: spatialRelevance.nearestStationDistanceKm,
+      coverageRadiusKm: spatialRelevance.coverageRadiusKm,
+      stationCount: spatialRelevance.stationCount,
+    },
     notes: [
       `${matchedSignals}/${expectedSignals} configured station signals currently map to ${area.name}.`,
+      spatialRelevance.coverageRadiusKm === null
+        ? "Spatial station coverage is waiting for coordinate metadata."
+        : `Configured stations sit within ${spatialRelevance.coverageRadiusKm} km of the area centroid.`,
       missingRiverStations.length > 0
         ? `${missingRiverStations.length} configured river/creek station(s) are not present in the current feed.`
         : "All configured river/creek stations for this area are present in the current feed.",
@@ -312,6 +324,7 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, p
     },
   };
   const areaRelevance = buildAreaRelevance(area, weatherObservations, rainfallSeries, riverContext);
+  const spatialRelevance = buildSpatialRelevance(area);
 
   const baseSignals = {
     area: {
@@ -332,6 +345,7 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, p
     riverContext,
     publicSignalSummary,
     areaRelevance,
+    spatialRelevance,
     sourceMetadata: buildAreaSourceFreshness(
       area,
       sourceMetadata,
@@ -470,4 +484,8 @@ export async function readAreaBaselinePrediction(areaId = defaultAreaId, limit =
     areaId,
     ...buildBaselinePrediction(rows),
   };
+}
+
+export function readSpatialRelevance({ areaId = null, lat = null, lon = null } = {}) {
+  return resolveSpatialQuery({ areaId, lat, lon });
 }

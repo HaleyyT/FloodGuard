@@ -54,6 +54,10 @@ The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is n
 
 Each area response includes an `areaRelevance` summary that compares the configured station mapping with the current feed. The dashboard uses this to show an Area Signal Fit tile, while stored history and feature rows keep the relevance score for future modelling.
 
+Each area response also includes `spatialRelevance`, a lightweight pre-PostGIS distance layer built from station coordinates. It records the nearest signal station, configured station coverage radius, and ranked nearby stations so the dashboard can explain local fit before a full spatial database is added.
+
+`GET /api/spatial-relevance?area=parramatta` returns the area spatial summary. `GET /api/spatial-relevance?lat=-33.8&lon=151` resolves the nearest configured pilot area and ranks nearby stations for that coordinate.
+
 ## Source Freshness
 
 The backend compares each source observation timestamp with the ingestion time. If a fallback river or rainfall file is old, the API marks it as stale, the dashboard shows Source Freshness, and the risk engine lowers confidence.
@@ -107,6 +111,8 @@ Environment variables:
 - `GET /api/baseline-prediction?area=parramatta`
 - `GET /api/source-health?area=parramatta`
 - `GET /api/decision-audit?area=parramatta`
+- `GET /api/spatial-relevance?area=parramatta`
+- `GET /api/spatial-relevance?lat=-33.8&lon=151`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`

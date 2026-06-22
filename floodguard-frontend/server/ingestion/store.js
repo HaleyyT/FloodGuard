@@ -23,6 +23,13 @@ export function buildAreaHistoryRecord(areaSignals) {
     riskFeatures: areaSignals.riskAssessment.features,
     decisionReliability: areaSignals.riskAssessment.decisionAudit?.reliability ?? null,
     publicSignalSummary: areaSignals.publicSignalSummary,
+    spatialRelevance: {
+      status: areaSignals.spatialRelevance?.status ?? "unknown",
+      stationCount: areaSignals.spatialRelevance?.stationCount ?? 0,
+      nearestStationDistanceKm: areaSignals.spatialRelevance?.nearestStationDistanceKm ?? null,
+      coverageRadiusKm: areaSignals.spatialRelevance?.coverageRadiusKm ?? null,
+      method: areaSignals.spatialRelevance?.method ?? "unknown",
+    },
     rainfall: {
       latestValidRainfallMm: areaSignals.rainfallSeries.latestValidRainfallMm,
       pointCount: areaSignals.rainfallSeries.points.length,

@@ -118,8 +118,11 @@ The backend now scores how well the current weather, rainfall, and river feeds m
 - source-level fit for weather, rainfall, and river stations
 - missing configured river or creek stations
 - an area relevance score shown on the dashboard
+- coordinate-based station distances and coverage radius
 
 This gives FloodGuard a clear pre-PostGIS relevance layer: the dashboard can explain why a signal belongs to Parramatta, North Parramatta, or Toongabbie before moving to automatic spatial joins later.
+
+`GET /api/spatial-relevance?area=parramatta` returns the lightweight spatial relevance view for an area. `GET /api/spatial-relevance?lat=-33.8&lon=151` resolves the nearest pilot area and ranks nearby signal stations.
 
 ## Source Freshness
 
@@ -178,6 +181,8 @@ Useful routes:
 - `GET /api/baseline-prediction?area=parramatta`
 - `GET /api/source-health?area=parramatta`
 - `GET /api/decision-audit?area=parramatta`
+- `GET /api/spatial-relevance?area=parramatta`
+- `GET /api/spatial-relevance?lat=-33.8&lon=151`
 - `GET /api/signals/parramatta`
 - `GET /api/rainfall/parramatta`
 - `GET /api/river/parramatta`
