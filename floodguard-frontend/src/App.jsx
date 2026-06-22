@@ -333,6 +333,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
   const publicSignalSummary = signals.publicSignalSummary ?? {
     recentReports: 0,
     actionableReports: 0,
+    imageEvidenceReports: 0,
     publicSignalPressure: 0,
     note: "No public signal summary is available.",
   };
@@ -412,7 +413,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
       {
         label: "Community Signals",
         value: String(publicSignalSummary.recentReports),
-        note: `${publicSignalSummary.actionableReports} actionable, public pressure ${publicSignalSummary.publicSignalPressure}/100`,
+        note: `${publicSignalSummary.actionableReports} actionable, ${publicSignalSummary.imageEvidenceReports ?? 0} with image evidence`,
       },
     ],
   };
@@ -1063,6 +1064,8 @@ function ReportsPanel({ reports }) {
 function CommunityReportPanel({ publicSignalSummary, reportState }) {
   const [form, setForm] = useState({
     description: "",
+    imageCaption: "",
+    imageUrl: "",
     severity: "low",
     signalType: "local observation",
   });
@@ -1085,6 +1088,8 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
       await reportState.submitReport(form);
       setForm({
         description: "",
+        imageCaption: "",
+        imageUrl: "",
         severity: "low",
         signalType: "local observation",
       });
@@ -1116,6 +1121,10 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
           <div>
             <p className="section-label">Public pressure</p>
             <h4>{publicSignalSummary.publicSignalPressure ?? 0}/100</h4>
+          </div>
+          <div>
+            <p className="section-label">Image evidence</p>
+            <h4>{publicSignalSummary.imageEvidenceReports ?? 0}</h4>
           </div>
         </div>
 
@@ -1150,6 +1159,29 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
             value={form.description}
           />
         </label>
+        <div className="report-form-grid">
+          <label>
+            <span>Image evidence URL</span>
+            <input
+              name="imageUrl"
+              onChange={updateForm}
+              placeholder="https://example.com/flood-photo.jpg"
+              type="url"
+              value={form.imageUrl}
+            />
+          </label>
+          <label>
+            <span>Image note</span>
+            <input
+              maxLength={120}
+              name="imageCaption"
+              onChange={updateForm}
+              placeholder="Photo facing the creek crossing"
+              type="text"
+              value={form.imageCaption}
+            />
+          </label>
+        </div>
         <button className="refresh-button report-submit" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Saving" : "Save report"}
         </button>
@@ -1173,6 +1205,11 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
                 <span className={`severity ${report.severity}`}>{report.severity}</span>
               </div>
               <p className="report-description">{report.description}</p>
+              {report.imageEvidence && (
+                <p className="report-evidence">
+                  Image evidence linked - {report.imageEvidence.verification}
+                </p>
+              )}
               <p className="report-quality">
                 Quality {report.validation?.qualityScore ?? report.confidence}/100 - {report.status}
               </p>

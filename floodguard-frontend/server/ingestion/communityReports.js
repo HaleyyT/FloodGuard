@@ -7,6 +7,7 @@ import { storageDir } from "./config.js";
 const reportsPath = path.join(storageDir, "community-reports.jsonl");
 const recentWindowMs = 24 * 60 * 60 * 1000;
 const severityLevels = new Set(["low", "moderate", "high"]);
+const allowedImageExtensions = new Set(["jpg", "jpeg", "png", "webp", "heic"]);
 const signalTypes = new Set([
   "road pooling",
   "creek level",
@@ -38,6 +39,39 @@ function normaliseSignalType(value) {
   return signalTypes.has(signalType) ? signalType : "local observation";
 }
 
+function normaliseImageEvidence(input = {}) {
+  const rawUrl = cleanText(input.imageUrl, 500);
+  if (!rawUrl) return null;
+
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw validationError("Image evidence must be a valid URL.");
+  }
+
+  if (url.protocol !== "https:") {
+    throw validationError("Image evidence must use a secure https URL.");
+  }
+
+  if (url.username || url.password) {
+    throw validationError("Image evidence URL must not contain credentials.");
+  }
+
+  const extension = url.pathname.split(".").at(-1)?.toLowerCase();
+  if (!allowedImageExtensions.has(extension)) {
+    throw validationError("Image evidence must link to a jpg, jpeg, png, webp, or heic file.");
+  }
+
+  return {
+    url: url.toString(),
+    caption: cleanText(input.imageCaption, 120),
+    status: "metadata-only",
+    verification: "unreviewed",
+    submittedAt: new Date().toISOString(),
+  };
+}
+
 function reportConfidence(severity) {
   if (severity === "high") return 70;
   if (severity === "moderate") return 55;
@@ -50,6 +84,7 @@ function normaliseDuplicateKey(report) {
 
 function buildValidation(report) {
   const flags = [];
+  const hasImageEvidence = Boolean(report.imageEvidence);
   const hasLocationDetail = /\b(near|at|on|beside|outside|under|around|crossing|creek|road|street|drain)\b/i.test(
     report.description,
   );
@@ -58,12 +93,22 @@ function buildValidation(report) {
   if (!hasLocationDetail) flags.push("needs-location-detail");
   if (report.severity === "high") flags.push("high-severity-unverified");
 
-  const qualityScore = Math.max(20, Math.min(100, report.confidence + (hasLocationDetail ? 15 : 0) - flags.length * 5));
+  const qualityScore = Math.max(
+    20,
+    Math.min(
+      100,
+      report.confidence +
+        (hasLocationDetail ? 15 : 0) +
+        (hasImageEvidence ? 10 : 0) -
+        flags.length * 5,
+    ),
+  );
 
   return {
     qualityScore,
     flags,
     actionable: qualityScore >= 55,
+    imageEvidence: hasImageEvidence ? "linked-unreviewed" : "none",
   };
 }
 
@@ -95,6 +140,7 @@ export function validateCommunityReport(input = {}) {
 
   const severity = normaliseSeverity(input.severity);
   const signalType = normaliseSignalType(input.signalType);
+  const imageEvidence = normaliseImageEvidence(input);
   const title =
     cleanText(input.title, 80) ||
     `${signalType.replace(/^\w/, (letter) => letter.toUpperCase())} report`;
@@ -112,6 +158,7 @@ export function validateCommunityReport(input = {}) {
     source: "community",
     confidence: reportConfidence(severity),
     createdAt: new Date().toISOString(),
+    ...(imageEvidence ? { imageEvidence } : {}),
   };
 
   return {
@@ -167,6 +214,7 @@ export function summariseCommunityReports(reports = [], referenceTime = new Date
     return referenceTimestamp - createdAt <= recentWindowMs;
   });
   const actionableReports = recentReports.filter((report) => report.validation?.actionable);
+  const imageEvidenceReports = recentReports.filter((report) => report.imageEvidence);
   const highSeverityReports = recentReports.filter((report) => report.severity === "high");
   const moderateSeverityReports = recentReports.filter((report) => report.severity === "moderate");
   const averageQuality =
@@ -192,6 +240,7 @@ export function summariseCommunityReports(reports = [], referenceTime = new Date
     totalReports: reports.length,
     recentReports: recentReports.length,
     actionableReports: actionableReports.length,
+    imageEvidenceReports: imageEvidenceReports.length,
     highSeverityReports: highSeverityReports.length,
     moderateSeverityReports: moderateSeverityReports.length,
     averageQuality,
@@ -205,6 +254,6 @@ export function summariseCommunityReports(reports = [], referenceTime = new Date
     note:
       recentReports.length === 0
         ? "No recent community reports are stored for this area."
-        : `${recentReports.length} recent unverified community report(s), ${actionableReports.length} actionable after quality checks.`,
+        : `${recentReports.length} recent unverified community report(s), ${actionableReports.length} actionable after quality checks, ${imageEvidenceReports.length} with image evidence.`,
   };
 }

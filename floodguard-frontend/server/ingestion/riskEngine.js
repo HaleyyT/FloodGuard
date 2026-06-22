@@ -125,6 +125,7 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
       status: signals.publicSignalSummary?.status ?? "unknown",
       recentReports: signals.publicSignalSummary?.recentReports ?? 0,
       actionableReports: signals.publicSignalSummary?.actionableReports ?? 0,
+      imageEvidenceReports: signals.publicSignalSummary?.imageEvidenceReports ?? 0,
       publicSignalPressure: signals.publicSignalSummary?.publicSignalPressure ?? 0,
       note: signals.publicSignalSummary?.note ?? "No public signal summary is available.",
     },

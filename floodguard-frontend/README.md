@@ -46,6 +46,8 @@ Community observations are accepted through `POST /api/community-reports` and st
 
 Recent validated reports are summarised per area into a bounded public-signal pressure score. The risk engine exposes this as supplementary decision evidence and feature data, but it does not directly override official weather, rainfall, or river risk signals.
 
+Image-assisted validation starts as a metadata-only flow: a resident report may include a secure HTTPS image URL and short note. The backend validates the URL, stores the link as unreviewed supplementary evidence, and avoids accepting raw file uploads until storage, scanning, and moderation controls are ready.
+
 After normalising the shared public feeds, the backend applies area-specific station mapping from `server/ingestion/areaConfig.js`. This keeps the first regional pilot explainable before adding heavier spatial tooling such as PostGIS.
 
 The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is not configured, the rainfall graph uses live BoM rain-trace observations instead of the older local rainfall file. River context still uses local fallback data until `FLOODGUARD_RIVER_URL` is connected to a live source.
@@ -76,7 +78,7 @@ Every refreshed ingestion appends compact area snapshots under `server/storage/h
 
 ## ML-Ready Features
 
-`GET /api/features?area=parramatta` transforms stored history into tabular rows with rainfall, river, wetness, confidence, public-signal pressure, lagged score, and elevated-concern target fields. Use `format=csv` to inspect or export the feature table.
+`GET /api/features?area=parramatta` transforms stored history into tabular rows with rainfall, river, wetness, confidence, public-signal pressure, image-evidence counts, spatial distance features, lagged score, and elevated-concern target fields. Use `format=csv` to inspect or export the feature table.
 
 `GET /api/baseline-prediction?area=parramatta` runs a transparent feature baseline over the stored rows. It reports the latest prediction, agreement with the rule engine, holdout accuracy over previous rows, and whether the history is ready for a real baseline experiment.
 

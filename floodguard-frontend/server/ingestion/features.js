@@ -45,6 +45,7 @@ export function buildFeatureRows(historyRecords = []) {
       confidence: record.riskSignals?.confidence ?? 0,
       recentCommunityReports: record.publicSignalSummary?.recentReports ?? 0,
       actionableCommunityReports: record.publicSignalSummary?.actionableReports ?? 0,
+      imageEvidenceReports: record.publicSignalSummary?.imageEvidenceReports ?? 0,
       averageCommunityReportQuality: record.publicSignalSummary?.averageQuality ?? 0,
       fallbackSourceCount: record.riskFeatures?.fallbackSourceCount ?? 0,
       staleSourceCount: record.riskFeatures?.staleSourceCount ?? 0,

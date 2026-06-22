@@ -449,7 +449,7 @@ p {
 .community-summary {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .community-summary div {
@@ -481,6 +481,7 @@ p {
 }
 
 .report-form select,
+.report-form input,
 .report-form textarea {
   background: #fbfdff;
   border: 1px solid #d9e7f5;
@@ -521,6 +522,13 @@ p {
 .report-quality {
   color: #19345a;
   font-size: 0.8rem;
+  font-weight: 700;
+  margin: 8px 0 0;
+}
+
+.report-evidence {
+  color: #184e9f;
+  font-size: 0.82rem;
   font-weight: 700;
   margin: 8px 0 0;
 }
