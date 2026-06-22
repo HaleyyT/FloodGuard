@@ -9,7 +9,11 @@ import {
   selectAreaSignals,
 } from "./ingestion/aggregators.js";
 import { defaultAreaId } from "./ingestion/areaConfig.js";
-import { createCommunityReport, readCommunityReports } from "./ingestion/communityReports.js";
+import {
+  buildImageEvidenceReviewQueue,
+  createCommunityReport,
+  readCommunityReports,
+} from "./ingestion/communityReports.js";
 import { featureRowsToCsv } from "./ingestion/features.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
@@ -47,6 +51,7 @@ function routes() {
     "/api/signals?area=toongabbie",
     "/api/history?area=parramatta",
     "/api/community-reports?area=parramatta",
+    "/api/evidence-review?area=parramatta",
     "/api/features?area=parramatta",
     "/api/features?area=parramatta&format=csv",
     "/api/baseline-prediction?area=parramatta",
@@ -265,6 +270,26 @@ async function routeRequest(request, response) {
     }
 
     sendJson(response, 200, await readCommunityReports(areaId, limit));
+    return;
+  }
+
+  if (url.pathname === "/api/evidence-review") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 20);
+
+    if (!selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    const reports = await readCommunityReports(areaId, Math.min(Math.max(limit * 2, 20), 100));
+    sendJson(response, 200, {
+      areaId,
+      ...buildImageEvidenceReviewQueue(reports, limit),
+    });
     return;
   }
 

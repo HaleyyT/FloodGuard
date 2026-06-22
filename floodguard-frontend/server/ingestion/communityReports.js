@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import net from "node:net";
 import { defaultAreaId, getAreaConfig } from "./areaConfig.js";
 import { storageDir } from "./config.js";
 
@@ -8,6 +9,7 @@ const reportsPath = path.join(storageDir, "community-reports.jsonl");
 const recentWindowMs = 24 * 60 * 60 * 1000;
 const severityLevels = new Set(["low", "moderate", "high"]);
 const allowedImageExtensions = new Set(["jpg", "jpeg", "png", "webp", "heic"]);
+const blockedImageHosts = new Set(["localhost", "localhost.localdomain"]);
 const signalTypes = new Set([
   "road pooling",
   "creek level",
@@ -39,6 +41,41 @@ function normaliseSignalType(value) {
   return signalTypes.has(signalType) ? signalType : "local observation";
 }
 
+function isPrivateImageHost(hostname) {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const ipVersion = net.isIP(host);
+
+  if (blockedImageHosts.has(host) || host.endsWith(".local")) return true;
+
+  if (ipVersion === 4) {
+    const [first, second] = host.split(".").map(Number);
+    return (
+      first === 10 ||
+      first === 127 ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168) ||
+      (first === 169 && second === 254) ||
+      first === 0
+    );
+  }
+
+  if (ipVersion === 6) {
+    return host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80");
+  }
+
+  return false;
+}
+
+function safeImageHost(imageEvidence) {
+  if (imageEvidence.host) return imageEvidence.host;
+
+  try {
+    return new URL(imageEvidence.url).hostname.toLowerCase();
+  } catch {
+    return "unknown-host";
+  }
+}
+
 function normaliseImageEvidence(input = {}) {
   const rawUrl = cleanText(input.imageUrl, 500);
   if (!rawUrl) return null;
@@ -58,6 +95,10 @@ function normaliseImageEvidence(input = {}) {
     throw validationError("Image evidence URL must not contain credentials.");
   }
 
+  if (isPrivateImageHost(url.hostname)) {
+    throw validationError("Image evidence must not use localhost or private network hosts.");
+  }
+
   const extension = url.pathname.split(".").at(-1)?.toLowerCase();
   if (!allowedImageExtensions.has(extension)) {
     throw validationError("Image evidence must link to a jpg, jpeg, png, webp, or heic file.");
@@ -66,9 +107,75 @@ function normaliseImageEvidence(input = {}) {
   return {
     url: url.toString(),
     caption: cleanText(input.imageCaption, 120),
+    host: url.hostname.toLowerCase(),
+    mediaType: extension,
     status: "metadata-only",
     verification: "unreviewed",
     submittedAt: new Date().toISOString(),
+  };
+}
+
+function imageEvidencePriority(report) {
+  const severityScore = report.severity === "high" ? 70 : report.severity === "moderate" ? 45 : 20;
+  const qualityScore = report.validation?.qualityScore ?? report.confidence ?? 0;
+  const imageCaptionScore = report.imageEvidence?.caption ? 10 : 0;
+  const score = Math.min(100, Math.round(severityScore + qualityScore * 0.35 + imageCaptionScore));
+
+  return {
+    score,
+    level: score >= 85 ? "urgent-review" : score >= 60 ? "elevated-review" : "routine-review",
+  };
+}
+
+export function buildImageEvidenceReviewItem(report) {
+  if (!report.imageEvidence) return null;
+
+  const priority = imageEvidencePriority(report);
+  const reasons = [
+    `${report.severity} severity community report`,
+    `quality score ${report.validation?.qualityScore ?? report.confidence ?? "unknown"}`,
+  ];
+
+  if (report.validation?.flags?.length > 0) {
+    reasons.push(`${report.validation.flags.length} validation flag(s) need review`);
+  }
+
+  if (!report.imageEvidence.caption) {
+    reasons.push("image note is missing");
+  }
+
+  return {
+    id: report.id,
+    areaId: report.areaId,
+    areaName: report.areaName,
+    title: report.title,
+    signalType: report.signalType,
+    severity: report.severity,
+    createdAt: report.createdAt,
+    imageHost: safeImageHost(report.imageEvidence),
+    imageType: report.imageEvidence.mediaType ?? report.imageEvidence.url.split(".").at(-1)?.toLowerCase(),
+    caption: report.imageEvidence.caption || "No image note supplied.",
+    verification: report.imageEvidence.verification ?? "unreviewed",
+    reviewStatus: "needs-human-review",
+    priority,
+    reasons,
+  };
+}
+
+export function buildImageEvidenceReviewQueue(reports = [], limit = 20) {
+  const items = reports
+    .map(buildImageEvidenceReviewItem)
+    .filter(Boolean)
+    .sort((a, b) => b.priority.score - a.priority.score || new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, limit);
+
+  return {
+    itemCount: items.length,
+    urgentCount: items.filter((item) => item.priority.level === "urgent-review").length,
+    elevatedCount: items.filter((item) => item.priority.level === "elevated-review").length,
+    routineCount: items.filter((item) => item.priority.level === "routine-review").length,
+    privacyNote: "Review items expose image host and metadata only; raw image URLs remain inside report storage.",
+    items,
   };
 }
 
@@ -215,6 +322,7 @@ export function summariseCommunityReports(reports = [], referenceTime = new Date
   });
   const actionableReports = recentReports.filter((report) => report.validation?.actionable);
   const imageEvidenceReports = recentReports.filter((report) => report.imageEvidence);
+  const imageReviewQueue = buildImageEvidenceReviewQueue(imageEvidenceReports);
   const highSeverityReports = recentReports.filter((report) => report.severity === "high");
   const moderateSeverityReports = recentReports.filter((report) => report.severity === "moderate");
   const averageQuality =
@@ -241,6 +349,9 @@ export function summariseCommunityReports(reports = [], referenceTime = new Date
     recentReports: recentReports.length,
     actionableReports: actionableReports.length,
     imageEvidenceReports: imageEvidenceReports.length,
+    imageReviewQueueCount: imageReviewQueue.itemCount,
+    urgentImageReviewCount: imageReviewQueue.urgentCount,
+    elevatedImageReviewCount: imageReviewQueue.elevatedCount,
     highSeverityReports: highSeverityReports.length,
     moderateSeverityReports: moderateSeverityReports.length,
     averageQuality,

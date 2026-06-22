@@ -23,7 +23,7 @@ Report intake includes JSON validation, request size limits, duplicate detection
 
 Recent validated reports are also summarised into a bounded public-signal pressure score. This score is attached to each area as supplementary evidence for dashboard explanations, decision audit context, and ML-ready feature rows without overriding official rainfall, river, or weather risk signals.
 
-The first image-assisted validation step is metadata-only for safety. Residents can attach a secure HTTPS image link to a report, but FloodGuard stores it as unreviewed supplementary evidence instead of uploading or automatically trusting the file.
+The first image-assisted validation step is metadata-only for safety. Residents can attach a secure HTTPS image link to a report, but FloodGuard stores it as unreviewed supplementary evidence instead of uploading or automatically trusting the file. Linked evidence is placed into a review queue with priority scoring, and localhost/private-network image hosts are rejected.
 
 ## Current MVP
 
@@ -93,6 +93,7 @@ FloodGuard can now convert stored history into tabular feature rows. These rows 
 - wetness and pressure scores
 - supplementary public-signal pressure from recent community reports
 - image-evidence counts from unreviewed community report links
+- image review queue priority counts
 - source confidence
 - lagged risk score change
 - target label for elevated local concern
@@ -174,6 +175,7 @@ Useful routes:
 - `GET /api/areas`
 - `GET /api/community-reports?area=parramatta`
 - `POST /api/community-reports`
+- `GET /api/evidence-review?area=parramatta`
 - `GET /api/signals?area=parramatta`
 - `GET /api/signals?area=north-parramatta`
 - `GET /api/signals?area=toongabbie`

@@ -18,6 +18,7 @@ import {
   fetchAreaFeatures,
   fetchAreaHistory,
   fetchCommunityReports,
+  fetchEvidenceReviewQueue,
   fetchFloodguardAreas,
   fetchParramattaSignals,
   localParramattaSignals,
@@ -334,6 +335,9 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     recentReports: 0,
     actionableReports: 0,
     imageEvidenceReports: 0,
+    imageReviewQueueCount: 0,
+    urgentImageReviewCount: 0,
+    elevatedImageReviewCount: 0,
     publicSignalPressure: 0,
     note: "No public signal summary is available.",
   };
@@ -580,6 +584,44 @@ function useCommunityReports(selectedAreaId, lastUpdated) {
     status,
     submitReport,
   };
+}
+
+function useEvidenceReviewQueue(selectedAreaId, lastUpdated) {
+  const [queue, setQueue] = useState({
+    itemCount: 0,
+    urgentCount: 0,
+    elevatedCount: 0,
+    routineCount: 0,
+    privacyNote: "Evidence review API is unavailable.",
+    items: [],
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchEvidenceReviewQueue({
+      areaId: selectedAreaId,
+      limit: 8,
+      signal: controller.signal,
+    })
+      .then(setQueue)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setQueue({
+            itemCount: 0,
+            urgentCount: 0,
+            elevatedCount: 0,
+            routineCount: 0,
+            privacyNote: "Evidence review API is unavailable.",
+            items: [],
+          });
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return queue;
 }
 
 function useAreaFeatures(selectedAreaId, lastUpdated) {
@@ -1223,6 +1265,51 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
   );
 }
 
+// #image evidence review card
+function EvidenceReviewPanel({ queue }) {
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Image-assisted validation</p>
+          <h3>Evidence review queue</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Needs review" value={String(queue.itemCount)} />
+        <InfoTile label="Elevated/urgent" value={String(queue.urgentCount + queue.elevatedCount)} />
+      </div>
+
+      <div className="evidence-review-list">
+        {queue.items.length > 0 ? (
+          queue.items.map((item) => (
+            <div className="evidence-review-item" key={item.id}>
+              <div className="report-top">
+                <div>
+                  <h4>{item.title}</h4>
+                  <p className="report-time">
+                    {item.imageHost} - {item.imageType}
+                  </p>
+                </div>
+                <span className={`review-priority ${item.priority.level}`}>
+                  {item.priority.score}/100
+                </span>
+              </div>
+              <p className="report-description">{item.caption}</p>
+              <p className="report-evidence">{item.reasons.join("; ")}</p>
+            </div>
+          ))
+        ) : (
+          <p className="report-description">No linked image evidence is waiting for review.</p>
+        )}
+      </div>
+
+      <p className="report-form-message">{queue.privacyNote}</p>
+    </section>
+  );
+}
+
 // #prototype evidence card
 function EvidencePanel({ evidence }) {
   return (
@@ -1415,6 +1502,7 @@ export default function App() {
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
   const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
+  const evidenceReviewQueue = useEvidenceReviewQueue(selectedAreaId, liveStatus.lastUpdated);
   const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
   const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
@@ -1439,6 +1527,7 @@ export default function App() {
             publicSignalSummary={dashboardData.publicSignalSummary}
             reportState={communityReportState}
           />
+          <EvidenceReviewPanel queue={evidenceReviewQueue} />
           <EvidencePanel evidence={dashboardData.evidence} />
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />

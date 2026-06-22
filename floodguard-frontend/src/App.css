@@ -512,11 +512,19 @@ p {
   gap: 10px;
 }
 
-.community-report-item {
+.community-report-item,
+.evidence-review-item {
   background: #fbfdff;
   border: 1px solid #e5ecf6;
   border-radius: 12px;
   padding: 12px;
+}
+
+.evidence-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .report-quality {
@@ -531,6 +539,29 @@ p {
   font-size: 0.82rem;
   font-weight: 700;
   margin: 8px 0 0;
+}
+
+.review-priority {
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
+.review-priority.urgent-review {
+  background: #fde8e8;
+  color: #a12a2a;
+}
+
+.review-priority.elevated-review {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.review-priority.routine-review {
+  background: #e2f6e8;
+  color: #156f39;
 }
 
 .severity {
