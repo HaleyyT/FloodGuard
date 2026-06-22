@@ -10,6 +10,7 @@ import {
 import { assessRisk } from "./riskEngine.js";
 import { buildFeatureRows, buildFeatureSummary } from "./features.js";
 import { buildBaselinePrediction } from "./baselineModel.js";
+import { readCommunityReports, summariseCommunityReports } from "./communityReports.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
 
 function matchesRelevantStation(value, relevantNames = []) {
@@ -296,7 +297,7 @@ function buildAreaRelevance(area, weatherObservations, rainfallSeries, riverCont
   };
 }
 
-function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
+function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, publicSignalSummary) {
   const rainfallSeries = filterRainfallForArea(normalizedSources.rainfallSeries, area);
   const riverContext = filterRiverForArea(normalizedSources.riverContext, area);
   const weatherObservations = {
@@ -329,6 +330,7 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt) {
     weatherObservations,
     rainfallSeries,
     riverContext,
+    publicSignalSummary,
     areaRelevance,
     sourceMetadata: buildAreaSourceFreshness(
       area,
@@ -399,12 +401,18 @@ export async function buildRegionalSignals() {
     rainfallSeries,
     riverContext: normalizeRiverContext(riverSource.data),
   };
-  const areas = Object.fromEntries(
-    Object.values(areaConfigs).map((area) => [
-      area.id,
-      buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt),
-    ]),
+  const areaEntries = await Promise.all(
+    Object.values(areaConfigs).map(async (area) => {
+      const communityReports = await readCommunityReports(area.id, 50);
+      const publicSignalSummary = summariseCommunityReports(communityReports, ingestedAt);
+
+      return [
+        area.id,
+        buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, publicSignalSummary),
+      ];
+    }),
   );
+  const areas = Object.fromEntries(areaEntries);
 
   return {
     defaultAreaId,

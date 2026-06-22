@@ -121,6 +121,13 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
       fallbackSourceCount: signals.freshness?.fallbackSourceCount ?? 0,
       failedSourceCount: signals.freshness?.failedSourceCount ?? 0,
     },
+    publicSignals: {
+      status: signals.publicSignalSummary?.status ?? "unknown",
+      recentReports: signals.publicSignalSummary?.recentReports ?? 0,
+      actionableReports: signals.publicSignalSummary?.actionableReports ?? 0,
+      publicSignalPressure: signals.publicSignalSummary?.publicSignalPressure ?? 0,
+      note: signals.publicSignalSummary?.note ?? "No public signal summary is available.",
+    },
   };
 }
 
@@ -196,6 +203,7 @@ export function assessRisk(signals) {
   const rainfall24h = riskSignals.features.rainfall24hMm;
   const rainfall72h = riskSignals.features.rainfall72hMm;
   const risingStations = riskSignals.features.risingRiverStations;
+  const publicSignalSummary = signals.publicSignalSummary ?? {};
   const reasons = [];
   const scoreComponents = buildScoreComponents(riskSignals);
   const score = Math.round(
@@ -230,6 +238,12 @@ export function assessRisk(signals) {
     );
   }
 
+  if ((publicSignalSummary.actionableReports ?? 0) > 0) {
+    reasons.push(
+      `${publicSignalSummary.actionableReports} unverified actionable community report(s) are included as supplementary evidence`,
+    );
+  }
+
   if (reasons.length === 0) {
     reasons.push(`${shortAreaName} rainfall and river-height signals remain below concern thresholds`);
   }
@@ -248,6 +262,7 @@ export function assessRisk(signals) {
       rainfallPressure: riskSignals.rainfallPressure,
       riverPressure: riskSignals.riverPressure,
       wetnessPressure: riskSignals.wetnessPressure,
+      publicSignalPressure: publicSignalSummary.publicSignalPressure ?? 0,
       confidence: riskSignals.confidence,
     },
     features: riskSignals.features,

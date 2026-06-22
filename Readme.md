@@ -21,6 +21,8 @@ FloodGuard now includes a small resident-report intake path. The dashboard can s
 
 Report intake includes JSON validation, request size limits, duplicate detection, basic rate limiting, and a quality score so community input is useful without being treated as automatically verified.
 
+Recent validated reports are also summarised into a bounded public-signal pressure score. This score is attached to each area as supplementary evidence for dashboard explanations, decision audit context, and ML-ready feature rows without overriding official rainfall, river, or weather risk signals.
+
 ## Current MVP
 
 The current prototype includes:
@@ -87,6 +89,7 @@ FloodGuard can now convert stored history into tabular feature rows. These rows 
 - rainfall features
 - river tendency features
 - wetness and pressure scores
+- supplementary public-signal pressure from recent community reports
 - source confidence
 - lagged risk score change
 - target label for elevated local concern

@@ -96,6 +96,7 @@ function buildRiskSignals(signals) {
       { name: "Rainfall", value: backendSignals.rainfallPressure ?? 0 },
       { name: "River", value: backendSignals.riverPressure ?? 0 },
       { name: "Wetness", value: backendSignals.wetnessPressure ?? 0 },
+      { name: "Public", value: backendSignals.publicSignalPressure ?? 0 },
       { name: "Confidence", value: backendSignals.confidence ?? 0 },
     ];
   }
@@ -324,6 +325,12 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
   const publicSignalCards = buildPublicSignalCards(signals);
   const riskAssessment = buildRiskAssessment(signals, riverSummary, publicSignalCards);
   const latestRain = signals.rainfallSeries.latestValidRainfallMm;
+  const publicSignalSummary = signals.publicSignalSummary ?? {
+    recentReports: 0,
+    actionableReports: 0,
+    publicSignalPressure: 0,
+    note: "No public signal summary is available.",
+  };
   const rainDisplay = latestRain !== null ? `${latestRain} mm` : "No recent reading";
   const dataStatus =
     sourceStatus === "api" && signals.freshness?.status === "stale"
@@ -344,6 +351,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     riskSignals: buildRiskSignals(signals),
     sourceHealth: signals.sourceMetadata ?? [],
     decisionAudit: signals.riskAssessment?.decisionAudit ?? null,
+    publicSignalSummary,
 
     officialSignals: {
       warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
@@ -392,6 +400,11 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
         label: "Current River Feed",
         value: String(riverSummary.stationCount),
         note: `${riverSummary.tendencyCounts.steady} steady, ${riverSummary.tendencyCounts.falling} falling, ${riverSummary.tendencyCounts.rising} rising`,
+      },
+      {
+        label: "Community Signals",
+        value: String(publicSignalSummary.recentReports),
+        note: `${publicSignalSummary.actionableReports} actionable, public pressure ${publicSignalSummary.publicSignalPressure}/100`,
       },
     ],
   };
@@ -1031,7 +1044,7 @@ function ReportsPanel({ reports }) {
 }
 
 // #community report intake card
-function CommunityReportPanel({ reportState }) {
+function CommunityReportPanel({ publicSignalSummary, reportState }) {
   const [form, setForm] = useState({
     description: "",
     severity: "low",
@@ -1075,6 +1088,21 @@ function CommunityReportPanel({ reportState }) {
       </div>
 
       <form className="report-form" onSubmit={handleSubmit}>
+        <div className="community-summary">
+          <div>
+            <p className="section-label">Recent reports</p>
+            <h4>{publicSignalSummary.recentReports ?? 0}</h4>
+          </div>
+          <div>
+            <p className="section-label">Actionable</p>
+            <h4>{publicSignalSummary.actionableReports ?? 0}</h4>
+          </div>
+          <div>
+            <p className="section-label">Public pressure</p>
+            <h4>{publicSignalSummary.publicSignalPressure ?? 0}/100</h4>
+          </div>
+        </div>
+
         <div className="report-form-grid">
           <label>
             <span>Signal</span>
@@ -1354,7 +1382,10 @@ export default function App() {
         <div className="left-column">
           <FactorsPanel factors={dashboardData.contributingFactors} />
           <ReportsPanel reports={dashboardData.reports} />
-          <CommunityReportPanel reportState={communityReportState} />
+          <CommunityReportPanel
+            publicSignalSummary={dashboardData.publicSignalSummary}
+            reportState={communityReportState}
+          />
           <EvidencePanel evidence={dashboardData.evidence} />
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />

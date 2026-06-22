@@ -44,6 +44,8 @@ The backend reads configured remote JSON URLs when environment variables are pre
 
 Community observations are accepted through `POST /api/community-reports` and stored as local unverified report records. The dashboard reads them back with `GET /api/community-reports?area=parramatta`. Report intake validates JSON, limits request size, rate-limits repeated submissions, detects recent duplicates, and assigns a quality score.
 
+Recent validated reports are summarised per area into a bounded public-signal pressure score. The risk engine exposes this as supplementary decision evidence and feature data, but it does not directly override official weather, rainfall, or river risk signals.
+
 After normalising the shared public feeds, the backend applies area-specific station mapping from `server/ingestion/areaConfig.js`. This keeps the first regional pilot explainable before adding heavier spatial tooling such as PostGIS.
 
 The weather source has a live BoM default URL. If `FLOODGUARD_RAINFALL_URL` is not configured, the rainfall graph uses live BoM rain-trace observations instead of the older local rainfall file. River context still uses local fallback data until `FLOODGUARD_RIVER_URL` is connected to a live source.
@@ -70,7 +72,7 @@ Every refreshed ingestion appends compact area snapshots under `server/storage/h
 
 ## ML-Ready Features
 
-`GET /api/features?area=parramatta` transforms stored history into tabular rows with rainfall, river, wetness, confidence, lagged score, and elevated-concern target fields. Use `format=csv` to inspect or export the feature table.
+`GET /api/features?area=parramatta` transforms stored history into tabular rows with rainfall, river, wetness, confidence, public-signal pressure, lagged score, and elevated-concern target fields. Use `format=csv` to inspect or export the feature table.
 
 `GET /api/baseline-prediction?area=parramatta` runs a transparent feature baseline over the stored rows. It reports the latest prediction, agreement with the rule engine, holdout accuracy over previous rows, and whether the history is ready for a real baseline experiment.
 

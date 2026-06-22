@@ -446,6 +446,25 @@ p {
   margin-bottom: 14px;
 }
 
+.community-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.community-summary div {
+  background: #eef3f9;
+  border: 1px solid #e0eaf7;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.community-summary h4 {
+  color: #10213a;
+  font-size: 0.98rem;
+  margin-bottom: 0;
+}
+
 .report-form-grid {
   display: grid;
   gap: 10px;
@@ -534,7 +553,7 @@ p {
 .evidence-grid {
   margin-top: 6px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -653,7 +672,9 @@ p {
 
   .overview-grid,
   .evidence-grid,
-  .architecture-footer {
+  .architecture-footer,
+  .community-summary,
+  .report-form-grid {
     grid-template-columns: 1fr;
   }
 

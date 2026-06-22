@@ -5,6 +5,7 @@ import { defaultAreaId, getAreaConfig } from "./areaConfig.js";
 import { storageDir } from "./config.js";
 
 const reportsPath = path.join(storageDir, "community-reports.jsonl");
+const recentWindowMs = 24 * 60 * 60 * 1000;
 const severityLevels = new Set(["low", "moderate", "high"]);
 const signalTypes = new Set([
   "road pooling",
@@ -156,4 +157,54 @@ export async function readCommunityReports(areaId = defaultAreaId, limit = 20) {
     if (error.code === "ENOENT") return [];
     throw error;
   }
+}
+
+export function summariseCommunityReports(reports = [], referenceTime = new Date().toISOString()) {
+  const referenceTimestamp = new Date(referenceTime).getTime();
+  const recentReports = reports.filter((report) => {
+    const createdAt = new Date(report.createdAt).getTime();
+    if (Number.isNaN(createdAt) || Number.isNaN(referenceTimestamp)) return false;
+    return referenceTimestamp - createdAt <= recentWindowMs;
+  });
+  const actionableReports = recentReports.filter((report) => report.validation?.actionable);
+  const highSeverityReports = recentReports.filter((report) => report.severity === "high");
+  const moderateSeverityReports = recentReports.filter((report) => report.severity === "moderate");
+  const averageQuality =
+    recentReports.length > 0
+      ? Math.round(
+          recentReports.reduce(
+            (total, report) => total + (report.validation?.qualityScore ?? report.confidence ?? 0),
+            0,
+          ) / recentReports.length,
+        )
+      : 0;
+  const publicSignalPressure = Math.min(
+    100,
+    Math.round(
+      actionableReports.length * 15 +
+        highSeverityReports.length * 20 +
+        moderateSeverityReports.length * 10 +
+        averageQuality * 0.2,
+    ),
+  );
+
+  return {
+    totalReports: reports.length,
+    recentReports: recentReports.length,
+    actionableReports: actionableReports.length,
+    highSeverityReports: highSeverityReports.length,
+    moderateSeverityReports: moderateSeverityReports.length,
+    averageQuality,
+    publicSignalPressure,
+    status:
+      recentReports.length === 0
+        ? "no-recent-reports"
+        : actionableReports.length > 0
+          ? "supplementary-evidence"
+          : "unverified-context",
+    note:
+      recentReports.length === 0
+        ? "No recent community reports are stored for this area."
+        : `${recentReports.length} recent unverified community report(s), ${actionableReports.length} actionable after quality checks.`,
+  };
 }
