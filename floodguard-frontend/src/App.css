@@ -308,36 +308,83 @@ p {
 .frontpage-grid {
   align-items: stretch;
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(300px, 0.9fr);
+  gap: 14px;
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.1fr) minmax(300px, 0.96fr);
   margin-bottom: 12px;
   min-width: 0;
 }
 
 .frontpage-primary,
-.frontpage-secondary {
+.frontpage-secondary,
+.frontpage-tertiary {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
-.frontpage-map .card,
 .frontpage-primary .card,
-.frontpage-secondary .card {
+.frontpage-secondary .card,
+.frontpage-tertiary .card {
   height: 100%;
+}
+
+.frontpage-primary .card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.frontpage-primary .section-header {
+  justify-content: center;
+  text-align: center;
+}
+
+.frontpage-primary .section-label {
+  margin-bottom: 10px;
+}
+
+.frontpage-primary .factor-list,
+.frontpage-primary .action-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  padding-left: 0;
+  text-align: center;
+}
+
+.frontpage-primary .factor-list li,
+.frontpage-primary .action-list li {
+  background: rgba(251, 253, 255, 0.5);
+  border: 1px solid rgba(224, 234, 247, 0.8);
+  border-radius: 10px;
+  margin-bottom: 0;
+  padding: 10px 12px;
+}
+
+.frontpage-secondary .river-status-card {
+  align-self: center;
+  width: calc(100% - 40px);
 }
 
 .frontpage-secondary .river-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.frontpage-secondary .signal-chart-card .chart-box {
-  height: 220px;
+.frontpage-tertiary .signal-chart-card {
+  min-height: 100%;
 }
 
-.frontpage-map .map-panel {
-  height: 310px;
+.frontpage-tertiary .signal-chart-card .chart-box {
+  height: 330px;
+}
+
+.frontpage-secondary .map-panel {
+  height: 300px;
+}
+
+.frontpage-secondary .location-card {
+  padding-bottom: 14px;
 }
 
 /* #contributing factors and recommended actions */
@@ -796,7 +843,15 @@ p {
     display: none;
   }
 
-  .frontpage-map .map-panel {
+  .frontpage-secondary .river-status-card {
+    width: 100%;
+  }
+
+  .frontpage-secondary .map-panel {
+    height: 260px;
+  }
+
+  .frontpage-tertiary .signal-chart-card .chart-box {
     height: 260px;
   }
 }
@@ -837,7 +892,11 @@ p {
     max-width: calc(100vw - 28px);
   }
 
-  .frontpage-map .map-panel {
+  .frontpage-secondary .map-panel {
+    height: 230px;
+  }
+
+  .frontpage-tertiary .signal-chart-card .chart-box {
     height: 230px;
   }
 

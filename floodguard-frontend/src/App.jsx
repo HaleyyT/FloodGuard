@@ -1109,11 +1109,11 @@ function FrontPageSummary({ data }) {
           areaName={data.areaName}
           riverSummary={data.riverSummary}
         />
-        <RainfallChart rainfallTrend={data.rainfallTrend} />
+        <MapPanel areaName={data.areaName} />
       </div>
 
-      <div className="frontpage-map">
-        <MapPanel areaName={data.areaName} />
+      <div className="frontpage-tertiary">
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
       </div>
     </section>
   );
