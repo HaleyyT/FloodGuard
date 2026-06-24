@@ -2,6 +2,8 @@ import { areaConfigs, defaultAreaId, getAreaConfig, listAreas } from "./areaConf
 import { historyDir, ingestionPolicy, latestSignalsPath, sourceConfig } from "./config.js";
 import { loadSource } from "./fetchers.js";
 import {
+  normalizeFloodSmartRainfall,
+  normalizeFloodSmartRiverContext,
   normalizeRainfall,
   normalizeRiverContext,
   normalizeWeather,
@@ -22,12 +24,24 @@ function matchesRelevantStation(value, relevantNames = []) {
 function filterRainfallForArea(rainfallSeries, area) {
   const relevantStationNumbers = area.relevantStations.rainfall ?? [];
   const isDerivedWeatherRainfall = rainfallSeries.aggregation === "Observation rain trace";
+  const matchedGaugeStation = (rainfallSeries.stations ?? []).find((station) =>
+    relevantStationNumbers.includes(station.stationNumber),
+  );
 
-  if (
-    isDerivedWeatherRainfall ||
-    relevantStationNumbers.length === 0 ||
-    relevantStationNumbers.includes(rainfallSeries.stationNumber)
-  ) {
+  if (matchedGaugeStation) {
+    return {
+      ...rainfallSeries,
+      ...matchedGaugeStation,
+      stations: rainfallSeries.stations,
+      areaRelevance: {
+        areaId: area.id,
+        matched: true,
+        reason: "Rainfall station is mapped to this area.",
+      },
+    };
+  }
+
+  if (isDerivedWeatherRainfall || relevantStationNumbers.length === 0) {
     return {
       ...rainfallSeries,
       areaRelevance: {
@@ -36,6 +50,17 @@ function filterRainfallForArea(rainfallSeries, area) {
         reason: isDerivedWeatherRainfall
           ? "Live BoM rain-trace observations are used while the mapped rainfall gauge API is not configured."
           : "Rainfall station is mapped to this area.",
+      },
+    };
+  }
+
+  if (relevantStationNumbers.includes(rainfallSeries.stationNumber)) {
+    return {
+      ...rainfallSeries,
+      areaRelevance: {
+        areaId: area.id,
+        matched: true,
+        reason: "Rainfall station is mapped to this area.",
       },
     };
   }
@@ -366,6 +391,22 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, p
   };
 }
 
+function normalizeConfiguredRainfall(source) {
+  if (source.metadata.adapter === "floodsmart-rainfall") {
+    return normalizeFloodSmartRainfall(source.data);
+  }
+
+  return normalizeRainfall(source.data);
+}
+
+function normalizeConfiguredRiver(source) {
+  if (source.metadata.adapter === "floodsmart-river") {
+    return normalizeFloodSmartRiverContext(source.data);
+  }
+
+  return normalizeRiverContext(source.data);
+}
+
 export async function buildRegionalSignals() {
   const ingestedAt = new Date().toISOString();
   const [weatherSource, rainfallSource, riverSource] = await Promise.all([
@@ -373,10 +414,10 @@ export async function buildRegionalSignals() {
     loadSource(sourceConfig.rainfall),
     loadSource(sourceConfig.river),
   ]);
-  let rainfallSeries = normalizeRainfall(rainfallSource.data);
+  let rainfallSeries = normalizeConfiguredRainfall(rainfallSource);
   let rainfallMetadata = {
     ...rainfallSource.metadata,
-    label: "North Parramatta rainfall gauge",
+    label: rainfallSource.metadata.label,
     type: "rainfall",
     note: "Nearby rainfall time series normalised from the ingestion pipeline.",
   };
@@ -387,7 +428,7 @@ export async function buildRegionalSignals() {
       ...weatherSource.metadata,
       label: "BoM Parramatta rain trace observations",
       type: "rainfall",
-      note: "Live BoM rain-trace observations are used for the graph until a WaterNSW rainfall URL is configured.",
+      note: "Live BoM rain-trace observations are used for the graph until a primary rainfall gauge is available.",
       mode: "remote-derived",
       sourceStrength: "weather_proxy",
       derivedFrom: weatherSource.metadata.source,
@@ -403,7 +444,7 @@ export async function buildRegionalSignals() {
     },
     rainfallMetadata,
     {
-      label: "Parramatta river context",
+      label: riverSource.metadata.label,
       type: "river",
       note: "Current local river and creek heights normalised from the ingestion pipeline.",
       ...riverSource.metadata,
@@ -412,7 +453,7 @@ export async function buildRegionalSignals() {
   const normalizedSources = {
     weatherObservations: normalizeWeather(weatherSource.data),
     rainfallSeries,
-    riverContext: normalizeRiverContext(riverSource.data),
+    riverContext: normalizeConfiguredRiver(riverSource),
   };
   const areaEntries = await Promise.all(
     Object.values(areaConfigs).map(async (area) => {

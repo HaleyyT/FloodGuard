@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { ingestionPolicy } from "./config.js";
+import { loadFloodSmartGaugeSource } from "./floodsmartAdapter.js";
 
 async function fetchJsonFromUrl(url) {
   const response = await fetch(url, {
@@ -21,18 +22,21 @@ async function readFallbackJson(filePath) {
 }
 
 export async function loadSource(source) {
-  const configuredUrl = process.env[source.envUrl] || source.defaultUrl;
+  const configuredUrl = process.env[source.envUrl] || process.env[source.roadmapEnvUrl] || source.defaultUrl;
   const fetchedAt = new Date().toISOString();
 
   if (configuredUrl) {
     try {
       return {
-        data: await fetchJsonFromUrl(configuredUrl),
+        data: source.adapter
+          ? await loadFloodSmartGaugeSource(source, configuredUrl)
+          : await fetchJsonFromUrl(configuredUrl),
         metadata: {
           label: source.label,
           mode: "remote",
           source: configuredUrl,
           sourceStrength: source.sourceStrength,
+          adapter: source.adapter ?? "json",
           fetchedAt,
           status: "ok",
         },

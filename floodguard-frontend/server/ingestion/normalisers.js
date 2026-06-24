@@ -111,6 +111,59 @@ export function normalizeRainfall(raw) {
   };
 }
 
+export function normalizeFloodSmartRainfall(raw) {
+  const stations = (raw?.stations ?? []).map((station) => {
+    const points = (station.events ?? [])
+      .map((event) => ({
+        time: event.time,
+        rainfallMm: toNumber(event.value),
+        qualityCode: event.validationCode || null,
+        interpolationType: null,
+      }))
+      .filter((point) => point.time && point.rainfallMm !== null)
+      .reverse();
+    const latestPoint = points.at(-1) ?? null;
+
+    return {
+      stationName: station.stationName,
+      stationNumber: station.code,
+      sourceLabel: "City of Parramatta FloodSmart rainfall gauge",
+      parameterType: station.parameter,
+      timeseriesName: station.timeseriesUrl,
+      unit: station.unit ?? "mm",
+      dataOwner: raw.provider,
+      aggregation: "5 minute gauge observations",
+      latestValidRainfallMm: latestPoint ? latestPoint.rainfallMm : toNumber(station.latestValue),
+      points:
+        points.length > 0
+          ? points
+          : [
+              {
+                time: station.observedAt,
+                rainfallMm: toNumber(station.latestValue),
+                qualityCode: null,
+                interpolationType: null,
+              },
+            ].filter((point) => point.time && point.rainfallMm !== null),
+    };
+  });
+  const primaryStation = stations[0] ?? null;
+
+  return {
+    stationName: primaryStation?.stationName ?? "City of Parramatta FloodSmart rainfall gauges",
+    stationNumber: primaryStation?.stationNumber ?? null,
+    sourceLabel: "City of Parramatta FloodSmart rainfall gauges",
+    parameterType: primaryStation?.parameterType ?? "Precipitation",
+    timeseriesName: primaryStation?.timeseriesName ?? null,
+    unit: primaryStation?.unit ?? "mm",
+    dataOwner: raw?.provider ?? "City of Parramatta FloodSmart",
+    aggregation: "5 minute gauge observations",
+    latestValidRainfallMm: primaryStation?.latestValidRainfallMm ?? null,
+    points: primaryStation?.points ?? [],
+    stations,
+  };
+}
+
 export function normalizeRiverContext(raw) {
   const stations = (raw?.stations ?? []).map((station) => ({
     stationName: station.station_name,
@@ -146,6 +199,63 @@ export function normalizeRiverContext(raw) {
     sourceLabel: raw?.source || "Latest public river-height context",
     issuedDate: raw?.issued_date || null,
     region: raw?.region || "Parramatta River",
+    headlineTrend: primaryStation
+      ? `${primaryStation.statusLabel} at ${primaryStation.stationName}`
+      : "No river data available",
+    stationCount: stations.length,
+    tendencyCounts,
+    primaryStation,
+    stations,
+  };
+}
+
+export function normalizeFloodSmartRiverContext(raw) {
+  const stations = (raw?.stations ?? []).map((station) => {
+    const [latestEvent, previousEvent] = station.events ?? [];
+    const latestValue = toNumber(latestEvent?.value ?? station.latestValue);
+    const previousValue = toNumber(previousEvent?.value);
+    const delta = latestValue !== null && previousValue !== null ? latestValue - previousValue : 0;
+    const tendency = delta > 0.01 ? "rising" : delta < -0.01 ? "falling" : "steady";
+
+    return {
+      stationName: station.normalizedStationName,
+      stationType: station.category,
+      timeDay: station.observedAt,
+      heightM: latestValue,
+      gaugeDatum: station.unit === "m" ? "mAHD" : station.unit,
+      tendency,
+      statusLabel: normaliseStatusLabel(tendency),
+      floodClassification: null,
+    };
+  });
+
+  const latestObservedAt = stations
+    .map((station) => station.timeDay)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  const primaryStation =
+    stations.find((station) =>
+      station.stationName?.includes("Parramatta River at Riverside Theatre"),
+    ) ||
+    stations.find((station) => station.stationName?.includes("Parramatta River")) ||
+    stations[0] ||
+    null;
+  const tendencyCounts = stations.reduce(
+    (counts, station) => {
+      const tendency = station.tendency?.toLowerCase();
+      if (tendency === "rising") counts.rising += 1;
+      else if (tendency === "falling") counts.falling += 1;
+      else counts.steady += 1;
+      return counts;
+    },
+    { rising: 0, falling: 0, steady: 0 },
+  );
+
+  return {
+    sourceLabel: raw?.provider ?? "City of Parramatta FloodSmart river gauges",
+    issuedDate: latestObservedAt ?? null,
+    region: "Parramatta River",
     headlineTrend: primaryStation
       ? `${primaryStation.statusLabel} at ${primaryStation.stationName}`
       : "No river data available",

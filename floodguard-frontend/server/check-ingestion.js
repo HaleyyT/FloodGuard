@@ -1,5 +1,6 @@
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
 import { readOrRefreshRegionalSignals, runRegionalIngestion } from "./ingestion/aggregators.js";
+import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
 
 const shouldRefresh = !process.argv.includes("--no-refresh");
 const regionalSignals = shouldRefresh
@@ -34,5 +35,14 @@ for (const area of health.areas) {
 }
 
 if (!health.ready) {
+  const registry = getSourceRegistry();
+  console.log("\nLive source policy:");
+  console.log(
+    `  rainfall: ${registry.activeIngestion.rainfall.sourceStrength}, ${registry.activeIngestion.rainfall.adapter}`,
+  );
+  console.log(
+    `  river: ${registry.activeIngestion.river.sourceStrength}, ${registry.activeIngestion.river.adapter}`,
+  );
+  console.log("  A blocked result is expected when live gauges are stale, unreachable, or fallback-only.");
   process.exitCode = 1;
 }

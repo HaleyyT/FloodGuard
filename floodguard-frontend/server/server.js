@@ -18,7 +18,9 @@ import {
   readCommunityReports,
 } from "./ingestion/communityReports.js";
 import { featureRowsToCsv } from "./ingestion/features.js";
+import { readGaugeMetadata } from "./ingestion/gaugeMetadata.js";
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
+import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
 const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
@@ -50,6 +52,8 @@ function routes() {
   return [
     "/api/health",
     "/api/ingestion-health",
+    "/api/source-registry",
+    "/api/gauge-metadata",
     "/api/areas",
     "/api/signals?area=parramatta",
     "/api/signals?area=north-parramatta",
@@ -165,6 +169,8 @@ function buildSourceHealth(areaSignals) {
       mode: metadata.mode,
       status: metadata.status ?? "ok",
       source: metadata.source,
+      sourceStrength: metadata.sourceStrength,
+      adapter: metadata.adapter,
       fetchedAt: metadata.fetchedAt,
       observedAt: metadata.observedAt,
       ageHours: metadata.ageHours,
@@ -225,6 +231,16 @@ async function routeRequest(request, response) {
 
   if (request.method !== "GET") {
     sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  if (url.pathname === "/api/source-registry") {
+    sendJson(response, 200, getSourceRegistry());
+    return;
+  }
+
+  if (url.pathname === "/api/gauge-metadata") {
+    sendJson(response, 200, await readGaugeMetadata());
     return;
   }
 
