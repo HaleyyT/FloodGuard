@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { ingestionPolicy } from "./config.js";
 
 async function fetchJsonFromUrl(url) {
   const response = await fetch(url, {
@@ -31,6 +32,7 @@ export async function loadSource(source) {
           label: source.label,
           mode: "remote",
           source: configuredUrl,
+          sourceStrength: source.sourceStrength,
           fetchedAt,
           status: "ok",
         },
@@ -42,6 +44,21 @@ export async function loadSource(source) {
     }
   }
 
+  if (!ingestionPolicy.allowLocalFallback) {
+    return {
+      data: null,
+      metadata: {
+        label: source.label,
+        mode: "unavailable",
+        source: source.fallbackFile,
+        sourceStrength: "unavailable",
+        fetchedAt,
+        status: "failed",
+        note: "Local fallback is disabled by FLOODGUARD_ALLOW_LOCAL_FALLBACK.",
+      },
+    };
+  }
+
   try {
     return {
       data: await readFallbackJson(source.fallbackFile),
@@ -49,6 +66,7 @@ export async function loadSource(source) {
         label: source.label,
         mode: "local-fallback",
         source: source.fallbackFile,
+        sourceStrength: "local_fallback",
         fetchedAt,
         status: "ok",
       },
@@ -60,6 +78,7 @@ export async function loadSource(source) {
         label: source.label,
         mode: "unavailable",
         source: source.fallbackFile,
+        sourceStrength: "unavailable",
         fetchedAt,
         status: "failed",
         note: error.message,

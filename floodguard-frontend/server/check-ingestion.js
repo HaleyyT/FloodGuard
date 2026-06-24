@@ -18,7 +18,9 @@ for (const area of health.areas) {
 
   for (const source of area.sources) {
     console.log(
-      `  ${source.type}: ${source.mode}, ${source.freshnessStatus}, observed ${source.observedAt ?? "unknown"}`,
+      `  ${source.type}: ${source.sourceStrength}, ${source.mode}, ${source.freshnessStatus}, observed ${
+        source.observedAt ?? "unknown"
+      }`,
     );
   }
 

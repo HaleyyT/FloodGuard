@@ -11,6 +11,7 @@ import {
   selectAreaSignals,
 } from "./ingestion/aggregators.js";
 import { defaultAreaId } from "./ingestion/areaConfig.js";
+import { ingestionPolicy } from "./ingestion/config.js";
 import {
   buildImageEvidenceReviewQueue,
   createCommunityReport,
@@ -245,6 +246,15 @@ async function routeRequest(request, response) {
         ready: ingestionHealth.ready,
         blockedAreaCount: ingestionHealth.blockedAreaCount,
         warningAreaCount: ingestionHealth.warningAreaCount,
+      },
+      sourcePolicy: {
+        allowLocalFallback: ingestionPolicy.allowLocalFallback,
+        maxAgeHours: ingestionPolicy.maxAgeHours,
+        requiredLiveSources: {
+          rainfall: ["primary_live_gauge", "official_backup"],
+          river: ["primary_live_gauge", "official_backup"],
+          weather: ["official_backup"],
+        },
       },
     });
     return;

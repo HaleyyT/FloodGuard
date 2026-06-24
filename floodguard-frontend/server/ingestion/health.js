@@ -5,6 +5,33 @@ function sourceModeIssue(source) {
   return null;
 }
 
+function sourceStrengthLabel(sourceStrength) {
+  return (sourceStrength || "unknown").replaceAll("_", " ");
+}
+
+function isAcceptedLiveStrength(source) {
+  return ["primary_live_gauge", "official_backup"].includes(source.sourceStrength);
+}
+
+function sourceStrengthIssue(source) {
+  if (source.type === "river" && !isAcceptedLiveStrength(source)) {
+    return `${source.label} is ${sourceStrengthLabel(
+      source.sourceStrength,
+    )}; river needs a primary live gauge or official backup source.`;
+  }
+
+  if (
+    source.type === "rainfall" &&
+    ["local_fallback", "historical_context", "unavailable"].includes(source.sourceStrength)
+  ) {
+    return `${source.label} is ${sourceStrengthLabel(
+      source.sourceStrength,
+    )}; rainfall needs a live gauge, official backup, or clearly labelled weather proxy.`;
+  }
+
+  return null;
+}
+
 function sourceFreshnessIssue(source) {
   if (source.freshnessStatus === "stale") {
     return `${source.label} is stale (${source.ageHours}h old, expected within ${source.staleAfterHours}h).`;
@@ -18,8 +45,12 @@ function sourceFreshnessIssue(source) {
 }
 
 function sourceWarning(source) {
-  if (source.mode === "remote-derived") {
-    return `${source.label} is live-derived from another feed; connect the mapped gauge URL for full source fidelity.`;
+  if (source.sourceStrength === "weather_proxy") {
+    return `${source.label} is a weather proxy; connect FLOODGUARD_RAINFALL_URL for a primary rainfall gauge or official rainfall bulletin.`;
+  }
+
+  if (source.sourceStrength === "official_warning") {
+    return `${source.label} is warning context, not a gauge measurement.`;
   }
 
   return null;
@@ -35,10 +66,12 @@ export function buildAreaIngestionHealth(areaSignals) {
 
   for (const source of sources) {
     const modeIssue = sourceModeIssue(source);
+    const strengthIssue = sourceStrengthIssue(source);
     const freshnessIssue = sourceFreshnessIssue(source);
     const warning = sourceWarning(source);
 
     if (modeIssue) issues.push(modeIssue);
+    if (strengthIssue) issues.push(strengthIssue);
     if (freshnessIssue) issues.push(freshnessIssue);
     if (warning) warnings.push(warning);
   }
@@ -81,6 +114,7 @@ export function buildAreaIngestionHealth(areaSignals) {
       label: source.label,
       type: source.type,
       mode: source.mode,
+      sourceStrength: source.sourceStrength ?? "unknown",
       status: source.status,
       freshnessStatus: source.freshnessStatus,
       observedAt: source.observedAt,

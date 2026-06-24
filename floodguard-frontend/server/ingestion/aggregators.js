@@ -1,5 +1,5 @@
 import { areaConfigs, defaultAreaId, getAreaConfig, listAreas } from "./areaConfig.js";
-import { historyDir, latestSignalsPath, sourceConfig } from "./config.js";
+import { historyDir, ingestionPolicy, latestSignalsPath, sourceConfig } from "./config.js";
 import { loadSource } from "./fetchers.js";
 import {
   normalizeRainfall,
@@ -149,10 +149,7 @@ function sourceObservedAt(metadata, signals) {
 }
 
 function staleAfterHours(type) {
-  if (type === "weather") return 12;
-  if (type === "rainfall") return 48;
-  if (type === "river") return 24;
-  return 24;
+  return ingestionPolicy.maxAgeHours[type] ?? 24;
 }
 
 function buildAreaSourceFreshness(area, sourceMetadata, signals, ingestedAt) {
@@ -392,6 +389,7 @@ export async function buildRegionalSignals() {
       type: "rainfall",
       note: "Live BoM rain-trace observations are used for the graph until a WaterNSW rainfall URL is configured.",
       mode: "remote-derived",
+      sourceStrength: "weather_proxy",
       derivedFrom: weatherSource.metadata.source,
     };
   }
