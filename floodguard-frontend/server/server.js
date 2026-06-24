@@ -259,9 +259,14 @@ async function routeRequest(request, response) {
       ingestedAt: regionalSignals.ingestedAt,
       ingestionHealth: {
         status: ingestionHealth.status,
+        overallStatus: ingestionHealth.overallStatus,
+        coreFloodStatus: ingestionHealth.coreFloodStatus,
+        contextStatus: ingestionHealth.contextStatus,
+        warningStatus: ingestionHealth.warningStatus,
         ready: ingestionHealth.ready,
         blockedAreaCount: ingestionHealth.blockedAreaCount,
         warningAreaCount: ingestionHealth.warningAreaCount,
+        summary: ingestionHealth.summary,
       },
       sourcePolicy: {
         allowLocalFallback: ingestionPolicy.allowLocalFallback,

@@ -8,11 +8,20 @@ const regionalSignals = shouldRefresh
   : await readOrRefreshRegionalSignals();
 const health = regionalSignals.ingestionHealth ?? buildRegionalIngestionHealth(regionalSignals);
 
-console.log(`FloodGuard ingestion health: ${health.status}`);
+console.log(`FloodGuard ingestion health: ${health.overallStatus ?? health.status}`);
+console.log(`Core flood gauges: ${health.coreFloodStatus ?? "unknown"}`);
+console.log(`Supporting context: ${health.contextStatus ?? "unknown"}`);
+console.log(`Official warnings: ${health.warningStatus ?? "unknown"}`);
+if (health.summary) console.log(health.summary);
 console.log(`Areas checked: ${health.areaCount}`);
 
 for (const area of health.areas) {
-  console.log(`\n${area.areaName}: ${area.status}`);
+  console.log(`\n${area.areaName}: ${area.overallStatus ?? area.status}`);
+  console.log(
+    `  Core: ${area.coreFloodStatus ?? "unknown"}; context: ${
+      area.contextStatus ?? "unknown"
+    }; warnings: ${area.warningStatus ?? "unknown"}`,
+  );
   console.log(
     `  Area fit: ${area.areaRelevance.matchedSignals}/${area.areaRelevance.expectedSignals} (${area.areaRelevance.score}%)`,
   );
@@ -43,6 +52,6 @@ if (!health.ready) {
   console.log(
     `  river: ${registry.activeIngestion.river.sourceStrength}, ${registry.activeIngestion.river.adapter}`,
   );
-  console.log("  A blocked result is expected when live gauges are stale, unreachable, or fallback-only.");
+  console.log("  A blocked result means core live gauges are stale, unreachable, or fallback-only.");
   process.exitCode = 1;
 }

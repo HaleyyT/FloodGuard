@@ -314,6 +314,65 @@ function formatSourceFreshness(freshness) {
   return "Current";
 }
 
+function sourceReliabilityKind(source) {
+  if (source.freshnessStatus === "not-connected") return "not-connected";
+  if (source.mode === "local-fallback") return "fallback";
+  if (source.type === "weather" && source.freshnessStatus === "stale") return "stale-context";
+  if (
+    ["rainfall", "river"].includes(source.type) &&
+    source.sourceStrength === "primary_live_gauge" &&
+    source.freshnessStatus === "current"
+  ) {
+    return "live-gauge";
+  }
+  if (source.freshnessStatus === "current") return "current-context";
+  if (source.freshnessStatus === "stale") return "stale";
+  return "unknown";
+}
+
+function sourceReliabilityLabel(source) {
+  const kind = sourceReliabilityKind(source);
+  if (kind === "live-gauge") return "Live gauge";
+  if (kind === "current-context") return "Current context";
+  if (kind === "stale-context") return "Stale context";
+  if (kind === "fallback") return "Demo/Fallback";
+  if (kind === "not-connected") return "Not connected";
+  if (kind === "stale") return "Stale";
+  return "Unknown";
+}
+
+function buildReliabilitySummary(sources = []) {
+  const coreSources = sources.filter((source) => ["rainfall", "river"].includes(source.type));
+  const contextSources = sources.filter((source) => !["rainfall", "river"].includes(source.type));
+  const coreLive = coreSources.every(
+    (source) =>
+      source.sourceStrength === "primary_live_gauge" &&
+      source.freshnessStatus === "current" &&
+      source.mode !== "local-fallback",
+  );
+  const staleContext = contextSources.some((source) => source.freshnessStatus === "stale");
+  const fallbackCore = coreSources.some((source) => source.mode === "local-fallback");
+
+  if (!coreLive || fallbackCore) {
+    return {
+      label: "Blocked",
+      note: "Core rainfall or river gauges are stale, fallback, missing, or mismatched.",
+    };
+  }
+
+  if (staleContext) {
+    return {
+      label: "Partial",
+      note: "Live gauge data is current. Some supporting sources are stale or not yet connected.",
+    };
+  }
+
+  return {
+    label: "Live",
+    note: "Live rainfall and river gauges are current.",
+  };
+}
+
 function formatSourceAge(ageHours) {
   if (ageHours === null || ageHours === undefined) return "age unknown";
   if (ageHours < 1) return "under 1h old";
@@ -383,6 +442,8 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
   const publicSignalCards = buildPublicSignalCards(signals);
   const riskAssessment = buildRiskAssessment(signals, riverSummary, publicSignalCards);
   const latestRain = signals.rainfallSeries.latestValidRainfallMm;
+  const sourceHealth = signals.sourceMetadata ?? [];
+  const reliabilitySummary = buildReliabilitySummary(sourceHealth);
   const publicSignalSummary = signals.publicSignalSummary ?? {
     recentReports: 0,
     actionableReports: 0,
@@ -411,13 +472,16 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     riverSummary,
     rainfallTrend: buildRainfallTrend(signals),
     riskSignals: buildRiskSignals(signals),
-    sourceHealth: signals.sourceMetadata ?? [],
+    sourceHealth,
+    reliabilitySummary,
     locationRelevance: buildLocationRelevance(signals),
     decisionAudit: signals.riskAssessment?.decisionAudit ?? null,
     publicSignalSummary,
 
     officialSignals: {
       warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
+      dataReliability: reliabilitySummary.label,
+      dataReliabilityNote: reliabilitySummary.note,
       areaSignalFit: formatAreaSignalFit(signals.areaRelevance),
       sourceFreshness: formatSourceFreshness(signals.freshness),
       spatialRadius: formatDistanceKm(signals.spatialRelevance?.coverageRadiusKm),
@@ -872,16 +936,11 @@ function buildHistorySummary(history = []) {
   };
 }
 
-function sourceStatusLabel(status) {
-  if (status === "stale") return "Stale";
-  if (status === "current") return "Current";
-  return "Unknown";
-}
-
 function sourceModeLabel(mode) {
   if (mode === "remote-derived") return "Live derived";
   if (mode === "remote") return "Live";
   if (mode === "local-fallback") return "Fallback";
+  if (mode === "planned") return "Planned";
   return mode || "Unknown";
 }
 
@@ -1103,8 +1162,8 @@ function OverviewPanel({ data }) {
 
       <div className="overview-grid">
         <InfoTile
-          label="Data Status"
-          value={data.officialSignals.warningStatus}
+          label="Data Reliability"
+          value={data.officialSignals.dataReliability}
         />
         <InfoTile
           label="Area Signal Fit"
@@ -1135,6 +1194,7 @@ function OverviewPanel({ data }) {
           value={data.officialSignals.forecastOutlook}
         />
       </div>
+      <p className="reliability-note">{data.officialSignals.dataReliabilityNote}</p>
     </section>
   );
 }
@@ -1219,7 +1279,7 @@ function ActionsPanel({ actions }) {
 
 // #source health diagnostics card
 function SourceHealthPanel({ sources }) {
-  const rows =
+  const sourceRows =
     sources.length > 0
       ? sources
       : [
@@ -1232,13 +1292,26 @@ function SourceHealthPanel({ sources }) {
             ageHours: null,
           },
         ];
+  const rows = [
+    ...sourceRows,
+    {
+      label: "NSW SES / HazardWatch warnings",
+      type: "warnings",
+      mode: "planned",
+      freshnessStatus: "not-connected",
+      observedAt: null,
+      ageHours: null,
+      sourceStrength: "official_warning",
+      note: "Official warning integration is planned but not connected yet.",
+    },
+  ];
 
   return (
     <section className="card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Source diagnostics</p>
-          <h3>Source health</h3>
+          <h3>Data sources</h3>
         </div>
       </div>
 
@@ -1250,12 +1323,12 @@ function SourceHealthPanel({ sources }) {
                 <h4>{source.label}</h4>
                 <p>{sourceModeLabel(source.mode)} {source.type}</p>
               </div>
-              <span className={`source-badge ${source.freshnessStatus || "unknown"}`}>
-                {sourceStatusLabel(source.freshnessStatus)}
+              <span className={`source-badge ${sourceReliabilityKind(source)}`}>
+                {sourceReliabilityLabel(source)}
               </span>
             </div>
             <p className="source-health-meta">
-              {formatObservedAt(source.observedAt)} - {formatSourceAge(source.ageHours)}
+              {source.note || `${formatObservedAt(source.observedAt)} - ${formatSourceAge(source.ageHours)}`}
             </p>
           </div>
         ))}

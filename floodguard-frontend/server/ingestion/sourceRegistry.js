@@ -35,14 +35,15 @@ export function getSourceRegistry() {
       maxAgeHours: ingestionPolicy.maxAgeHours,
       passStrengthByType,
       blockWhen: [
-        "river data is fallback, stale, unavailable, or not a live/official gauge source",
-        "rainfall data is fallback, stale, unavailable, or only historical context",
-        "all configured areas are stale or station mapping does not match",
+        "river gauge data is fallback, stale, unavailable, or not a live/official gauge source",
+        "rainfall gauge data is fallback, stale, unavailable, or only historical context",
+        "core rainfall or river station mapping is wrong",
       ],
       warnWhen: [
         "rainfall is derived from BoM weather rain trace rather than a mapped gauge",
-        "warning feed is unavailable while gauges are otherwise fresh",
-        "one area has partial station coverage",
+        "BoM weather context is stale while gauges are otherwise fresh",
+        "official warning feed is not connected yet",
+        "supporting metadata or context coverage is partial",
       ],
     },
     activeIngestion: {

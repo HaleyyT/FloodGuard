@@ -62,22 +62,38 @@ function buildScoreComponents(riskSignals) {
 function buildReliability(signals, riskSignals) {
   const areaRelevanceScore = signals.areaRelevance?.score ?? 100;
   const coverageScore = signals.dataQuality?.coverageScore ?? 0;
+  const coreSources = (signals.sourceMetadata ?? []).filter((source) =>
+    ["rainfall", "river"].includes(source.type),
+  );
+  const contextSources = (signals.sourceMetadata ?? []).filter(
+    (source) => !["rainfall", "river"].includes(source.type),
+  );
+  const staleCoreCount = coreSources.filter((source) => source.freshnessStatus === "stale").length;
+  const staleContextCount = contextSources.filter(
+    (source) => source.freshnessStatus === "stale",
+  ).length;
+  const fallbackCoreCount = coreSources.filter((source) => source.mode === "local-fallback").length;
+  const failedCoreCount = coreSources.filter((source) => source.status === "failed").length;
   const reliabilityScore = clamp(
     Math.round(riskSignals.confidence * 0.55 + areaRelevanceScore * 0.25 + coverageScore * 0.2),
   );
   const warnings = [];
   const blockers = [];
 
-  if ((signals.freshness?.staleSourceCount ?? 0) > 0) {
-    warnings.push(`${signals.freshness.staleSourceCount} stale source(s) reduce decision reliability`);
+  if (staleCoreCount > 0) {
+    blockers.push(`${staleCoreCount} core flood gauge source(s) are stale`);
   }
 
-  if ((signals.freshness?.fallbackSourceCount ?? 0) > 0) {
-    warnings.push(`${signals.freshness.fallbackSourceCount} source(s) are using fallback data`);
+  if (staleContextCount > 0) {
+    warnings.push(`${staleContextCount} supporting context source(s) are stale`);
   }
 
-  if ((signals.freshness?.failedSourceCount ?? 0) > 0) {
-    blockers.push(`${signals.freshness.failedSourceCount} source(s) failed during ingestion`);
+  if (fallbackCoreCount > 0) {
+    blockers.push(`${fallbackCoreCount} core flood gauge source(s) are using fallback data`);
+  }
+
+  if (failedCoreCount > 0) {
+    blockers.push(`${failedCoreCount} core flood gauge source(s) failed during ingestion`);
   }
 
   if ((signals.dataQuality?.missing ?? []).length > 0) {
@@ -144,6 +160,18 @@ export function buildRiskSignals(signals) {
   const fallbackSourceCount = signals.freshness?.fallbackSourceCount ?? 0;
   const failedSourceCount = signals.freshness?.failedSourceCount ?? 0;
   const staleSourceCount = signals.freshness?.staleSourceCount ?? 0;
+  const coreSources = (signals.sourceMetadata ?? []).filter((source) =>
+    ["rainfall", "river"].includes(source.type),
+  );
+  const contextSources = (signals.sourceMetadata ?? []).filter(
+    (source) => !["rainfall", "river"].includes(source.type),
+  );
+  const staleCoreCount = coreSources.filter((source) => source.freshnessStatus === "stale").length;
+  const staleContextCount = contextSources.filter(
+    (source) => source.freshnessStatus === "stale",
+  ).length;
+  const fallbackCoreCount = coreSources.filter((source) => source.mode === "local-fallback").length;
+  const failedCoreCount = coreSources.filter((source) => source.status === "failed").length;
   const coverageScore = signals.dataQuality?.coverageScore ?? 0;
   const rainfall24h = rainfallWindowTotal(rainfallSeries.points, 24);
   const rainfall72h = rainfallWindowTotal(rainfallSeries.points, 72);
@@ -173,7 +201,11 @@ export function buildRiskSignals(signals) {
     riverStations.length > 0,
   ].filter(Boolean).length;
   const confidence = clamp(
-    coverageScore - fallbackSourceCount * 18 - staleSourceCount * 22 - failedSourceCount * 30,
+    coverageScore -
+      fallbackCoreCount * 18 -
+      staleCoreCount * 22 -
+      failedCoreCount * 30 -
+      staleContextCount * 6,
   );
 
   return {
@@ -195,6 +227,8 @@ export function buildRiskSignals(signals) {
       fallbackSourceCount,
       staleSourceCount,
       failedSourceCount,
+      staleCoreCount,
+      staleContextCount,
     },
   };
 }

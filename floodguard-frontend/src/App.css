@@ -258,6 +258,14 @@ p {
   gap: 10px;
 }
 
+/* #data reliability summary */
+.reliability-note {
+  color: #31445f;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  margin: 10px 0 0;
+}
+
 .info-tile {
   background: #eef3f9;
   border: 1px solid #e0eaf7;
@@ -578,6 +586,31 @@ p {
 .source-badge.stale {
   background: #fff3d8;
   color: #9a5d00;
+}
+
+.source-badge.live-gauge {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
+.source-badge.current-context {
+  background: #e2f0ff;
+  color: #145398;
+}
+
+.source-badge.stale-context {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.source-badge.fallback {
+  background: #fde8e8;
+  color: #a12a2a;
+}
+
+.source-badge.not-connected {
+  background: #e8eef7;
+  color: #42546f;
 }
 
 .source-badge.unknown {
