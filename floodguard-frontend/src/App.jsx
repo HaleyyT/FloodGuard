@@ -48,6 +48,13 @@ const fallbackAreas = [
 const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
+const appSections = [
+  { id: "overview", label: "Overview" },
+  { id: "signals", label: "Signals" },
+  { id: "community", label: "Community" },
+  { id: "model", label: "Model" },
+  { id: "architecture", label: "Architecture" },
+];
 
 // #river monitoring card
 function RiverStatusPanel({ areaName, riverSummary }) {
@@ -423,6 +430,10 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
       },
     ],
   };
+}
+
+function topPriorityFactors(factors = []) {
+  return factors.slice(0, 4);
 }
 
 function useParramattaSignals(selectedAreaId) {
@@ -1011,6 +1022,25 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
   );
 }
 
+// #app section navigation
+function AppNavigation({ activeView, onViewChange }) {
+  return (
+    <nav className="app-nav" aria-label="FloodGuard sections">
+      {appSections.map((section) => (
+        <button
+          aria-current={activeView === section.id ? "page" : undefined}
+          className={activeView === section.id ? "active" : ""}
+          key={section.id}
+          onClick={() => onViewChange(section.id)}
+          type="button"
+        >
+          {section.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 // #monitored region overview
 function OverviewPanel({ data }) {
   return (
@@ -1060,6 +1090,30 @@ function OverviewPanel({ data }) {
           label="Latest Feed Update"
           value={data.officialSignals.forecastOutlook}
         />
+      </div>
+    </section>
+  );
+}
+
+// #front-page summary for screenshot and field use
+function FrontPageSummary({ data }) {
+  return (
+    <section className="frontpage-grid">
+      <div className="frontpage-primary">
+        <ActionsPanel actions={data.recommendedActions} />
+        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
+      </div>
+
+      <div className="frontpage-secondary">
+        <RiverStatusPanel
+          areaName={data.areaName}
+          riverSummary={data.riverSummary}
+        />
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
+      </div>
+
+      <div className="frontpage-map">
+        <MapPanel areaName={data.areaName} />
       </div>
     </section>
   );
@@ -1647,6 +1701,7 @@ function ArchitecturePanel() {
 export default function App() {
   const areas = useFloodguardAreas();
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
+  const [activeView, setActiveView] = useState("overview");
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
   const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
@@ -1666,41 +1721,57 @@ export default function App() {
         liveStatus={liveStatus}
         onAreaChange={setSelectedAreaId}
       />
+      <AppNavigation activeView={activeView} onViewChange={setActiveView} />
 
-      <OverviewPanel data={dashboardData} />
+      {activeView === "overview" && (
+        <>
+          <OverviewPanel data={dashboardData} />
+          <FrontPageSummary data={dashboardData} />
+          <EvidencePanel evidence={dashboardData.evidence} />
+        </>
+      )}
 
-      <div className="main-grid">
-        <div className="left-column">
-          <FactorsPanel factors={dashboardData.contributingFactors} />
+      {activeView === "signals" && (
+        <section className="section-page">
+          <SourceHealthPanel sources={dashboardData.sourceHealth} />
+          <DecisionAuditPanel audit={dashboardData.decisionAudit} />
+          <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
+          <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
+          <RiverStatusPanel
+            areaName={dashboardData.areaName}
+            riverSummary={dashboardData.riverSummary}
+          />
+          <MapPanel areaName={dashboardData.areaName} />
+        </section>
+      )}
+
+      {activeView === "community" && (
+        <section className="section-page community-page">
           <ReportsPanel reports={dashboardData.reports} />
           <CommunityReportPanel
             publicSignalSummary={dashboardData.publicSignalSummary}
             reportState={communityReportState}
           />
           <EvidenceReviewPanel queue={evidenceReviewQueue} />
-          <EvidencePanel evidence={dashboardData.evidence} />
+        </section>
+      )}
+
+      {activeView === "model" && (
+        <section className="section-page model-page">
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />
           <DatasetQualityPanel quality={datasetQuality} />
           <BaselinePredictionPanel baseline={baselinePrediction} />
           <ModelCardPanel modelCard={modelCard} />
-        </div>
+        </section>
+      )}
 
-        <div className="right-column">
-          <ActionsPanel actions={dashboardData.recommendedActions} />
-          <SourceHealthPanel sources={dashboardData.sourceHealth} />
-          <RiverStatusPanel
-            areaName={dashboardData.areaName}
-            riverSummary={dashboardData.riverSummary}
-          />
-          <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
-          <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
-          <DecisionAuditPanel audit={dashboardData.decisionAudit} />
-          <MapPanel areaName={dashboardData.areaName} />
-        </div>
-      </div>
-
-      <ArchitecturePanel />
+      {activeView === "architecture" && (
+        <section className="section-page architecture-page">
+          <ArchitecturePanel />
+          <EvidencePanel evidence={dashboardData.evidence} />
+        </section>
+      )}
     </div>
   );
 }

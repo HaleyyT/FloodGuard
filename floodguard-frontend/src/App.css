@@ -10,9 +10,9 @@
 
 body {
   margin: 0;
-  background: #d4ebfa;
-  /*background: #4c81ca; #daeaf3 */
+  background: #d7ecfa;
   color: #172033;
+  overflow-x: hidden;
 }
 
 h1,
@@ -26,9 +26,10 @@ p {
 
 /* #dashboard shell */
 .app-shell {
-  max-width: 1240px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 18px 16px 32px;
+  padding: 16px 16px 28px;
+  width: 100%;
 }
 
 /* #hero / project header */
@@ -37,7 +38,7 @@ p {
   justify-content: space-between;
   align-items: flex-start;
   gap: 18px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .eyebrow {
@@ -65,25 +66,26 @@ p {
 }
 
 .hero {
-  background: linear-gradient(135deg, #fbfded, #83b5ee);
+  background: linear-gradient(135deg, #fbfded, #8abced);
   border: 1px solid #c7d8ef;
-  border-radius: 16px;
-  padding: 18px 20px;
-  margin-bottom: 14px;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
 }
 
 /* #shared card surface and section headings */
 .card {
   background: linear-gradient(135deg, #fbfdf4, #bddfeb);
   border-radius: 14px;
-  padding: 16px;
+  min-width: 0;
+  padding: 14px;
   box-shadow: 0 8px 22px rgba(16, 33, 58, 0.08);
   border: 1px solid #e6edf7;
 }
 
 /* #monitored region overview */
 .overview-panel {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 /* #regional pilot selector */
@@ -92,7 +94,7 @@ p {
   justify-content: space-between;
   align-items: center;
   gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .area-selector h3 {
@@ -135,6 +137,38 @@ p {
 
 .area-tabs button.active,
 .area-tabs button:hover {
+  background: #184e9f;
+  border-color: #184e9f;
+  color: #ffffff;
+}
+
+/* #app view navigation */
+.app-nav {
+  background: rgba(246, 251, 255, 0.82);
+  border: 1px solid #cfe0f2;
+  border-radius: 14px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding: 8px;
+}
+
+.app-nav button {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #19345a;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.app-nav button.active,
+.app-nav button:hover {
   background: #184e9f;
   border-color: #184e9f;
   color: #ffffff;
@@ -221,15 +255,15 @@ p {
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .info-tile {
   background: #eef3f9;
   border: 1px solid #e0eaf7;
   border-radius: 12px;
-  min-height: 82px;
-  padding: 12px;
+  min-height: 78px;
+  padding: 11px;
 }
 
 .info-tile h3 {
@@ -238,20 +272,54 @@ p {
   color: #19345a;
 }
 
-/* #main dashboard two-column layout */
-.main-grid {
+/* #view layouts */
+.section-page {
   display: grid;
-  grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr);
-  gap: 14px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
   align-items: start;
+  min-width: 0;
 }
 
-.left-column,
-.right-column {
+.architecture-page {
+  grid-template-columns: 1fr;
+}
+
+/* #front-page app dashboard */
+.frontpage-grid {
+  align-items: stretch;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(300px, 0.9fr);
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.frontpage-primary,
+.frontpage-secondary {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.frontpage-map .card,
+.frontpage-primary .card,
+.frontpage-secondary .card {
+  height: 100%;
+}
+
+.frontpage-secondary .river-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.frontpage-secondary .signal-chart-card .chart-box {
+  height: 220px;
+}
+
+.frontpage-map .map-panel {
+  height: 310px;
 }
 
 /* #contributing factors and recommended actions */
@@ -265,7 +333,7 @@ p {
 
 .factor-list li,
 .action-list li {
-  margin-bottom: 7px;
+  margin-bottom: 6px;
 }
 
 /* #source health diagnostics */
@@ -590,10 +658,10 @@ p {
 
 /* #prototype evidence, historical storage, and ML readiness */
 .evidence-grid {
-  margin-top: 6px;
+  margin-top: 4px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .history-grid {
@@ -689,6 +757,11 @@ p {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .frontpage-grid,
+  .section-page {
+    grid-template-columns: 1fr;
+  }
+
   .architecture-flow {
     grid-template-columns: 1fr;
   }
@@ -697,8 +770,8 @@ p {
     display: none;
   }
 
-  .main-grid {
-    grid-template-columns: 1fr;
+  .frontpage-map .map-panel {
+    height: 260px;
   }
 }
 
@@ -713,12 +786,13 @@ p {
   .evidence-grid,
   .architecture-footer,
   .community-summary,
-  .report-form-grid {
+  .report-form-grid,
+  .frontpage-secondary .river-grid {
     grid-template-columns: 1fr;
   }
 
   .hero h1 {
-    font-size: 2.1rem;
+    font-size: 1.95rem;
   }
 
   .area-tabs {
@@ -727,6 +801,22 @@ p {
 
   .area-controls {
     align-items: flex-start;
+    width: 100%;
+  }
+
+  .app-nav {
+    margin-left: -2px;
+    margin-right: -2px;
+    max-width: calc(100vw - 28px);
+  }
+
+  .frontpage-map .map-panel {
+    height: 230px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 
