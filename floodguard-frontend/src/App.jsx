@@ -1099,21 +1099,27 @@ function OverviewPanel({ data }) {
 function FrontPageSummary({ data }) {
   return (
     <section className="frontpage-grid">
-      <div className="frontpage-primary">
+      <div className="frontpage-actions">
         <ActionsPanel actions={data.recommendedActions} />
-        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
       </div>
 
-      <div className="frontpage-secondary">
+      <div className="frontpage-river">
         <RiverStatusPanel
           areaName={data.areaName}
           riverSummary={data.riverSummary}
         />
-        <MapPanel areaName={data.areaName} />
       </div>
 
-      <div className="frontpage-tertiary">
+      <div className="frontpage-rainfall">
         <RainfallChart rainfallTrend={data.rainfallTrend} />
+      </div>
+
+      <div className="frontpage-factors">
+        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
+      </div>
+
+      <div className="frontpage-map">
+        <MapPanel areaName={data.areaName} />
       </div>
     </section>
   );

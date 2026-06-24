@@ -309,43 +309,76 @@ p {
   align-items: stretch;
   display: grid;
   gap: 14px;
+  grid-template-areas:
+    "actions river rainfall"
+    "factors map map";
   grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.1fr) minmax(300px, 0.96fr);
+  grid-template-rows: minmax(0, auto) minmax(0, auto);
   margin-bottom: 12px;
   min-width: 0;
 }
 
-.frontpage-primary,
-.frontpage-secondary,
-.frontpage-tertiary {
+.frontpage-actions {
+  grid-area: actions;
+}
+
+.frontpage-river {
+  align-items: stretch;
+  display: flex;
+  grid-area: river;
+  justify-content: center;
+}
+
+.frontpage-rainfall {
+  grid-area: rainfall;
+}
+
+.frontpage-factors {
+  grid-area: factors;
+}
+
+.frontpage-map {
+  grid-area: map;
+}
+
+.frontpage-actions,
+.frontpage-factors,
+.frontpage-map,
+.frontpage-rainfall,
+.frontpage-river {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   min-width: 0;
 }
 
-.frontpage-primary .card,
-.frontpage-secondary .card,
-.frontpage-tertiary .card {
+.frontpage-actions .card,
+.frontpage-factors .card,
+.frontpage-map .card,
+.frontpage-rainfall .card,
+.frontpage-river .card {
   height: 100%;
 }
 
-.frontpage-primary .card {
+.frontpage-actions .card,
+.frontpage-factors .card {
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-.frontpage-primary .section-header {
+.frontpage-actions .section-header,
+.frontpage-factors .section-header {
   justify-content: center;
   text-align: center;
 }
 
-.frontpage-primary .section-label {
+.frontpage-actions .section-label,
+.frontpage-factors .section-label {
   margin-bottom: 10px;
 }
 
-.frontpage-primary .factor-list,
-.frontpage-primary .action-list {
+.frontpage-actions .action-list,
+.frontpage-factors .factor-list {
   display: grid;
   gap: 10px;
   list-style: none;
@@ -353,8 +386,8 @@ p {
   text-align: center;
 }
 
-.frontpage-primary .factor-list li,
-.frontpage-primary .action-list li {
+.frontpage-actions .action-list li,
+.frontpage-factors .factor-list li {
   background: rgba(251, 253, 255, 0.5);
   border: 1px solid rgba(224, 234, 247, 0.8);
   border-radius: 10px;
@@ -362,28 +395,24 @@ p {
   padding: 10px 12px;
 }
 
-.frontpage-secondary .river-status-card {
+.frontpage-river .river-status-card {
   align-self: center;
   width: calc(100% - 40px);
 }
 
-.frontpage-secondary .river-grid {
+.frontpage-river .river-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.frontpage-tertiary .signal-chart-card {
-  min-height: 100%;
+.frontpage-rainfall .signal-chart-card .chart-box {
+  height: 215px;
 }
 
-.frontpage-tertiary .signal-chart-card .chart-box {
-  height: 330px;
+.frontpage-map .map-panel {
+  height: 250px;
 }
 
-.frontpage-secondary .map-panel {
-  height: 300px;
-}
-
-.frontpage-secondary .location-card {
+.frontpage-map .location-card {
   padding-bottom: 14px;
 }
 
@@ -832,6 +861,12 @@ p {
 
   .frontpage-grid,
   .section-page {
+    grid-template-areas:
+      "actions"
+      "river"
+      "rainfall"
+      "factors"
+      "map";
     grid-template-columns: 1fr;
   }
 
@@ -843,15 +878,15 @@ p {
     display: none;
   }
 
-  .frontpage-secondary .river-status-card {
+  .frontpage-river .river-status-card {
     width: 100%;
   }
 
-  .frontpage-secondary .map-panel {
+  .frontpage-map .map-panel {
     height: 260px;
   }
 
-  .frontpage-tertiary .signal-chart-card .chart-box {
+  .frontpage-rainfall .signal-chart-card .chart-box {
     height: 260px;
   }
 }
@@ -869,7 +904,7 @@ p {
   .community-summary,
   .report-form-grid,
   .community-page,
-  .frontpage-secondary .river-grid {
+  .frontpage-river .river-grid {
     grid-template-columns: 1fr;
   }
 
@@ -892,11 +927,11 @@ p {
     max-width: calc(100vw - 28px);
   }
 
-  .frontpage-secondary .map-panel {
+  .frontpage-map .map-panel {
     height: 230px;
   }
 
-  .frontpage-tertiary .signal-chart-card .chart-box {
+  .frontpage-rainfall .signal-chart-card .chart-box {
     height: 230px;
   }
 
