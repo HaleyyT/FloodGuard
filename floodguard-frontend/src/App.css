@@ -286,6 +286,24 @@ p {
   grid-template-columns: 1fr;
 }
 
+/* #community workspace */
+.community-page {
+  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
+}
+
+.community-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.community-intake-card,
+.evidence-review-card,
+.local-signals-card {
+  align-self: stretch;
+}
+
 /* #front-page app dashboard */
 .frontpage-grid {
   align-items: stretch;
@@ -510,8 +528,8 @@ p {
 .report-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 9px;
+  margin-bottom: 12px;
 }
 
 .community-summary {
@@ -560,7 +578,7 @@ p {
 }
 
 .report-form textarea {
-  min-height: 74px;
+  min-height: 64px;
   resize: vertical;
 }
 
@@ -578,6 +596,10 @@ p {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .community-report-item,
@@ -585,7 +607,11 @@ p {
   background: #fbfdff;
   border: 1px solid #e5ecf6;
   border-radius: 12px;
-  padding: 12px;
+  padding: 11px 12px;
+}
+
+.community-report-item {
+  min-height: 100px;
 }
 
 .evidence-review-list {
@@ -787,6 +813,7 @@ p {
   .architecture-footer,
   .community-summary,
   .report-form-grid,
+  .community-page,
   .frontpage-secondary .river-grid {
     grid-template-columns: 1fr;
   }

@@ -1217,7 +1217,7 @@ function SourceHealthPanel({ sources }) {
 // #local situational awareness card
 function ReportsPanel({ reports }) {
   return (
-    <section className="card">
+    <section className="card local-signals-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Local situational awareness</p>
@@ -1285,7 +1285,7 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
   };
 
   return (
-    <section className="card">
+    <section className="card community-intake-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Community input</p>
@@ -1411,7 +1411,7 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
 // #image evidence review card
 function EvidenceReviewPanel({ queue }) {
   return (
-    <section className="card">
+    <section className="card evidence-review-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Image-assisted validation</p>
@@ -1747,12 +1747,16 @@ export default function App() {
 
       {activeView === "community" && (
         <section className="section-page community-page">
-          <ReportsPanel reports={dashboardData.reports} />
-          <CommunityReportPanel
-            publicSignalSummary={dashboardData.publicSignalSummary}
-            reportState={communityReportState}
-          />
-          <EvidenceReviewPanel queue={evidenceReviewQueue} />
+          <div className="community-column">
+            <ReportsPanel reports={dashboardData.reports} />
+            <EvidenceReviewPanel queue={evidenceReviewQueue} />
+          </div>
+          <div className="community-column">
+            <CommunityReportPanel
+              publicSignalSummary={dashboardData.publicSignalSummary}
+              reportState={communityReportState}
+            />
+          </div>
         </section>
       )}
 
