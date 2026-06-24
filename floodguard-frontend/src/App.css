@@ -464,6 +464,74 @@ p {
   margin-bottom: 0;
 }
 
+/* #location-aware relevance diagnostics */
+.relevance-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.relevance-source-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.relevance-source-row {
+  align-items: center;
+  background: #fbfdff;
+  border: 1px solid #e5ecf6;
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.relevance-source-row h4 {
+  color: #10213a;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+}
+
+.relevance-source-row p {
+  color: #4c5f79;
+  font-size: 0.82rem;
+  margin-bottom: 0;
+}
+
+.relevance-source-row strong {
+  color: #184e9f;
+  font-size: 0.95rem;
+}
+
+.nearest-station-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.nearest-station-list .section-label {
+  flex: 0 0 100%;
+  margin-bottom: 0;
+}
+
+.nearest-station-list span {
+  background: rgba(246, 251, 255, 0.92);
+  border: 1px solid #d9e7f5;
+  border-radius: 999px;
+  color: #19345a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.relevance-note-list {
+  margin-top: 0;
+}
+
 .source-badge {
   border-radius: 999px;
   flex: 0 0 auto;
@@ -475,6 +543,21 @@ p {
 .source-badge.current {
   background: #d8f6e1;
   color: #156f39;
+}
+
+.source-badge.complete {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
+.source-badge.partial {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.source-badge.limited {
+  background: #fde8e8;
+  color: #a12a2a;
 }
 
 .source-badge.high {
@@ -855,7 +938,8 @@ p {
 /* #responsive layout */
 @media (max-width: 1020px) {
   .overview-grid,
-  .evidence-grid {
+  .evidence-grid,
+  .relevance-summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -902,6 +986,7 @@ p {
   .evidence-grid,
   .architecture-footer,
   .community-summary,
+  .relevance-summary-grid,
   .report-form-grid,
   .community-page,
   .frontpage-river .river-grid {

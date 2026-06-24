@@ -334,6 +334,49 @@ function formatObservedAt(value) {
   return new Date(timestamp).toLocaleString("en-AU");
 }
 
+function formatFitStatus(status) {
+  if (status === "complete") return "Complete";
+  if (status === "partial") return "Partial";
+  if (status === "limited") return "Limited";
+  return "Unknown";
+}
+
+function formatSpatialStatus(status) {
+  if (status === "local-fit") return "Local fit";
+  if (status === "wide-fit") return "Wide fit";
+  if (status === "no-station-coordinates") return "No coordinates";
+  return "Unknown";
+}
+
+function buildLocationRelevance(signals) {
+  const areaRelevance = signals.areaRelevance ?? {};
+  const spatialRelevance = signals.spatialRelevance ?? {};
+  const sourceFit = areaRelevance.sourceFit ?? {};
+  const sourceRows = ["weather", "rainfall", "river"]
+    .map((type) => sourceFit[type])
+    .filter(Boolean);
+
+  return {
+    areaName: areaRelevance.areaName ?? signals.area?.name ?? signals.location?.name,
+    catchment: areaRelevance.catchment ?? signals.area?.catchment,
+    fitScore: areaRelevance.score,
+    fitStatus: areaRelevance.status,
+    matchedSignals: areaRelevance.matchedSignals,
+    expectedSignals: areaRelevance.expectedSignals,
+    sourceRows,
+    matchedRiverStations: areaRelevance.matchedRiverStations ?? [],
+    missingRiverStations: areaRelevance.missingRiverStations ?? [],
+    spatialStatus: spatialRelevance.status ?? areaRelevance.spatial?.status,
+    coverageRadiusKm:
+      spatialRelevance.coverageRadiusKm ?? areaRelevance.spatial?.coverageRadiusKm,
+    nearestStationDistanceKm:
+      spatialRelevance.nearestStationDistanceKm ??
+      areaRelevance.spatial?.nearestStationDistanceKm,
+    nearestStations: spatialRelevance.nearestStations ?? [],
+    notes: areaRelevance.notes ?? [],
+  };
+}
+
 function buildDashboardData(signals, sourceStatus, liveStatus) {
   const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
@@ -369,6 +412,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     rainfallTrend: buildRainfallTrend(signals),
     riskSignals: buildRiskSignals(signals),
     sourceHealth: signals.sourceMetadata ?? [],
+    locationRelevance: buildLocationRelevance(signals),
     decisionAudit: signals.riskAssessment?.decisionAudit ?? null,
     publicSignalSummary,
 
@@ -1220,6 +1264,87 @@ function SourceHealthPanel({ sources }) {
   );
 }
 
+// #location-aware relevance card
+function LocationRelevancePanel({ relevance }) {
+  const matchLabel =
+    typeof relevance.matchedSignals === "number" && typeof relevance.expectedSignals === "number"
+      ? `${relevance.matchedSignals}/${relevance.expectedSignals}`
+      : "Unknown";
+  const nearestStations = relevance.nearestStations.slice(0, 4);
+
+  return (
+    <section className="card location-relevance-card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Location-aware data fit</p>
+          <h3>Area relevance</h3>
+        </div>
+        <span className={`source-badge ${relevance.fitStatus ?? "unknown"}`}>
+          {formatFitStatus(relevance.fitStatus)}
+        </span>
+      </div>
+
+      <div className="relevance-summary-grid">
+        <InfoTile
+          label="Station match"
+          value={matchLabel}
+        />
+        <InfoTile
+          label="Fit score"
+          value={
+            typeof relevance.fitScore === "number"
+              ? `${relevance.fitScore}%`
+              : "Unknown"
+          }
+        />
+        <InfoTile
+          label="Spatial fit"
+          value={formatSpatialStatus(relevance.spatialStatus)}
+        />
+        <InfoTile
+          label="Coverage radius"
+          value={formatDistanceKm(relevance.coverageRadiusKm)}
+        />
+      </div>
+
+      <div className="relevance-source-list">
+        {relevance.sourceRows.map((row) => (
+          <div className="relevance-source-row" key={row.label}>
+            <div>
+              <h4>{row.label}</h4>
+              <p>{row.matched}/{row.expected} configured signal(s) matched</p>
+            </div>
+            <strong>{row.score}%</strong>
+          </div>
+        ))}
+      </div>
+
+      {nearestStations.length > 0 && (
+        <div className="nearest-station-list">
+          <p className="section-label">Nearest configured context</p>
+          {nearestStations.map((station) => (
+            <span key={station.id}>
+              {station.name} · {formatDistanceKm(station.distanceKm)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {relevance.missingRiverStations.length > 0 ? (
+        <ul className="factor-list history-list relevance-note-list">
+          {relevance.missingRiverStations.map((station) => (
+            <li key={station}>{station} is configured but missing from the current river feed.</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="report-form-message">
+          All configured river/creek stations for this area are present in the current feed.
+        </p>
+      )}
+    </section>
+  );
+}
+
 // #local situational awareness card
 function ReportsPanel({ reports }) {
   return (
@@ -1740,6 +1865,7 @@ export default function App() {
       {activeView === "signals" && (
         <section className="section-page">
           <SourceHealthPanel sources={dashboardData.sourceHealth} />
+          <LocationRelevancePanel relevance={dashboardData.locationRelevance} />
           <DecisionAuditPanel audit={dashboardData.decisionAudit} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
           <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
