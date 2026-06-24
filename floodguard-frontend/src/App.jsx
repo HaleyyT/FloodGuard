@@ -17,9 +17,11 @@ import {
   fetchBaselinePrediction,
   fetchAreaFeatures,
   fetchAreaHistory,
+  fetchDatasetQuality,
   fetchCommunityReports,
   fetchEvidenceReviewQueue,
   fetchFloodguardAreas,
+  fetchModelCard,
   fetchParramattaSignals,
   localParramattaSignals,
   submitCommunityReport,
@@ -664,6 +666,48 @@ function useAreaFeatures(selectedAreaId, lastUpdated) {
   return featureDataset;
 }
 
+function useDatasetQuality(selectedAreaId, lastUpdated) {
+  const [quality, setQuality] = useState({
+    rowCount: 0,
+    elevatedCount: 0,
+    lowCount: 0,
+    readyForModelComparison: false,
+    classBalanceStatus: "unknown",
+    averageReliabilityScore: null,
+    gates: [],
+    warnings: ["Dataset quality API is unavailable."],
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchDatasetQuality({
+      areaId: selectedAreaId,
+      limit: 100,
+      signal: controller.signal,
+    })
+      .then(setQuality)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setQuality({
+            rowCount: 0,
+            elevatedCount: 0,
+            lowCount: 0,
+            readyForModelComparison: false,
+            classBalanceStatus: "unknown",
+            averageReliabilityScore: null,
+            gates: [],
+            warnings: ["Dataset quality API is unavailable."],
+          });
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return quality;
+}
+
 function useBaselinePrediction(selectedAreaId, lastUpdated) {
   const [baselinePrediction, setBaselinePrediction] = useState({
     modelName: "transparent feature baseline",
@@ -711,6 +755,51 @@ function useBaselinePrediction(selectedAreaId, lastUpdated) {
   }, [selectedAreaId, lastUpdated]);
 
   return baselinePrediction;
+}
+
+function useModelCard(selectedAreaId, lastUpdated) {
+  const [modelCard, setModelCard] = useState({
+    modelName: "transparent feature baseline",
+    modelType: "rule-weighted tabular baseline",
+    status: "unavailable",
+    target: "Waiting for model card.",
+    scoreFormula: "Waiting for model card.",
+    readiness: {
+      readyForExperiment: false,
+      rowCount: 0,
+      elevatedExamples: 0,
+      note: "Model card API is unavailable.",
+    },
+    limitations: ["Model card API is unavailable."],
+    nextModelCandidates: [],
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchModelCard({
+      areaId: selectedAreaId,
+      limit: 100,
+      signal: controller.signal,
+    })
+      .then(setModelCard)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setModelCard((current) => ({
+            ...current,
+            status: "unavailable",
+            readiness: {
+              ...current.readiness,
+              note: "Model card API is unavailable.",
+            },
+          }));
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return modelCard;
 }
 
 function buildHistorySummary(history = []) {
@@ -1409,6 +1498,40 @@ function FeatureReadinessPanel({ dataset }) {
   );
 }
 
+// #dataset quality card
+function DatasetQualityPanel({ quality }) {
+  const readyLabel = quality.readyForModelComparison ? "Ready" : "Collecting";
+  const reliabilityLabel =
+    quality.averageReliabilityScore === null ? "Unknown" : `${quality.averageReliabilityScore}/100`;
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Training data quality</p>
+          <h3>Dataset readiness</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Model readiness" value={readyLabel} />
+        <InfoTile label="Avg reliability" value={reliabilityLabel} />
+      </div>
+
+      <ul className="factor-list history-list">
+        {quality.gates.slice(0, 4).map((gate) => (
+          <li key={gate.name}>
+            {gate.name}: {gate.actual}/{gate.required} {gate.status}
+          </li>
+        ))}
+        {(quality.warnings ?? []).slice(0, 2).map((warning) => (
+          <li key={warning}>{warning}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // #baseline prediction card
 function BaselinePredictionPanel({ baseline }) {
   const prediction = baseline.prediction;
@@ -1448,6 +1571,31 @@ function BaselinePredictionPanel({ baseline }) {
         <li>{agreement}</li>
         <li>Holdout accuracy: {accuracy} across {baseline.evaluation.sampleSize} previous row(s)</li>
         <li>{baseline.readiness.note}</li>
+      </ul>
+    </section>
+  );
+}
+
+// #model card panel
+function ModelCardPanel({ modelCard }) {
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Model governance</p>
+          <h3>Baseline model card</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Model type" value={modelCard.modelType} />
+        <InfoTile label="Status" value={modelCard.status} />
+      </div>
+
+      <ul className="factor-list history-list">
+        <li>{modelCard.target}</li>
+        <li>{modelCard.readiness.note}</li>
+        <li>{modelCard.limitations?.[0] ?? "Limitations are waiting for the API."}</li>
       </ul>
     </section>
   );
@@ -1504,7 +1652,9 @@ export default function App() {
   const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
   const evidenceReviewQueue = useEvidenceReviewQueue(selectedAreaId, liveStatus.lastUpdated);
   const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
+  const datasetQuality = useDatasetQuality(selectedAreaId, liveStatus.lastUpdated);
   const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
+  const modelCard = useModelCard(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
 
   return (
@@ -1531,7 +1681,9 @@ export default function App() {
           <EvidencePanel evidence={dashboardData.evidence} />
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />
+          <DatasetQualityPanel quality={datasetQuality} />
           <BaselinePredictionPanel baseline={baselinePrediction} />
+          <ModelCardPanel modelCard={modelCard} />
         </div>
 
         <div className="right-column">

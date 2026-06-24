@@ -6,7 +6,9 @@ const defaultHistoryUrl = "http://localhost:5174/api/history";
 const defaultCommunityReportsUrl = "http://localhost:5174/api/community-reports";
 const defaultEvidenceReviewUrl = "http://localhost:5174/api/evidence-review";
 const defaultFeaturesUrl = "http://localhost:5174/api/features";
+const defaultDatasetQualityUrl = "http://localhost:5174/api/dataset-quality";
 const defaultBaselineUrl = "http://localhost:5174/api/baseline-prediction";
+const defaultModelCardUrl = "http://localhost:5174/api/model-card";
 
 export const parramattaSignalsApiUrl =
   import.meta.env.VITE_FLOODGUARD_API_URL || defaultApiUrl;
@@ -20,8 +22,12 @@ export const floodguardEvidenceReviewApiUrl =
   import.meta.env.VITE_FLOODGUARD_EVIDENCE_REVIEW_API_URL || defaultEvidenceReviewUrl;
 export const floodguardFeaturesApiUrl =
   import.meta.env.VITE_FLOODGUARD_FEATURES_API_URL || defaultFeaturesUrl;
+export const floodguardDatasetQualityApiUrl =
+  import.meta.env.VITE_FLOODGUARD_DATASET_QUALITY_API_URL || defaultDatasetQualityUrl;
 export const floodguardBaselineApiUrl =
   import.meta.env.VITE_FLOODGUARD_BASELINE_API_URL || defaultBaselineUrl;
+export const floodguardModelCardApiUrl =
+  import.meta.env.VITE_FLOODGUARD_MODEL_CARD_API_URL || defaultModelCardUrl;
 
 function buildSignalsUrl(areaId, refresh = false) {
   const url = new URL(parramattaSignalsApiUrl);
@@ -132,6 +138,20 @@ export async function fetchAreaFeatures({ areaId, limit = 100, signal } = {}) {
   return response.json();
 }
 
+export async function fetchDatasetQuality({ areaId, limit = 100, signal } = {}) {
+  const url = new URL(floodguardDatasetQualityApiUrl);
+  if (areaId) url.searchParams.set("area", areaId);
+  url.searchParams.set("limit", String(limit));
+
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    throw new Error(`FloodGuard dataset quality API returned ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function fetchBaselinePrediction({ areaId, limit = 100, signal } = {}) {
   const url = new URL(floodguardBaselineApiUrl);
   if (areaId) url.searchParams.set("area", areaId);
@@ -141,6 +161,20 @@ export async function fetchBaselinePrediction({ areaId, limit = 100, signal } = 
 
   if (!response.ok) {
     throw new Error(`FloodGuard baseline API returned ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchModelCard({ areaId, limit = 100, signal } = {}) {
+  const url = new URL(floodguardModelCardApiUrl);
+  if (areaId) url.searchParams.set("area", areaId);
+  url.searchParams.set("limit", String(limit));
+
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    throw new Error(`FloodGuard model card API returned ${response.status}`);
   }
 
   return response.json();

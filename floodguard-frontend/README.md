@@ -84,6 +84,8 @@ Every refreshed ingestion appends compact area snapshots under `server/storage/h
 
 `GET /api/baseline-prediction?area=parramatta` runs a transparent feature baseline over the stored rows. It reports the latest prediction, agreement with the rule engine, holdout accuracy over previous rows, and whether the history is ready for a real baseline experiment.
 
+`GET /api/dataset-quality?area=parramatta` reports ML-readiness gates, class balance, source stability, missing values, and warnings. `GET /api/model-card?area=parramatta` explains the transparent baseline purpose, scoring formula, inputs, limitations, and next model candidates.
+
 Environment variables:
 
 - `FLOODGUARD_WEATHER_URL`
@@ -93,7 +95,9 @@ Environment variables:
 - `FLOODGUARD_API_PORT`
 - `VITE_FLOODGUARD_API_URL`
 - `VITE_FLOODGUARD_AREAS_API_URL`
+- `VITE_FLOODGUARD_DATASET_QUALITY_API_URL`
 - `VITE_FLOODGUARD_BASELINE_API_URL`
+- `VITE_FLOODGUARD_MODEL_CARD_API_URL`
 - `VITE_FLOODGUARD_COMMUNITY_REPORTS_API_URL`
 - `VITE_FLOODGUARD_REFRESH_MS`
 
@@ -113,7 +117,9 @@ Environment variables:
 - `GET /api/evidence-review?area=parramatta`
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
+- `GET /api/dataset-quality?area=parramatta`
 - `GET /api/baseline-prediction?area=parramatta`
+- `GET /api/model-card?area=parramatta`
 - `GET /api/source-health?area=parramatta`
 - `GET /api/decision-audit?area=parramatta`
 - `GET /api/spatial-relevance?area=parramatta`

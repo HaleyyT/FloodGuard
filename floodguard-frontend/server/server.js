@@ -1,7 +1,9 @@
 import http from "node:http";
 import {
   readAreaBaselinePrediction,
+  readAreaDatasetQuality,
   readAreaFeatureDataset,
+  readAreaModelCard,
   readOrRefreshRegionalSignals,
   readHistoricalSignals,
   readSpatialRelevance,
@@ -54,7 +56,9 @@ function routes() {
     "/api/evidence-review?area=parramatta",
     "/api/features?area=parramatta",
     "/api/features?area=parramatta&format=csv",
+    "/api/dataset-quality?area=parramatta",
     "/api/baseline-prediction?area=parramatta",
+    "/api/model-card?area=parramatta",
     "/api/source-health?area=parramatta",
     "/api/spatial-relevance?area=parramatta",
     "/api/spatial-relevance?lat=-33.8&lon=151",
@@ -330,6 +334,38 @@ async function routeRequest(request, response) {
     }
 
     sendJson(response, 200, await readAreaBaselinePrediction(areaId, limit));
+    return;
+  }
+
+  if (url.pathname === "/api/dataset-quality") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+
+    if (!selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await readAreaDatasetQuality(areaId, limit));
+    return;
+  }
+
+  if (url.pathname === "/api/model-card") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+
+    if (!selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await readAreaModelCard(areaId, limit));
     return;
   }
 

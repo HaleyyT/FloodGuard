@@ -8,8 +8,8 @@ import {
   normalizeWeatherRainfall,
 } from "./normalisers.js";
 import { assessRisk } from "./riskEngine.js";
-import { buildFeatureRows, buildFeatureSummary } from "./features.js";
-import { buildBaselinePrediction } from "./baselineModel.js";
+import { buildDatasetQualityReport, buildFeatureRows, buildFeatureSummary } from "./features.js";
+import { buildBaselineModelCard, buildBaselinePrediction } from "./baselineModel.js";
 import { readCommunityReports, summariseCommunityReports } from "./communityReports.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
 import { buildSpatialRelevance, resolveSpatialQuery } from "./spatialRelevance.js";
@@ -472,6 +472,7 @@ export async function readAreaFeatureDataset(areaId = defaultAreaId, limit = 100
   return {
     areaId,
     summary: buildFeatureSummary(rows),
+    quality: buildDatasetQualityReport(rows),
     rows,
   };
 }
@@ -483,6 +484,27 @@ export async function readAreaBaselinePrediction(areaId = defaultAreaId, limit =
   return {
     areaId,
     ...buildBaselinePrediction(rows),
+  };
+}
+
+export async function readAreaDatasetQuality(areaId = defaultAreaId, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaId, limit);
+  const rows = buildFeatureRows(history);
+
+  return {
+    areaId,
+    ...buildDatasetQualityReport(rows),
+  };
+}
+
+export async function readAreaModelCard(areaId = defaultAreaId, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaId, limit);
+  const rows = buildFeatureRows(history);
+  const datasetQuality = buildDatasetQualityReport(rows);
+
+  return {
+    areaId,
+    ...buildBaselineModelCard(rows, datasetQuality),
   };
 }
 

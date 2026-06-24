@@ -1,4 +1,16 @@
 const elevatedRiskLevels = new Set(["Moderate", "High"]);
+const qualityFeatureFields = [
+  "rainfall24hMm",
+  "rainfall72hMm",
+  "riverStationCount",
+  "rainfallPressure",
+  "riverPressure",
+  "wetnessPressure",
+  "confidence",
+  "decisionReliabilityScore",
+  "areaRelevanceScore",
+  "nearestStationDistanceKm",
+];
 
 function toTimestamp(value) {
   const timestamp = new Date(value).getTime();
@@ -82,6 +94,87 @@ export function buildFeatureSummary(featureRows = []) {
       featureRows.length >= 30 && elevatedRows.length >= 5
         ? "Enough starter rows exist for a simple baseline experiment."
         : "Keep collecting history before training; this feature table is the model-ready foundation.",
+  };
+}
+
+function average(values) {
+  const usable = values.filter((value) => typeof value === "number" && Number.isFinite(value));
+  if (usable.length === 0) return null;
+  return Math.round((usable.reduce((total, value) => total + value, 0) / usable.length) * 10) / 10;
+}
+
+function buildMissingValueCounts(featureRows) {
+  return Object.fromEntries(
+    qualityFeatureFields.map((field) => [
+      field,
+      featureRows.filter((row) => row[field] === null || row[field] === undefined).length,
+    ]),
+  );
+}
+
+function gate(name, passed, actual, required, note) {
+  return {
+    name,
+    status: passed ? "pass" : "collecting",
+    actual,
+    required,
+    note,
+  };
+}
+
+export function buildDatasetQualityReport(featureRows = []) {
+  const rowCount = featureRows.length;
+  const elevatedRows = featureRows.filter((row) => row.targetElevatedConcern === 1);
+  const lowRows = featureRows.filter((row) => row.targetElevatedConcern === 0);
+  const staleRows = featureRows.filter((row) => row.staleSourceCount > 0);
+  const fallbackRows = featureRows.filter((row) => row.fallbackSourceCount > 0);
+  const failedRows = featureRows.filter((row) => row.failedSourceCount > 0);
+  const gates = [
+    gate("Starter history", rowCount >= 30, rowCount, 30, "Collect at least 30 rows before comparing models."),
+    gate(
+      "Elevated examples",
+      elevatedRows.length >= 5,
+      elevatedRows.length,
+      5,
+      "Collect enough moderate/high concern examples to avoid a one-class dataset.",
+    ),
+    gate(
+      "Low examples",
+      lowRows.length >= 5,
+      lowRows.length,
+      5,
+      "Keep low-concern examples so future models learn normal conditions too.",
+    ),
+    gate(
+      "Source stability",
+      failedRows.length === 0,
+      failedRows.length,
+      0,
+      "Failed source rows should be investigated before training.",
+    ),
+  ];
+  const warnings = [
+    rowCount < 30 ? "History is still small for model comparison." : null,
+    elevatedRows.length === 0 ? "No elevated-concern examples are present yet." : null,
+    staleRows.length > rowCount / 2 ? "Most rows currently come from stale source data." : null,
+    fallbackRows.length > rowCount / 2 ? "Most rows currently rely on fallback sources." : null,
+    failedRows.length > 0 ? `${failedRows.length} row(s) include failed source inputs.` : null,
+  ].filter(Boolean);
+
+  return {
+    rowCount,
+    elevatedCount: elevatedRows.length,
+    lowCount: lowRows.length,
+    classBalanceStatus:
+      elevatedRows.length > 0 && lowRows.length > 0 ? "two-class-history" : "single-class-history",
+    averageReliabilityScore: average(featureRows.map((row) => row.decisionReliabilityScore)),
+    staleRowCount: staleRows.length,
+    fallbackRowCount: fallbackRows.length,
+    failedRowCount: failedRows.length,
+    missingValueCounts: buildMissingValueCounts(featureRows),
+    gates,
+    readyForModelComparison: gates.every((item) => item.status === "pass"),
+    warnings,
   };
 }
 

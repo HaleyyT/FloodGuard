@@ -104,6 +104,8 @@ This prepares the project for a future baseline classifier without pretending th
 
 FloodGuard now includes a transparent feature baseline that scores the latest stored feature row and compares it with the rule-engine label. It is deliberately simple and inspectable, so it acts as a bridge between rule-based decisions and future trained ML models.
 
+FloodGuard also exposes dataset-quality diagnostics and a baseline model card. These explain whether the feature table is ready for model comparison, which gates are still collecting data, what the baseline is trying to predict, and why it should not be treated as a final trained model yet.
+
 ## Regional Pilot
 
 FloodGuard is now multi-area ready without jumping straight to PostGIS. The current pilot uses a simple config mapping to connect each area to relevant public stations:
@@ -183,7 +185,9 @@ Useful routes:
 - `GET /api/history?area=parramatta`
 - `GET /api/features?area=parramatta`
 - `GET /api/features?area=parramatta&format=csv`
+- `GET /api/dataset-quality?area=parramatta`
 - `GET /api/baseline-prediction?area=parramatta`
+- `GET /api/model-card?area=parramatta`
 - `GET /api/source-health?area=parramatta`
 - `GET /api/decision-audit?area=parramatta`
 - `GET /api/spatial-relevance?area=parramatta`

@@ -22,6 +22,54 @@ function scoreRow(row) {
   return clamp(Math.round(rawScore));
 }
 
+const modelInputs = [
+  {
+    field: "rainfallPressure",
+    role: "pressure",
+    explanation: "Higher rainfall pressure increases predicted local concern.",
+  },
+  {
+    field: "riverPressure",
+    role: "pressure",
+    explanation: "Higher river pressure increases predicted local concern.",
+  },
+  {
+    field: "wetnessPressure",
+    role: "pressure",
+    explanation: "Antecedent wetness supports the pressure score.",
+  },
+  {
+    field: "risingRiverStations",
+    role: "trend",
+    explanation: "Rising stations add a worsening-condition signal.",
+  },
+  {
+    field: "scoreDelta",
+    role: "trend",
+    explanation: "Recent rule-score increases add short-term momentum.",
+  },
+  {
+    field: "decisionReliabilityScore",
+    role: "support",
+    explanation: "More reliable decision inputs support the baseline score.",
+  },
+  {
+    field: "staleSourceCount",
+    role: "penalty",
+    explanation: "Stale source rows reduce model confidence.",
+  },
+  {
+    field: "fallbackSourceCount",
+    role: "penalty",
+    explanation: "Fallback source rows reduce model confidence.",
+  },
+  {
+    field: "failedSourceCount",
+    role: "penalty",
+    explanation: "Failed source rows heavily reduce model confidence.",
+  },
+];
+
 function evaluateRows(rows) {
   if (rows.length === 0) {
     return {
@@ -119,5 +167,36 @@ export function buildBaselinePrediction(featureRows = []) {
           ? "Enough starter history exists to compare this baseline against future models."
           : "Keep collecting balanced history before treating this as a trained model.",
     },
+  };
+}
+
+export function buildBaselineModelCard(featureRows = [], datasetQuality = null) {
+  const baseline = buildBaselinePrediction(featureRows);
+
+  return {
+    modelName: "transparent feature baseline",
+    modelType: "rule-weighted tabular baseline",
+    status: baseline.status,
+    purpose:
+      "Provide an inspectable comparison point before training heavier models such as random forest, XGBoost, or LightGBM.",
+    target: "Predict whether the latest stored area snapshot is elevated local flood concern.",
+    predictionTask: "binary-classification",
+    threshold: {
+      score: 45,
+      label: "Scores >= 45 are classified as elevated concern.",
+    },
+    scoreFormula:
+      "rainfall pressure 35% + river pressure 30% + wetness pressure 20% + rising stations/momentum + reliability support - stale/fallback/failed source penalties",
+    inputs: modelInputs,
+    evaluation: baseline.evaluation,
+    readiness: baseline.readiness,
+    datasetQuality,
+    limitations: [
+      "This is not a trained ML model yet.",
+      "Historical labels are derived from the current rule engine, not independent flood outcomes.",
+      "Small or single-class history makes accuracy unsuitable as a final performance measure.",
+      "Fallback or stale public feeds reduce reliability until live source coverage improves.",
+    ],
+    nextModelCandidates: ["logistic regression", "random forest", "XGBoost", "LightGBM"],
   };
 }
