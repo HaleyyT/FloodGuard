@@ -17,6 +17,7 @@ import {
   readCommunityReports,
 } from "./ingestion/communityReports.js";
 import { featureRowsToCsv } from "./ingestion/features.js";
+import { buildRegionalIngestionHealth } from "./ingestion/health.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
 const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
@@ -47,6 +48,7 @@ function sendText(response, statusCode, body, contentType = "text/plain; charset
 function routes() {
   return [
     "/api/health",
+    "/api/ingestion-health",
     "/api/areas",
     "/api/signals?area=parramatta",
     "/api/signals?area=north-parramatta",
@@ -231,12 +233,25 @@ async function routeRequest(request, response) {
     : await readOrRefreshRegionalSignals();
 
   if (url.pathname === "/api/health") {
+    const ingestionHealth = buildRegionalIngestionHealth(regionalSignals);
+
     sendJson(response, 200, {
       status: "ok",
       defaultAreaId: regionalSignals.defaultAreaId,
       areaCount: regionalSignals.areaList.length,
       ingestedAt: regionalSignals.ingestedAt,
+      ingestionHealth: {
+        status: ingestionHealth.status,
+        ready: ingestionHealth.ready,
+        blockedAreaCount: ingestionHealth.blockedAreaCount,
+        warningAreaCount: ingestionHealth.warningAreaCount,
+      },
     });
+    return;
+  }
+
+  if (url.pathname === "/api/ingestion-health") {
+    sendJson(response, 200, buildRegionalIngestionHealth(regionalSignals));
     return;
   }
 

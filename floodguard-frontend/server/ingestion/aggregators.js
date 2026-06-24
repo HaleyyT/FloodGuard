@@ -10,6 +10,7 @@ import {
 import { assessRisk } from "./riskEngine.js";
 import { buildDatasetQualityReport, buildFeatureRows, buildFeatureSummary } from "./features.js";
 import { buildBaselineModelCard, buildBaselinePrediction } from "./baselineModel.js";
+import { buildRegionalIngestionHealth } from "./health.js";
 import { readCommunityReports, summariseCommunityReports } from "./communityReports.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
 import { buildSpatialRelevance, resolveSpatialQuery } from "./spatialRelevance.js";
@@ -377,19 +378,19 @@ export async function buildRegionalSignals() {
   ]);
   let rainfallSeries = normalizeRainfall(rainfallSource.data);
   let rainfallMetadata = {
+    ...rainfallSource.metadata,
     label: "North Parramatta rainfall gauge",
     type: "rainfall",
     note: "Nearby rainfall time series normalised from the ingestion pipeline.",
-    ...rainfallSource.metadata,
   };
 
   if (rainfallSource.metadata.mode !== "remote" && weatherSource.metadata.mode === "remote") {
     rainfallSeries = normalizeWeatherRainfall(weatherSource.data);
     rainfallMetadata = {
+      ...weatherSource.metadata,
       label: "BoM Parramatta rain trace observations",
       type: "rainfall",
       note: "Live BoM rain-trace observations are used for the graph until a WaterNSW rainfall URL is configured.",
-      ...weatherSource.metadata,
       mode: "remote-derived",
       derivedFrom: weatherSource.metadata.source,
     };
@@ -428,12 +429,17 @@ export async function buildRegionalSignals() {
   );
   const areas = Object.fromEntries(areaEntries);
 
-  return {
+  const regionalSignals = {
     defaultAreaId,
     areas,
     areaList: listAreas(),
     sourceMetadata,
     ingestedAt,
+  };
+
+  return {
+    ...regionalSignals,
+    ingestionHealth: buildRegionalIngestionHealth(regionalSignals),
   };
 }
 

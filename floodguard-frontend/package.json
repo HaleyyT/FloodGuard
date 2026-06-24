@@ -7,6 +7,7 @@
     "api": "node server/server.js",
     "dev": "vite",
     "ingest": "node server/ingest.js",
+    "check:ingestion": "node server/check-ingestion.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
