@@ -11,12 +11,16 @@ import {
   selectAreaSignals,
 } from "./ingestion/aggregators.js";
 import { defaultAreaId } from "./ingestion/areaConfig.js";
+import { ingestionPolicy } from "./ingestion/config.js";
 import {
   buildImageEvidenceReviewQueue,
   createCommunityReport,
   readCommunityReports,
 } from "./ingestion/communityReports.js";
 import { featureRowsToCsv } from "./ingestion/features.js";
+import { readGaugeMetadata } from "./ingestion/gaugeMetadata.js";
+import { buildRegionalIngestionHealth } from "./ingestion/health.js";
+import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
 const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
@@ -47,6 +51,9 @@ function sendText(response, statusCode, body, contentType = "text/plain; charset
 function routes() {
   return [
     "/api/health",
+    "/api/ingestion-health",
+    "/api/source-registry",
+    "/api/gauge-metadata",
     "/api/areas",
     "/api/signals?area=parramatta",
     "/api/signals?area=north-parramatta",
@@ -162,6 +169,8 @@ function buildSourceHealth(areaSignals) {
       mode: metadata.mode,
       status: metadata.status ?? "ok",
       source: metadata.source,
+      sourceStrength: metadata.sourceStrength,
+      adapter: metadata.adapter,
       fetchedAt: metadata.fetchedAt,
       observedAt: metadata.observedAt,
       ageHours: metadata.ageHours,
@@ -184,7 +193,23 @@ function sendAreaSignals(response, regionalSignals, areaId, selector) {
     return;
   }
 
-  sendJson(response, 200, selector(areaSignals));
+  const regionalHealth = regionalSignals.ingestionHealth ?? buildRegionalIngestionHealth(regionalSignals);
+  const areaHealth = regionalHealth.areas.find((area) => area.areaId === areaSignals.area.id);
+  const enrichedAreaSignals = {
+    ...areaSignals,
+    ingestionHealth: areaSignals.ingestionHealth ?? areaHealth ?? null,
+    regionalIngestionHealth: {
+      status: regionalHealth.status,
+      overallStatus: regionalHealth.overallStatus,
+      coreFloodStatus: regionalHealth.coreFloodStatus,
+      contextStatus: regionalHealth.contextStatus,
+      warningStatus: regionalHealth.warningStatus,
+      ready: regionalHealth.ready,
+      summary: regionalHealth.summary,
+    },
+  };
+
+  sendJson(response, 200, selector(enrichedAreaSignals));
 }
 
 async function routeRequest(request, response) {
@@ -225,18 +250,57 @@ async function routeRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/source-registry") {
+    sendJson(response, 200, getSourceRegistry());
+    return;
+  }
+
+  if (url.pathname === "/api/gauge-metadata") {
+    sendJson(response, 200, await readGaugeMetadata());
+    return;
+  }
+
   const shouldRefresh = url.searchParams.get("refresh") === "true";
   const regionalSignals = shouldRefresh
-    ? await runRegionalIngestion()
+    ? await runRegionalIngestion({ protectCache: true })
     : await readOrRefreshRegionalSignals();
 
   if (url.pathname === "/api/health") {
+    const ingestionHealth = buildRegionalIngestionHealth(regionalSignals);
+
     sendJson(response, 200, {
       status: "ok",
       defaultAreaId: regionalSignals.defaultAreaId,
       areaCount: regionalSignals.areaList.length,
       ingestedAt: regionalSignals.ingestedAt,
+      refreshMetadata: regionalSignals.refreshMetadata,
+      ingestionHealth: {
+        status: ingestionHealth.status,
+        overallStatus: ingestionHealth.overallStatus,
+        coreFloodStatus: ingestionHealth.coreFloodStatus,
+        contextStatus: ingestionHealth.contextStatus,
+        warningStatus: ingestionHealth.warningStatus,
+        ready: ingestionHealth.ready,
+        blockedAreaCount: ingestionHealth.blockedAreaCount,
+        warningAreaCount: ingestionHealth.warningAreaCount,
+        summary: ingestionHealth.summary,
+      },
+      sourcePolicy: {
+        allowLocalFallback: ingestionPolicy.allowLocalFallback,
+        maxAgeHours: ingestionPolicy.maxAgeHours,
+        requiredLiveSources: {
+          rainfall: ["primary_live_gauge", "official_backup"],
+          river: ["primary_live_gauge", "official_backup"],
+          weather: ["official_backup"],
+          warnings: ["official_warning"],
+        },
+      },
     });
+    return;
+  }
+
+  if (url.pathname === "/api/ingestion-health") {
+    sendJson(response, 200, buildRegionalIngestionHealth(regionalSignals));
     return;
   }
 

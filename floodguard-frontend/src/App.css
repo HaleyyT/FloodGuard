@@ -10,9 +10,9 @@
 
 body {
   margin: 0;
-  background: #d4ebfa;
-  /*background: #4c81ca; #daeaf3 */
+  background: #d7ecfa;
   color: #172033;
+  overflow-x: hidden;
 }
 
 h1,
@@ -26,9 +26,10 @@ p {
 
 /* #dashboard shell */
 .app-shell {
-  max-width: 1240px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 18px 16px 32px;
+  padding: 16px 16px 28px;
+  width: 100%;
 }
 
 /* #hero / project header */
@@ -37,7 +38,7 @@ p {
   justify-content: space-between;
   align-items: flex-start;
   gap: 18px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .eyebrow {
@@ -65,25 +66,26 @@ p {
 }
 
 .hero {
-  background: linear-gradient(135deg, #fbfded, #83b5ee);
+  background: linear-gradient(135deg, #fbfded, #8abced);
   border: 1px solid #c7d8ef;
-  border-radius: 16px;
-  padding: 18px 20px;
-  margin-bottom: 14px;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
 }
 
 /* #shared card surface and section headings */
 .card {
   background: linear-gradient(135deg, #fbfdf4, #bddfeb);
   border-radius: 14px;
-  padding: 16px;
+  min-width: 0;
+  padding: 14px;
   box-shadow: 0 8px 22px rgba(16, 33, 58, 0.08);
   border: 1px solid #e6edf7;
 }
 
 /* #monitored region overview */
 .overview-panel {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 /* #regional pilot selector */
@@ -92,7 +94,7 @@ p {
   justify-content: space-between;
   align-items: center;
   gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .area-selector h3 {
@@ -135,6 +137,38 @@ p {
 
 .area-tabs button.active,
 .area-tabs button:hover {
+  background: #184e9f;
+  border-color: #184e9f;
+  color: #ffffff;
+}
+
+/* #app view navigation */
+.app-nav {
+  background: rgba(246, 251, 255, 0.82);
+  border: 1px solid #cfe0f2;
+  border-radius: 14px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding: 8px;
+}
+
+.app-nav button {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #19345a;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.app-nav button.active,
+.app-nav button:hover {
   background: #184e9f;
   border-color: #184e9f;
   color: #ffffff;
@@ -221,15 +255,23 @@ p {
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
+}
+
+/* #data reliability summary */
+.reliability-note {
+  color: #31445f;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  margin: 10px 0 0;
 }
 
 .info-tile {
   background: #eef3f9;
   border: 1px solid #e0eaf7;
   border-radius: 12px;
-  min-height: 82px;
-  padding: 12px;
+  min-height: 78px;
+  padding: 11px;
 }
 
 .info-tile h3 {
@@ -238,20 +280,148 @@ p {
   color: #19345a;
 }
 
-/* #main dashboard two-column layout */
-.main-grid {
+/* #view layouts */
+.section-page {
   display: grid;
-  grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr);
-  gap: 14px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
   align-items: start;
+  min-width: 0;
 }
 
-.left-column,
-.right-column {
+.architecture-page {
+  grid-template-columns: 1fr;
+}
+
+/* #community workspace */
+.community-page {
+  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
+}
+
+.community-column {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.community-intake-card,
+.evidence-review-card,
+.local-signals-card {
+  align-self: stretch;
+}
+
+/* #front-page app dashboard */
+.frontpage-grid {
+  align-items: stretch;
+  display: grid;
+  gap: 14px;
+  grid-template-areas:
+    "actions river rainfall"
+    "factors map map";
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.1fr) minmax(300px, 0.96fr);
+  grid-template-rows: minmax(0, auto) minmax(0, auto);
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.frontpage-actions {
+  grid-area: actions;
+}
+
+.frontpage-river {
+  align-items: stretch;
+  display: flex;
+  grid-area: river;
+  justify-content: center;
+}
+
+.frontpage-rainfall {
+  grid-area: rainfall;
+}
+
+.frontpage-factors {
+  grid-area: factors;
+}
+
+.frontpage-map {
+  grid-area: map;
+}
+
+.frontpage-actions,
+.frontpage-factors,
+.frontpage-map,
+.frontpage-rainfall,
+.frontpage-river {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.frontpage-actions .card,
+.frontpage-factors .card,
+.frontpage-map .card,
+.frontpage-rainfall .card,
+.frontpage-river .card {
+  height: 100%;
+}
+
+.frontpage-actions .card,
+.frontpage-factors .card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.frontpage-actions .section-header,
+.frontpage-factors .section-header {
+  justify-content: center;
+  text-align: center;
+}
+
+.frontpage-actions .section-label,
+.frontpage-factors .section-label {
+  margin-bottom: 10px;
+}
+
+.frontpage-actions .action-list,
+.frontpage-factors .factor-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  padding-left: 0;
+  text-align: center;
+}
+
+.frontpage-actions .action-list li,
+.frontpage-factors .factor-list li {
+  background: rgba(251, 253, 255, 0.5);
+  border: 1px solid rgba(224, 234, 247, 0.8);
+  border-radius: 10px;
+  margin-bottom: 0;
+  padding: 10px 12px;
+}
+
+.frontpage-river .river-status-card {
+  align-self: center;
+  width: calc(100% - 40px);
+}
+
+.frontpage-river .river-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.frontpage-rainfall .signal-chart-card .chart-box {
+  height: 215px;
+}
+
+.frontpage-map .map-panel {
+  height: 250px;
+}
+
+.frontpage-map .location-card {
+  padding-bottom: 14px;
 }
 
 /* #contributing factors and recommended actions */
@@ -265,7 +435,7 @@ p {
 
 .factor-list li,
 .action-list li {
-  margin-bottom: 7px;
+  margin-bottom: 6px;
 }
 
 /* #source health diagnostics */
@@ -273,6 +443,12 @@ p {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.source-health-summary {
+  color: #354863;
+  font-size: 0.86rem;
+  margin-bottom: 12px;
 }
 
 .source-health-item {
@@ -302,6 +478,74 @@ p {
   margin-bottom: 0;
 }
 
+/* #location-aware relevance diagnostics */
+.relevance-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.relevance-source-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.relevance-source-row {
+  align-items: center;
+  background: #fbfdff;
+  border: 1px solid #e5ecf6;
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.relevance-source-row h4 {
+  color: #10213a;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+}
+
+.relevance-source-row p {
+  color: #4c5f79;
+  font-size: 0.82rem;
+  margin-bottom: 0;
+}
+
+.relevance-source-row strong {
+  color: #184e9f;
+  font-size: 0.95rem;
+}
+
+.nearest-station-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.nearest-station-list .section-label {
+  flex: 0 0 100%;
+  margin-bottom: 0;
+}
+
+.nearest-station-list span {
+  background: rgba(246, 251, 255, 0.92);
+  border: 1px solid #d9e7f5;
+  border-radius: 999px;
+  color: #19345a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.relevance-note-list {
+  margin-top: 0;
+}
+
 .source-badge {
   border-radius: 999px;
   flex: 0 0 auto;
@@ -313,6 +557,41 @@ p {
 .source-badge.current {
   background: #d8f6e1;
   color: #156f39;
+}
+
+.source-badge.pass {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
+.source-badge.warn {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.source-badge.blocked {
+  background: #fde8e8;
+  color: #a12a2a;
+}
+
+.source-badge.not_connected {
+  background: #e8eef7;
+  color: #42546f;
+}
+
+.source-badge.complete {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
+.source-badge.partial {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.source-badge.limited {
+  background: #fde8e8;
+  color: #a12a2a;
 }
 
 .source-badge.high {
@@ -333,6 +612,31 @@ p {
 .source-badge.stale {
   background: #fff3d8;
   color: #9a5d00;
+}
+
+.source-badge.live-gauge {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
+.source-badge.current-context {
+  background: #e2f0ff;
+  color: #145398;
+}
+
+.source-badge.stale-context {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.source-badge.fallback {
+  background: #fde8e8;
+  color: #a12a2a;
+}
+
+.source-badge.not-connected {
+  background: #e8eef7;
+  color: #42546f;
 }
 
 .source-badge.unknown {
@@ -442,8 +746,8 @@ p {
 .report-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 9px;
+  margin-bottom: 12px;
 }
 
 .community-summary {
@@ -492,7 +796,7 @@ p {
 }
 
 .report-form textarea {
-  min-height: 74px;
+  min-height: 64px;
   resize: vertical;
 }
 
@@ -510,6 +814,10 @@ p {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .community-report-item,
@@ -517,7 +825,11 @@ p {
   background: #fbfdff;
   border: 1px solid #e5ecf6;
   border-radius: 12px;
-  padding: 12px;
+  padding: 11px 12px;
+}
+
+.community-report-item {
+  min-height: 100px;
 }
 
 .evidence-review-list {
@@ -590,10 +902,10 @@ p {
 
 /* #prototype evidence, historical storage, and ML readiness */
 .evidence-grid {
-  margin-top: 6px;
+  margin-top: 4px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .history-grid {
@@ -685,8 +997,20 @@ p {
 /* #responsive layout */
 @media (max-width: 1020px) {
   .overview-grid,
-  .evidence-grid {
+  .evidence-grid,
+  .relevance-summary-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .frontpage-grid,
+  .section-page {
+    grid-template-areas:
+      "actions"
+      "river"
+      "rainfall"
+      "factors"
+      "map";
+    grid-template-columns: 1fr;
   }
 
   .architecture-flow {
@@ -697,8 +1021,16 @@ p {
     display: none;
   }
 
-  .main-grid {
-    grid-template-columns: 1fr;
+  .frontpage-river .river-status-card {
+    width: 100%;
+  }
+
+  .frontpage-map .map-panel {
+    height: 260px;
+  }
+
+  .frontpage-rainfall .signal-chart-card .chart-box {
+    height: 260px;
   }
 }
 
@@ -713,12 +1045,15 @@ p {
   .evidence-grid,
   .architecture-footer,
   .community-summary,
-  .report-form-grid {
+  .relevance-summary-grid,
+  .report-form-grid,
+  .community-page,
+  .frontpage-river .river-grid {
     grid-template-columns: 1fr;
   }
 
   .hero h1 {
-    font-size: 2.1rem;
+    font-size: 1.95rem;
   }
 
   .area-tabs {
@@ -727,6 +1062,26 @@ p {
 
   .area-controls {
     align-items: flex-start;
+    width: 100%;
+  }
+
+  .app-nav {
+    margin-left: -2px;
+    margin-right: -2px;
+    max-width: calc(100vw - 28px);
+  }
+
+  .frontpage-map .map-panel {
+    height: 230px;
+  }
+
+  .frontpage-rainfall .signal-chart-card .chart-box {
+    height: 230px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 

@@ -48,6 +48,13 @@ const fallbackAreas = [
 const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
+const appSections = [
+  { id: "overview", label: "Overview" },
+  { id: "signals", label: "Signals" },
+  { id: "community", label: "Community" },
+  { id: "model", label: "Model" },
+  { id: "architecture", label: "Architecture" },
+];
 
 // #river monitoring card
 function RiverStatusPanel({ areaName, riverSummary }) {
@@ -307,6 +314,109 @@ function formatSourceFreshness(freshness) {
   return "Current";
 }
 
+function sourceReliabilityKind(source) {
+  if (source.freshnessStatus === "not-connected") return "not-connected";
+  if (source.mode === "local-fallback") return "fallback";
+  if (source.type === "weather" && source.freshnessStatus === "stale") return "stale-context";
+  if (
+    ["rainfall", "river"].includes(source.type) &&
+    source.sourceStrength === "primary_live_gauge" &&
+    source.freshnessStatus === "current"
+  ) {
+    return "live-gauge";
+  }
+  if (source.freshnessStatus === "current") return "current-context";
+  if (source.freshnessStatus === "stale") return "stale";
+  return "unknown";
+}
+
+function sourceReliabilityLabel(source) {
+  const kind = sourceReliabilityKind(source);
+  if (kind === "live-gauge") return "Live gauge";
+  if (kind === "current-context") return "Current context";
+  if (kind === "stale-context") return "Stale context";
+  if (kind === "fallback") return "Demo/Fallback";
+  if (kind === "not-connected") return "Not connected";
+  if (kind === "stale") return "Stale";
+  return "Unknown";
+}
+
+function formatHealthLabel(status) {
+  if (status === "pass") return "Live";
+  if (status === "warn") return "Partial";
+  if (status === "blocked") return "Blocked";
+  if (status === "not_connected") return "Not connected";
+  return "Unknown";
+}
+
+function buildReliabilitySummary(sources = [], ingestionHealth = null) {
+  if (ingestionHealth?.overallStatus) {
+    const labels = [
+      `Core gauges: ${formatHealthLabel(ingestionHealth.coreFloodStatus)}`,
+      `Context: ${formatHealthLabel(ingestionHealth.contextStatus)}`,
+      `Warnings: ${formatHealthLabel(ingestionHealth.warningStatus)}`,
+    ];
+
+    return {
+      label: formatHealthLabel(ingestionHealth.overallStatus),
+      note: `${ingestionHealth.summary || "Signal source health has been checked."} ${labels.join(
+        ". ",
+      )}.`,
+    };
+  }
+
+  const coreSources = sources.filter((source) => ["rainfall", "river"].includes(source.type));
+  const contextSources = sources.filter((source) => !["rainfall", "river"].includes(source.type));
+  const coreLive = coreSources.every(
+    (source) =>
+      source.sourceStrength === "primary_live_gauge" &&
+      source.freshnessStatus === "current" &&
+      source.mode !== "local-fallback",
+  );
+  const staleContext = contextSources.some((source) => source.freshnessStatus === "stale");
+  const fallbackCore = coreSources.some((source) => source.mode === "local-fallback");
+
+  if (!coreLive || fallbackCore) {
+    return {
+      label: "Blocked",
+      note: "Core rainfall or river gauges are stale, fallback, missing, or mismatched.",
+    };
+  }
+
+  if (staleContext) {
+    return {
+      label: "Partial",
+      note: "Live gauge data is current. Some supporting sources are stale or not yet connected.",
+    };
+  }
+
+  return {
+    label: "Live",
+    note: "Live rainfall and river gauges are current.",
+  };
+}
+
+function formatRefreshStatus(refreshMetadata, sourceStatus) {
+  if (sourceStatus !== "api") return "Local fallback signals loaded";
+  if (refreshMetadata?.status === "protected-cache") return "Latest good API snapshot kept";
+  if (refreshMetadata?.status === "blocked-refresh") return "Live API refresh blocked";
+  if (refreshMetadata?.status === "cache") return "Live API cache loaded";
+  if (refreshMetadata?.status === "refreshed") return "Live API ingestion synced";
+  return "Live API ingestion synced";
+}
+
+function formatRefreshNote(refreshMetadata) {
+  if (refreshMetadata?.status === "protected-cache") {
+    return refreshMetadata.reason;
+  }
+
+  if (refreshMetadata?.status === "blocked-refresh") {
+    return "Live refresh returned blocked core data; source diagnostics explain the failure.";
+  }
+
+  return null;
+}
+
 function formatSourceAge(ageHours) {
   if (ageHours === null || ageHours === undefined) return "age unknown";
   if (ageHours < 1) return "under 1h old";
@@ -327,12 +437,59 @@ function formatObservedAt(value) {
   return new Date(timestamp).toLocaleString("en-AU");
 }
 
+function formatFitStatus(status) {
+  if (status === "complete") return "Complete";
+  if (status === "partial") return "Partial";
+  if (status === "limited") return "Limited";
+  return "Unknown";
+}
+
+function formatSpatialStatus(status) {
+  if (status === "local-fit") return "Local fit";
+  if (status === "wide-fit") return "Wide fit";
+  if (status === "no-station-coordinates") return "No coordinates";
+  return "Unknown";
+}
+
+function buildLocationRelevance(signals) {
+  const areaRelevance = signals.areaRelevance ?? {};
+  const spatialRelevance = signals.spatialRelevance ?? {};
+  const sourceFit = areaRelevance.sourceFit ?? {};
+  const sourceRows = ["weather", "rainfall", "river"]
+    .map((type) => sourceFit[type])
+    .filter(Boolean);
+
+  return {
+    areaName: areaRelevance.areaName ?? signals.area?.name ?? signals.location?.name,
+    catchment: areaRelevance.catchment ?? signals.area?.catchment,
+    fitScore: areaRelevance.score,
+    fitStatus: areaRelevance.status,
+    matchedSignals: areaRelevance.matchedSignals,
+    expectedSignals: areaRelevance.expectedSignals,
+    sourceRows,
+    matchedRiverStations: areaRelevance.matchedRiverStations ?? [],
+    missingRiverStations: areaRelevance.missingRiverStations ?? [],
+    spatialStatus: spatialRelevance.status ?? areaRelevance.spatial?.status,
+    coverageRadiusKm:
+      spatialRelevance.coverageRadiusKm ?? areaRelevance.spatial?.coverageRadiusKm,
+    nearestStationDistanceKm:
+      spatialRelevance.nearestStationDistanceKm ??
+      areaRelevance.spatial?.nearestStationDistanceKm,
+    nearestStations: spatialRelevance.nearestStations ?? [],
+    notes: areaRelevance.notes ?? [],
+  };
+}
+
 function buildDashboardData(signals, sourceStatus, liveStatus) {
   const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
   const publicSignalCards = buildPublicSignalCards(signals);
   const riskAssessment = buildRiskAssessment(signals, riverSummary, publicSignalCards);
   const latestRain = signals.rainfallSeries.latestValidRainfallMm;
+  const sourceHealth = signals.sourceMetadata ?? [];
+  const ingestionHealth = signals.ingestionHealth ?? null;
+  const reliabilitySummary = buildReliabilitySummary(sourceHealth, ingestionHealth);
+  const refreshMetadata = signals.refreshMetadata ?? null;
   const publicSignalSummary = signals.publicSignalSummary ?? {
     recentReports: 0,
     actionableReports: 0,
@@ -344,14 +501,10 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     note: "No public signal summary is available.",
   };
   const rainDisplay = latestRain !== null ? `${latestRain} mm` : "No recent reading";
-  const dataStatus =
-    sourceStatus === "api" && signals.freshness?.status === "stale"
-      ? "Live API with stale source"
-      : sourceStatus === "api" && signals.freshness?.status === "mixed"
-      ? "Live API with fallback source"
-      : sourceStatus === "api"
-      ? "Live API ingestion synced"
-      : "Local fallback signals loaded";
+  const dataStatus = liveStatus.isRefreshing
+    ? "Refreshing live area signals"
+    : formatRefreshStatus(refreshMetadata, sourceStatus);
+  const refreshNote = formatRefreshNote(refreshMetadata);
 
   return {
     areaName,
@@ -361,12 +514,18 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     riverSummary,
     rainfallTrend: buildRainfallTrend(signals),
     riskSignals: buildRiskSignals(signals),
-    sourceHealth: signals.sourceMetadata ?? [],
+    sourceHealth,
+    reliabilitySummary,
+    ingestionHealth,
+    refreshMetadata,
+    locationRelevance: buildLocationRelevance(signals),
     decisionAudit: signals.riskAssessment?.decisionAudit ?? null,
     publicSignalSummary,
 
     officialSignals: {
-      warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
+      warningStatus: dataStatus,
+      dataReliability: reliabilitySummary.label,
+      dataReliabilityNote: [reliabilitySummary.note, refreshNote].filter(Boolean).join(" "),
       areaSignalFit: formatAreaSignalFit(signals.areaRelevance),
       sourceFreshness: formatSourceFreshness(signals.freshness),
       spatialRadius: formatDistanceKm(signals.spatialRelevance?.coverageRadiusKm),
@@ -423,6 +582,10 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
       },
     ],
   };
+}
+
+function topPriorityFactors(factors = []) {
+  return factors.slice(0, 4);
 }
 
 function useParramattaSignals(selectedAreaId) {
@@ -817,16 +980,12 @@ function buildHistorySummary(history = []) {
   };
 }
 
-function sourceStatusLabel(status) {
-  if (status === "stale") return "Stale";
-  if (status === "current") return "Current";
-  return "Unknown";
-}
-
 function sourceModeLabel(mode) {
   if (mode === "remote-derived") return "Live derived";
   if (mode === "remote") return "Live";
   if (mode === "local-fallback") return "Fallback";
+  if (mode === "not-configured") return "Not configured";
+  if (mode === "planned") return "Planned";
   return mode || "Unknown";
 }
 
@@ -1011,6 +1170,25 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
   );
 }
 
+// #app section navigation
+function AppNavigation({ activeView, onViewChange }) {
+  return (
+    <nav className="app-nav" aria-label="FloodGuard sections">
+      {appSections.map((section) => (
+        <button
+          aria-current={activeView === section.id ? "page" : undefined}
+          className={activeView === section.id ? "active" : ""}
+          key={section.id}
+          onClick={() => onViewChange(section.id)}
+          type="button"
+        >
+          {section.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 // #monitored region overview
 function OverviewPanel({ data }) {
   return (
@@ -1029,8 +1207,8 @@ function OverviewPanel({ data }) {
 
       <div className="overview-grid">
         <InfoTile
-          label="Data Status"
-          value={data.officialSignals.warningStatus}
+          label="Data Reliability"
+          value={data.officialSignals.dataReliability}
         />
         <InfoTile
           label="Area Signal Fit"
@@ -1060,6 +1238,37 @@ function OverviewPanel({ data }) {
           label="Latest Feed Update"
           value={data.officialSignals.forecastOutlook}
         />
+      </div>
+      <p className="reliability-note">{data.officialSignals.dataReliabilityNote}</p>
+    </section>
+  );
+}
+
+// #front-page summary for screenshot and field use
+function FrontPageSummary({ data }) {
+  return (
+    <section className="frontpage-grid">
+      <div className="frontpage-actions">
+        <ActionsPanel actions={data.recommendedActions} />
+      </div>
+
+      <div className="frontpage-river">
+        <RiverStatusPanel
+          areaName={data.areaName}
+          riverSummary={data.riverSummary}
+        />
+      </div>
+
+      <div className="frontpage-rainfall">
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
+      </div>
+
+      <div className="frontpage-factors">
+        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
+      </div>
+
+      <div className="frontpage-map">
+        <MapPanel areaName={data.areaName} />
       </div>
     </section>
   );
@@ -1114,8 +1323,8 @@ function ActionsPanel({ actions }) {
 }
 
 // #source health diagnostics card
-function SourceHealthPanel({ sources }) {
-  const rows =
+function SourceHealthPanel({ sources, ingestionHealth }) {
+  const sourceRows =
     sources.length > 0
       ? sources
       : [
@@ -1128,15 +1337,40 @@ function SourceHealthPanel({ sources }) {
             ageHours: null,
           },
         ];
+  const hasWarningSource = sourceRows.some((source) => source.type === "warnings");
+  const rows = hasWarningSource
+    ? sourceRows
+    : [
+        ...sourceRows,
+        {
+          label: "NSW SES / HazardWatch warnings",
+          type: "warnings",
+          mode: "planned",
+          freshnessStatus: "not-connected",
+          observedAt: null,
+          ageHours: null,
+          sourceStrength: "official_warning",
+          note: "Official warning integration is planned but not connected yet.",
+        },
+      ];
 
   return (
     <section className="card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Source diagnostics</p>
-          <h3>Source health</h3>
+          <h3>Data sources</h3>
         </div>
+        {ingestionHealth?.overallStatus ? (
+          <span className={`source-badge ${ingestionHealth.overallStatus}`}>
+            {formatHealthLabel(ingestionHealth.overallStatus)}
+          </span>
+        ) : null}
       </div>
+
+      {ingestionHealth?.summary ? (
+        <p className="source-health-summary">{ingestionHealth.summary}</p>
+      ) : null}
 
       <div className="source-health-list">
         {rows.map((source) => (
@@ -1146,12 +1380,12 @@ function SourceHealthPanel({ sources }) {
                 <h4>{source.label}</h4>
                 <p>{sourceModeLabel(source.mode)} {source.type}</p>
               </div>
-              <span className={`source-badge ${source.freshnessStatus || "unknown"}`}>
-                {sourceStatusLabel(source.freshnessStatus)}
+              <span className={`source-badge ${sourceReliabilityKind(source)}`}>
+                {sourceReliabilityLabel(source)}
               </span>
             </div>
             <p className="source-health-meta">
-              {formatObservedAt(source.observedAt)} - {formatSourceAge(source.ageHours)}
+              {source.note || `${formatObservedAt(source.observedAt)} - ${formatSourceAge(source.ageHours)}`}
             </p>
           </div>
         ))}
@@ -1160,10 +1394,91 @@ function SourceHealthPanel({ sources }) {
   );
 }
 
+// #location-aware relevance card
+function LocationRelevancePanel({ relevance }) {
+  const matchLabel =
+    typeof relevance.matchedSignals === "number" && typeof relevance.expectedSignals === "number"
+      ? `${relevance.matchedSignals}/${relevance.expectedSignals}`
+      : "Unknown";
+  const nearestStations = relevance.nearestStations.slice(0, 4);
+
+  return (
+    <section className="card location-relevance-card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Location-aware data fit</p>
+          <h3>Area relevance</h3>
+        </div>
+        <span className={`source-badge ${relevance.fitStatus ?? "unknown"}`}>
+          {formatFitStatus(relevance.fitStatus)}
+        </span>
+      </div>
+
+      <div className="relevance-summary-grid">
+        <InfoTile
+          label="Station match"
+          value={matchLabel}
+        />
+        <InfoTile
+          label="Fit score"
+          value={
+            typeof relevance.fitScore === "number"
+              ? `${relevance.fitScore}%`
+              : "Unknown"
+          }
+        />
+        <InfoTile
+          label="Spatial fit"
+          value={formatSpatialStatus(relevance.spatialStatus)}
+        />
+        <InfoTile
+          label="Coverage radius"
+          value={formatDistanceKm(relevance.coverageRadiusKm)}
+        />
+      </div>
+
+      <div className="relevance-source-list">
+        {relevance.sourceRows.map((row) => (
+          <div className="relevance-source-row" key={row.label}>
+            <div>
+              <h4>{row.label}</h4>
+              <p>{row.matched}/{row.expected} configured signal(s) matched</p>
+            </div>
+            <strong>{row.score}%</strong>
+          </div>
+        ))}
+      </div>
+
+      {nearestStations.length > 0 && (
+        <div className="nearest-station-list">
+          <p className="section-label">Nearest configured context</p>
+          {nearestStations.map((station) => (
+            <span key={station.id}>
+              {station.name} · {formatDistanceKm(station.distanceKm)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {relevance.missingRiverStations.length > 0 ? (
+        <ul className="factor-list history-list relevance-note-list">
+          {relevance.missingRiverStations.map((station) => (
+            <li key={station}>{station} is configured but missing from the current river feed.</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="report-form-message">
+          All configured river/creek stations for this area are present in the current feed.
+        </p>
+      )}
+    </section>
+  );
+}
+
 // #local situational awareness card
 function ReportsPanel({ reports }) {
   return (
-    <section className="card">
+    <section className="card local-signals-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Local situational awareness</p>
@@ -1231,7 +1546,7 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
   };
 
   return (
-    <section className="card">
+    <section className="card community-intake-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Community input</p>
@@ -1357,7 +1672,7 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
 // #image evidence review card
 function EvidenceReviewPanel({ queue }) {
   return (
-    <section className="card">
+    <section className="card evidence-review-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Image-assisted validation</p>
@@ -1647,6 +1962,7 @@ function ArchitecturePanel() {
 export default function App() {
   const areas = useFloodguardAreas();
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
+  const [activeView, setActiveView] = useState("overview");
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
   const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
@@ -1666,41 +1982,65 @@ export default function App() {
         liveStatus={liveStatus}
         onAreaChange={setSelectedAreaId}
       />
+      <AppNavigation activeView={activeView} onViewChange={setActiveView} />
 
-      <OverviewPanel data={dashboardData} />
-
-      <div className="main-grid">
-        <div className="left-column">
-          <FactorsPanel factors={dashboardData.contributingFactors} />
-          <ReportsPanel reports={dashboardData.reports} />
-          <CommunityReportPanel
-            publicSignalSummary={dashboardData.publicSignalSummary}
-            reportState={communityReportState}
-          />
-          <EvidenceReviewPanel queue={evidenceReviewQueue} />
+      {activeView === "overview" && (
+        <>
+          <OverviewPanel data={dashboardData} />
+          <FrontPageSummary data={dashboardData} />
           <EvidencePanel evidence={dashboardData.evidence} />
+        </>
+      )}
+
+      {activeView === "signals" && (
+        <section className="section-page">
+          <SourceHealthPanel
+            ingestionHealth={dashboardData.ingestionHealth}
+            sources={dashboardData.sourceHealth}
+          />
+          <LocationRelevancePanel relevance={dashboardData.locationRelevance} />
+          <DecisionAuditPanel audit={dashboardData.decisionAudit} />
+          <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
+          <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
+          <RiverStatusPanel
+            areaName={dashboardData.areaName}
+            riverSummary={dashboardData.riverSummary}
+          />
+          <MapPanel areaName={dashboardData.areaName} />
+        </section>
+      )}
+
+      {activeView === "community" && (
+        <section className="section-page community-page">
+          <div className="community-column">
+            <ReportsPanel reports={dashboardData.reports} />
+            <EvidenceReviewPanel queue={evidenceReviewQueue} />
+          </div>
+          <div className="community-column">
+            <CommunityReportPanel
+              publicSignalSummary={dashboardData.publicSignalSummary}
+              reportState={communityReportState}
+            />
+          </div>
+        </section>
+      )}
+
+      {activeView === "model" && (
+        <section className="section-page model-page">
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />
           <DatasetQualityPanel quality={datasetQuality} />
           <BaselinePredictionPanel baseline={baselinePrediction} />
           <ModelCardPanel modelCard={modelCard} />
-        </div>
+        </section>
+      )}
 
-        <div className="right-column">
-          <ActionsPanel actions={dashboardData.recommendedActions} />
-          <SourceHealthPanel sources={dashboardData.sourceHealth} />
-          <RiverStatusPanel
-            areaName={dashboardData.areaName}
-            riverSummary={dashboardData.riverSummary}
-          />
-          <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
-          <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
-          <DecisionAuditPanel audit={dashboardData.decisionAudit} />
-          <MapPanel areaName={dashboardData.areaName} />
-        </div>
-      </div>
-
-      <ArchitecturePanel />
+      {activeView === "architecture" && (
+        <section className="section-page architecture-page">
+          <ArchitecturePanel />
+          <EvidencePanel evidence={dashboardData.evidence} />
+        </section>
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@ export const areaConfigs = {
     lon: 151.0,
     relevantStations: {
       weather: ["Parramatta"],
-      rainfall: ["567112"],
+      rainfall: ["67111"],
       river: [
         "Parramatta River at Riverside Theatre",
         "Parramatta River at Marsden Weir",
@@ -27,7 +27,7 @@ export const areaConfigs = {
     lon: 151.01,
     relevantStations: {
       weather: ["Parramatta"],
-      rainfall: ["567112"],
+      rainfall: ["67111"],
       river: [
         "Darling Mills Creek at North Parramatta",
         "Parramatta River at Riverside Theatre",
@@ -43,7 +43,7 @@ export const areaConfigs = {
     lon: 150.95,
     relevantStations: {
       weather: ["Parramatta"],
-      rainfall: ["567112"],
+      rainfall: ["567065"],
       river: [
         "Toongabbie Creek at Johnstons Bridge",
         "Toongabbie Creek at Briens Rd",
@@ -62,12 +62,20 @@ export const stationCatalog = [
     lon: 151.0,
   },
   {
-    id: "rainfall-567112",
+    id: "rainfall-67111",
     type: "rainfall",
-    name: "NORTH PARRAMATTA (BURNSIDE HOMES)",
-    stationNumber: "567112",
-    lat: -33.791,
-    lon: 151.006,
+    name: "Burnside Homes",
+    stationNumber: "67111",
+    lat: -33.7916,
+    lon: 151.0179,
+  },
+  {
+    id: "rainfall-567065",
+    type: "rainfall",
+    name: "Toongabbie Bowling Club",
+    stationNumber: "567065",
+    lat: -33.784,
+    lon: 150.9525,
   },
   {
     id: "river-riverside-theatre",
