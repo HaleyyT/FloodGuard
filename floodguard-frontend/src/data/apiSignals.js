@@ -1,14 +1,16 @@
 import { parramattaSignals as localParramattaSignals } from "./parramattaSignals";
 
-const defaultApiUrl = "http://localhost:5174/api/signals/parramatta";
-const defaultAreasUrl = "http://localhost:5174/api/areas";
-const defaultHistoryUrl = "http://localhost:5174/api/history";
-const defaultCommunityReportsUrl = "http://localhost:5174/api/community-reports";
-const defaultEvidenceReviewUrl = "http://localhost:5174/api/evidence-review";
-const defaultFeaturesUrl = "http://localhost:5174/api/features";
-const defaultDatasetQualityUrl = "http://localhost:5174/api/dataset-quality";
-const defaultBaselineUrl = "http://localhost:5174/api/baseline-prediction";
-const defaultModelCardUrl = "http://localhost:5174/api/model-card";
+const defaultApiBaseUrl = "http://127.0.0.1:5174";
+const defaultApiUrl = `${defaultApiBaseUrl}/api/signals/parramatta`;
+const defaultAreasUrl = `${defaultApiBaseUrl}/api/areas`;
+const defaultHistoryUrl = `${defaultApiBaseUrl}/api/history`;
+const defaultCommunityReportsUrl = `${defaultApiBaseUrl}/api/community-reports`;
+const defaultEvidenceReviewUrl = `${defaultApiBaseUrl}/api/evidence-review`;
+const defaultFeaturesUrl = `${defaultApiBaseUrl}/api/features`;
+const defaultDatasetQualityUrl = `${defaultApiBaseUrl}/api/dataset-quality`;
+const defaultBaselineUrl = `${defaultApiBaseUrl}/api/baseline-prediction`;
+const defaultModelExperimentUrl = `${defaultApiBaseUrl}/api/model-experiment`;
+const defaultModelCardUrl = `${defaultApiBaseUrl}/api/model-card`;
 
 export const parramattaSignalsApiUrl =
   import.meta.env.VITE_FLOODGUARD_API_URL || defaultApiUrl;
@@ -26,6 +28,8 @@ export const floodguardDatasetQualityApiUrl =
   import.meta.env.VITE_FLOODGUARD_DATASET_QUALITY_API_URL || defaultDatasetQualityUrl;
 export const floodguardBaselineApiUrl =
   import.meta.env.VITE_FLOODGUARD_BASELINE_API_URL || defaultBaselineUrl;
+export const floodguardModelExperimentApiUrl =
+  import.meta.env.VITE_FLOODGUARD_MODEL_EXPERIMENT_API_URL || defaultModelExperimentUrl;
 export const floodguardModelCardApiUrl =
   import.meta.env.VITE_FLOODGUARD_MODEL_CARD_API_URL || defaultModelCardUrl;
 
@@ -161,6 +165,20 @@ export async function fetchBaselinePrediction({ areaId, limit = 100, signal } = 
 
   if (!response.ok) {
     throw new Error(`FloodGuard baseline API returned ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchModelExperiment({ areaId, limit = 100, signal } = {}) {
+  const url = new URL(floodguardModelExperimentApiUrl);
+  if (areaId) url.searchParams.set("area", areaId);
+  url.searchParams.set("limit", String(limit));
+
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    throw new Error(`FloodGuard model experiment API returned ${response.status}`);
   }
 
   return response.json();

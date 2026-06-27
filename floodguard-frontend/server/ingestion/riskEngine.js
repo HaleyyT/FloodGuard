@@ -2,6 +2,17 @@ function clamp(value, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
 
+function roundNumber(value, decimals = 1) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Number(value.toFixed(decimals));
+}
+
+function average(values = []) {
+  const usableValues = values.filter((value) => typeof value === "number" && Number.isFinite(value));
+  if (usableValues.length === 0) return null;
+  return usableValues.reduce((total, value) => total + value, 0) / usableValues.length;
+}
+
 function validRainfallValues(points = []) {
   return points
     .map((point) => point.rainfallMm)
@@ -31,6 +42,69 @@ function countByTendency(stations = [], tendency) {
   return stations.filter((station) => station.tendency?.toLowerCase() === tendency).length;
 }
 
+function stationHeights(station) {
+  return (station?.points ?? [])
+    .map((point) => point.heightM)
+    .filter((value) => typeof value === "number" && Number.isFinite(value));
+}
+
+function buildRiverBaselineFeatures(riverStations = [], primaryStation = null) {
+  const station = primaryStation ?? riverStations[0] ?? null;
+  const primaryHeight = station?.heightM ?? null;
+  const pointHeights = stationHeights(station);
+  const previousHeights = pointHeights.slice(1);
+  const recentBaseline = average(previousHeights) ?? station?.previousHeightM ?? null;
+  const heightDelta =
+    typeof primaryHeight === "number" && typeof recentBaseline === "number"
+      ? primaryHeight - recentBaseline
+      : null;
+  const baselineMethod =
+    previousHeights.length > 0
+      ? "station-recent-observations"
+      : typeof station?.previousHeightM === "number"
+        ? "station-previous-observation"
+        : "unavailable";
+
+  return {
+    primaryRiverHeightM: roundNumber(primaryHeight),
+    riverBaselineHeightM: roundNumber(recentBaseline),
+    riverHeightDeltaM: roundNumber(heightDelta, 3),
+    riverBaselineSampleCount:
+      previousHeights.length || (typeof station?.previousHeightM === "number" ? 1 : 0),
+    riverBaselineMethod: baselineMethod,
+  };
+}
+
+function buildFreshnessScore(sourceMetadata = []) {
+  const scoredSources = sourceMetadata.map((source) => {
+    if (source.status === "failed") return 0;
+    if (source.mode === "local-fallback") return 35;
+    if (source.freshnessStatus === "stale") return 45;
+    if (source.freshnessStatus === "unknown") return 65;
+
+    const ageHours = typeof source.ageHours === "number" ? source.ageHours : 0;
+    return clamp(100 - Math.max(0, ageHours - 1) * 4);
+  });
+
+  return scoredSources.length > 0 ? Math.round(average(scoredSources)) : 0;
+}
+
+function countContributingSignals(signals, riskSignals) {
+  const publicSignalSummary = signals.publicSignalSummary ?? {};
+  return [
+    riskSignals.features.rainfall1hMm > 0,
+    riskSignals.features.rainfall3hMm > 0,
+    riskSignals.features.rainfall24hMm > 0,
+    riskSignals.features.rainfall72hMm > 0,
+    riskSignals.features.riverStationCount > 0,
+    riskSignals.features.risingRiverStations > 0,
+    riskSignals.features.riverHeightDeltaM !== null &&
+      Math.abs(riskSignals.features.riverHeightDeltaM) >= 0.02,
+    Boolean(signals.weatherObservations?.stationName),
+    (publicSignalSummary.actionableReports ?? 0) > 0,
+  ].filter(Boolean).length;
+}
+
 function buildScoreComponents(riskSignals) {
   return [
     {
@@ -46,12 +120,17 @@ function buildScoreComponents(riskSignals) {
     {
       label: "Wetness pressure",
       value: riskSignals.wetnessPressure,
-      weight: 0.2,
+      weight: 0.18,
     },
     {
       label: "Weather pressure",
       value: riskSignals.weatherPressure,
-      weight: 0.15,
+      weight: 0.1,
+    },
+    {
+      label: "Public signal pressure",
+      value: riskSignals.publicSignalPressure,
+      weight: 0.07,
     },
   ].map((component) => ({
     ...component,
@@ -124,7 +203,7 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
   return {
     concernLevel,
     score,
-    scoreFormula: "rainfall 35% + river 30% + wetness 20% + weather 15%",
+    scoreFormula: "rainfall 35% + river 30% + wetness 18% + weather 10% + public signals 7%",
     thresholds: {
       moderate: 45,
       high: 70,
@@ -173,14 +252,20 @@ export function buildRiskSignals(signals) {
   const fallbackCoreCount = coreSources.filter((source) => source.mode === "local-fallback").length;
   const failedCoreCount = coreSources.filter((source) => source.status === "failed").length;
   const coverageScore = signals.dataQuality?.coverageScore ?? 0;
+  const areaRelevanceScore = signals.areaRelevance?.score ?? 100;
+  const rainfall1h = rainfallWindowTotal(rainfallSeries.points, 1);
+  const rainfall3h = rainfallWindowTotal(rainfallSeries.points, 3);
   const rainfall24h = rainfallWindowTotal(rainfallSeries.points, 24);
   const rainfall72h = rainfallWindowTotal(rainfallSeries.points, 72);
   const latestRainfall =
     rainfallSeries.latestValidRainfallMm ??
     (rainfallValues.length > 0 ? rainfallValues[rainfallValues.length - 1] : 0);
   const maxRecentRainfall = rainfallValues.length > 0 ? Math.max(...rainfallValues) : 0;
+  const antecedentWetness = Math.max(0, rainfall72h - rainfall3h);
   const rainfallPressure = clamp(
-    Math.round(rainfall24h * 8 + maxRecentRainfall * 3 + latestRainfall * 4),
+    Math.round(
+      rainfall1h * 14 + rainfall3h * 8 + rainfall24h * 3 + latestRainfall * 5 + maxRecentRainfall * 2,
+    ),
   );
 
   let weatherPressure = 15;
@@ -192,38 +277,65 @@ export function buildRiskSignals(signals) {
   const risingCount = countByTendency(riverStations, "rising");
   const steadyCount = countByTendency(riverStations, "steady");
   const fallingCount = countByTendency(riverStations, "falling");
-  const riverPressure = clamp(20 + risingCount * 30 + steadyCount * 7 - fallingCount * 5);
-  const wetnessPressure = clamp(Math.round(rainfall72h * 5 + maxRecentRainfall * 2));
+  const riverBaseline = buildRiverBaselineFeatures(riverStations, riverContext.primaryStation);
+  const tendencyPressure = clamp(risingCount * 35 + steadyCount * 8 - fallingCount * 8);
+  const riverLevelPressure =
+    riverBaseline.riverHeightDeltaM === null
+      ? riverStations.length > 0
+        ? 20
+        : 0
+      : clamp(25 + riverBaseline.riverHeightDeltaM * 140);
+  const riverPressure = clamp(
+    Math.round(tendencyPressure * 0.55 + riverLevelPressure * 0.4 + riverStations.length * 2),
+  );
+  const wetnessPressure = clamp(
+    Math.round(rainfall24h * 2.5 + antecedentWetness * 1.35 + maxRecentRainfall * 1.5),
+  );
 
   const inputCoverage = [
     Boolean(weather.stationName),
     (rainfallSeries.points ?? []).length > 0,
     riverStations.length > 0,
   ].filter(Boolean).length;
+  const inputCoverageScore = Math.round((inputCoverage / 3) * 100);
+  const dataFreshnessScore = buildFreshnessScore(signals.sourceMetadata ?? []);
   const confidence = clamp(
-    coverageScore -
-      fallbackCoreCount * 18 -
-      staleCoreCount * 22 -
-      failedCoreCount * 30 -
-      staleContextCount * 6,
+    Math.round(
+      coverageScore * 0.35 +
+        inputCoverageScore * 0.25 +
+        dataFreshnessScore * 0.3 +
+        areaRelevanceScore * 0.1 -
+        fallbackCoreCount * 12 -
+        staleCoreCount * 14 -
+        failedCoreCount * 22 -
+        staleContextCount * 4,
+    ),
   );
-
-  return {
+  const riskSignals = {
     rainfallPressure,
     weatherPressure: clamp(weatherPressure),
     riverPressure,
     wetnessPressure,
-    inputCoverage: Math.round((inputCoverage / 3) * 100),
+    publicSignalPressure: signals.publicSignalSummary?.publicSignalPressure ?? 0,
+    inputCoverage: inputCoverageScore,
     confidence,
     features: {
       latestRainfallMm: latestRainfall,
       maxRecentRainfallMm: maxRecentRainfall,
+      rainfall1hMm: Number(rainfall1h.toFixed(1)),
+      rainfall3hMm: Number(rainfall3h.toFixed(1)),
       rainfall24hMm: Number(rainfall24h.toFixed(1)),
       rainfall72hMm: Number(rainfall72h.toFixed(1)),
+      antecedentWetnessMm: Number(antecedentWetness.toFixed(1)),
       riverStationCount: riverStations.length,
       risingRiverStations: risingCount,
       steadyRiverStations: steadyCount,
       fallingRiverStations: fallingCount,
+      riverTendencyPressure: Math.round(tendencyPressure),
+      riverLevelPressure: Math.round(riverLevelPressure),
+      ...riverBaseline,
+      dataFreshnessScore,
+      inputCoverage: inputCoverageScore,
       fallbackSourceCount,
       staleSourceCount,
       failedSourceCount,
@@ -231,6 +343,9 @@ export function buildRiskSignals(signals) {
       staleContextCount,
     },
   };
+  riskSignals.features.contributingSignalCount = countContributingSignals(signals, riskSignals);
+
+  return riskSignals;
 }
 
 export function assessRisk(signals) {
@@ -240,6 +355,8 @@ export function assessRisk(signals) {
   const catchmentName = signals.area?.catchment || signals.riverContext?.region || "local waterways";
   const rainfall24h = riskSignals.features.rainfall24hMm;
   const rainfall72h = riskSignals.features.rainfall72hMm;
+  const rainfall3h = riskSignals.features.rainfall3hMm;
+  const antecedentWetness = riskSignals.features.antecedentWetnessMm;
   const risingStations = riskSignals.features.risingRiverStations;
   const publicSignalSummary = signals.publicSignalSummary ?? {};
   const reasons = [];
@@ -251,23 +368,36 @@ export function assessRisk(signals) {
   let concernLevel = score >= 70 ? "High" : score >= 45 ? "Moderate" : "Low";
 
   if (rainfall24h >= 5 || riskSignals.rainfallPressure >= 45) {
-    concernLevel = concernLevel === "Low" ? "Moderate" : concernLevel;
     reasons.push(`${shortAreaName} rainfall in the latest 24h window is ${rainfall24h} mm`);
   }
 
+  if (rainfall3h >= 3) {
+    reasons.push(`${shortAreaName} short-window rainfall is ${rainfall3h} mm over the latest 3h window`);
+  }
+
   if (rainfall72h >= 10) {
-    concernLevel = concernLevel === "Low" ? "Moderate" : concernLevel;
     reasons.push(`${shortAreaName} rainfall in the latest 72h window is ${rainfall72h} mm`);
   }
 
   if (risingStations > 0) {
-    concernLevel = concernLevel === "Low" ? "Moderate" : concernLevel;
     reasons.push(`${risingStations} ${catchmentName} river/creek station(s) are rising`);
   }
 
-  if (rainfall24h >= 10 && risingStations > 0) {
+  if (antecedentWetness >= 8) {
+    reasons.push(`Antecedent wetness is ${antecedentWetness} mm across the recent multi-day window`);
+  }
+
+  if (rainfall24h >= 10 && risingStations > 0 && score >= 60) {
     concernLevel = "High";
     reasons.push(`${shortAreaName} rainfall and river signals indicate elevated local flood concern`);
+  }
+
+  if (
+    score >= 40 &&
+    concernLevel === "Low" &&
+    Math.max(riskSignals.rainfallPressure, riskSignals.riverPressure) >= 60
+  ) {
+    concernLevel = "Moderate";
   }
 
   if (riskSignals.confidence < 80) {
