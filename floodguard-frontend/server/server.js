@@ -193,7 +193,23 @@ function sendAreaSignals(response, regionalSignals, areaId, selector) {
     return;
   }
 
-  sendJson(response, 200, selector(areaSignals));
+  const regionalHealth = regionalSignals.ingestionHealth ?? buildRegionalIngestionHealth(regionalSignals);
+  const areaHealth = regionalHealth.areas.find((area) => area.areaId === areaSignals.area.id);
+  const enrichedAreaSignals = {
+    ...areaSignals,
+    ingestionHealth: areaSignals.ingestionHealth ?? areaHealth ?? null,
+    regionalIngestionHealth: {
+      status: regionalHealth.status,
+      overallStatus: regionalHealth.overallStatus,
+      coreFloodStatus: regionalHealth.coreFloodStatus,
+      contextStatus: regionalHealth.contextStatus,
+      warningStatus: regionalHealth.warningStatus,
+      ready: regionalHealth.ready,
+      summary: regionalHealth.summary,
+    },
+  };
+
+  sendJson(response, 200, selector(enrichedAreaSignals));
 }
 
 async function routeRequest(request, response) {
@@ -246,7 +262,7 @@ async function routeRequest(request, response) {
 
   const shouldRefresh = url.searchParams.get("refresh") === "true";
   const regionalSignals = shouldRefresh
-    ? await runRegionalIngestion()
+    ? await runRegionalIngestion({ protectCache: true })
     : await readOrRefreshRegionalSignals();
 
   if (url.pathname === "/api/health") {
@@ -257,6 +273,7 @@ async function routeRequest(request, response) {
       defaultAreaId: regionalSignals.defaultAreaId,
       areaCount: regionalSignals.areaList.length,
       ingestedAt: regionalSignals.ingestedAt,
+      refreshMetadata: regionalSignals.refreshMetadata,
       ingestionHealth: {
         status: ingestionHealth.status,
         overallStatus: ingestionHealth.overallStatus,
@@ -275,6 +292,7 @@ async function routeRequest(request, response) {
           rainfall: ["primary_live_gauge", "official_backup"],
           river: ["primary_live_gauge", "official_backup"],
           weather: ["official_backup"],
+          warnings: ["official_warning"],
         },
       },
     });

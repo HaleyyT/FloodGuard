@@ -4,6 +4,7 @@ const passStrengthByType = {
   rainfall: ["primary_live_gauge", "official_backup"],
   river: ["primary_live_gauge", "official_backup"],
   weather: ["official_backup"],
+  warnings: ["official_warning"],
 };
 
 function resolveSourceUrl(source) {
@@ -71,6 +72,13 @@ export function getSourceRegistry() {
         adapter: sourceConfig.river.adapter,
         stationCodes: sourceConfig.river.stationCodes,
         url: resolveSourceUrl(sourceConfig.river),
+      },
+      warnings: {
+        label: sourceConfig.warnings.label,
+        envUrl: sourceConfig.warnings.envUrl,
+        sourceStrength: sourceConfig.warnings.sourceStrength,
+        optional: sourceConfig.warnings.optional,
+        url: resolveSourceUrl(sourceConfig.warnings),
       },
     },
     roadmapSources: Object.entries(dataSourceConfig)

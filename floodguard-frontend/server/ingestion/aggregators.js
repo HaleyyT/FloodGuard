@@ -1,9 +1,16 @@
 import { areaConfigs, defaultAreaId, getAreaConfig, listAreas } from "./areaConfig.js";
-import { historyDir, ingestionPolicy, latestSignalsPath, sourceConfig } from "./config.js";
+import {
+  historyDir,
+  ingestionPolicy,
+  latestSignalsPath,
+  latestSignalsSchemaVersion,
+  sourceConfig,
+} from "./config.js";
 import { loadSource } from "./fetchers.js";
 import {
   normalizeFloodSmartRainfall,
   normalizeFloodSmartRiverContext,
+  normalizeOfficialWarnings,
   normalizeRainfall,
   normalizeRiverContext,
   normalizeWeather,
@@ -126,7 +133,9 @@ function buildAreaSourceMetadata(area, sourceMetadata) {
         ? area.relevantStations.river
         : metadata.type === "rainfall"
           ? area.relevantStations.rainfall
-          : area.relevantStations.weather,
+          : metadata.type === "warnings"
+            ? [area.name, area.catchment]
+            : area.relevantStations.weather,
   }));
 }
 
@@ -170,6 +179,10 @@ function sourceObservedAt(metadata, signals) {
     return parseSourceTimestamp(signals.riverContext?.issuedDate);
   }
 
+  if (metadata.type === "warnings") {
+    return parseSourceTimestamp(signals.warningSummary?.observedAt);
+  }
+
   return null;
 }
 
@@ -179,6 +192,16 @@ function staleAfterHours(type) {
 
 function buildAreaSourceFreshness(area, sourceMetadata, signals, ingestedAt) {
   return buildAreaSourceMetadata(area, sourceMetadata).map((metadata) => {
+    if (metadata.status === "not-connected") {
+      return {
+        ...metadata,
+        observedAt: null,
+        ageHours: null,
+        staleAfterHours: staleAfterHours(metadata.type),
+        freshnessStatus: "not-connected",
+      };
+    }
+
     const observedAt = sourceObservedAt(metadata, signals);
     const ageHours = observedAt ? hoursBetween(observedAt, ingestedAt) : null;
     const staleLimitHours = staleAfterHours(metadata.type);
@@ -335,6 +358,7 @@ function buildAreaRelevance(area, weatherObservations, rainfallSeries, riverCont
 function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, publicSignalSummary) {
   const rainfallSeries = filterRainfallForArea(normalizedSources.rainfallSeries, area);
   const riverContext = filterRiverForArea(normalizedSources.riverContext, area);
+  const warningSummary = normalizeOfficialWarnings(normalizedSources.warningStatus, area);
   const weatherObservations = {
     ...normalizedSources.weatherObservations,
     areaRelevance: {
@@ -366,13 +390,14 @@ function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, p
     weatherObservations,
     rainfallSeries,
     riverContext,
+    warningSummary,
     publicSignalSummary,
     areaRelevance,
     spatialRelevance,
     sourceMetadata: buildAreaSourceFreshness(
       area,
       sourceMetadata,
-      { weatherObservations, rainfallSeries, riverContext },
+      { weatherObservations, rainfallSeries, riverContext, warningSummary },
       ingestedAt,
     ),
     ingestedAt,
@@ -407,12 +432,139 @@ function normalizeConfiguredRiver(source) {
   return normalizeRiverContext(source.data);
 }
 
+function disconnectedWarningMetadata(area, fetchedAt) {
+  return {
+    label: sourceConfig.warnings.label,
+    type: "warnings",
+    note: "Official warning integration is configured as an optional source and is not connected yet.",
+    mode: "not-configured",
+    source: null,
+    sourceStrength: "official_warning",
+    fetchedAt,
+    status: "not-connected",
+    areaId: area.id,
+    areaName: area.name,
+    areaRelevance: [area.name, area.catchment],
+    observedAt: null,
+    ageHours: null,
+    staleAfterHours: staleAfterHours("warnings"),
+    freshnessStatus: "not-connected",
+  };
+}
+
+function migrateAreaSignals(areaSignals, regionalIngestedAt) {
+  if ((areaSignals.sourceMetadata ?? []).some((source) => source.type === "warnings")) {
+    return areaSignals;
+  }
+
+  const area = getAreaConfig(areaSignals.area?.id) ?? areaSignals.area;
+  const sourceMetadata = [
+    ...(areaSignals.sourceMetadata ?? []),
+    disconnectedWarningMetadata(area, regionalIngestedAt ?? areaSignals.ingestedAt),
+  ];
+  const warningSummary = normalizeOfficialWarnings(null, area);
+  const freshness = buildFreshnessSummary(sourceMetadata);
+  const migratedSignals = {
+    ...areaSignals,
+    warningSummary,
+    sourceMetadata,
+    freshness,
+    dataQuality: buildDataQuality({
+      ...areaSignals,
+      warningSummary,
+      sourceMetadata,
+      freshness,
+    }),
+  };
+
+  return {
+    ...migratedSignals,
+    riskAssessment: assessRisk(migratedSignals),
+  };
+}
+
+function migrateRegionalSignals(regionalSignals) {
+  if (!regionalSignals || regionalSignals.schemaVersion === latestSignalsSchemaVersion) {
+    return regionalSignals;
+  }
+
+  if (regionalSignals.schemaVersion !== 2) return regionalSignals;
+
+  const areas = Object.fromEntries(
+    Object.entries(regionalSignals.areas ?? {}).map(([areaId, areaSignals]) => [
+      areaId,
+      migrateAreaSignals(areaSignals, regionalSignals.ingestedAt),
+    ]),
+  );
+  const sourceMetadata = (regionalSignals.sourceMetadata ?? []).some(
+    (source) => source.type === "warnings",
+  )
+    ? regionalSignals.sourceMetadata
+    : [
+        ...(regionalSignals.sourceMetadata ?? []),
+        {
+          label: sourceConfig.warnings.label,
+          type: "warnings",
+          note: "Official warning integration is configured as an optional source and is not connected yet.",
+          mode: "not-configured",
+          source: null,
+          sourceStrength: "official_warning",
+          fetchedAt: regionalSignals.ingestedAt,
+          status: "not-connected",
+        },
+      ];
+  const migratedRegionalSignals = {
+    ...regionalSignals,
+    schemaVersion: latestSignalsSchemaVersion,
+    areas,
+    sourceMetadata,
+  };
+
+  return {
+    ...migratedRegionalSignals,
+    ingestionHealth: buildRegionalIngestionHealth(migratedRegionalSignals),
+  };
+}
+
+function hasCurrentSignalSchema(regionalSignals) {
+  if (regionalSignals?.schemaVersion !== latestSignalsSchemaVersion) return false;
+
+  return Object.values(regionalSignals.areas ?? {}).every((areaSignals) =>
+    (areaSignals.sourceMetadata ?? []).every((source) => source.sourceStrength) &&
+      (areaSignals.sourceMetadata ?? []).some((source) => source.type === "warnings"),
+  );
+}
+
+function hasBlockedCoreFloodHealth(regionalSignals) {
+  const health = regionalSignals.ingestionHealth ?? buildRegionalIngestionHealth(regionalSignals);
+  return health.coreFloodStatus === "blocked";
+}
+
+function annotateRegionalSignals(regionalSignals, refreshMetadata) {
+  const areas = Object.fromEntries(
+    Object.entries(regionalSignals.areas ?? {}).map(([areaId, areaSignals]) => [
+      areaId,
+      {
+        ...areaSignals,
+        refreshMetadata,
+      },
+    ]),
+  );
+
+  return {
+    ...regionalSignals,
+    areas,
+    refreshMetadata,
+  };
+}
+
 export async function buildRegionalSignals() {
   const ingestedAt = new Date().toISOString();
-  const [weatherSource, rainfallSource, riverSource] = await Promise.all([
+  const [weatherSource, rainfallSource, riverSource, warningSource] = await Promise.all([
     loadSource(sourceConfig.weather),
     loadSource(sourceConfig.rainfall),
     loadSource(sourceConfig.river),
+    loadSource(sourceConfig.warnings),
   ]);
   let rainfallSeries = normalizeConfiguredRainfall(rainfallSource);
   let rainfallMetadata = {
@@ -449,11 +601,21 @@ export async function buildRegionalSignals() {
       note: "Current local river and creek heights normalised from the ingestion pipeline.",
       ...riverSource.metadata,
     },
+    {
+      label: warningSource.metadata.label,
+      type: "warnings",
+      note:
+        warningSource.metadata.status === "not-connected"
+          ? "Official warning integration is configured as an optional source and is not connected yet."
+          : "Official warning status normalised from the configured NSW SES/HazardWatch source.",
+      ...warningSource.metadata,
+    },
   ];
   const normalizedSources = {
     weatherObservations: normalizeWeather(weatherSource.data),
     rainfallSeries,
     riverContext: normalizeConfiguredRiver(riverSource),
+    warningStatus: warningSource.data,
   };
   const areaEntries = await Promise.all(
     Object.values(areaConfigs).map(async (area) => {
@@ -469,6 +631,7 @@ export async function buildRegionalSignals() {
   const areas = Object.fromEntries(areaEntries);
 
   const regionalSignals = {
+    schemaVersion: latestSignalsSchemaVersion,
     defaultAreaId,
     areas,
     areaList: listAreas(),
@@ -482,18 +645,55 @@ export async function buildRegionalSignals() {
   };
 }
 
-export async function runRegionalIngestion() {
+export async function runRegionalIngestion({ protectCache = false } = {}) {
   const signals = await buildRegionalSignals();
-  await writeLatestSignals(latestSignalsPath, signals);
-  await appendRegionalHistory(historyDir, signals);
-  return signals;
+  let existingSignals = null;
+
+  try {
+    existingSignals = migrateRegionalSignals(await readLatestSignals(latestSignalsPath));
+  } catch {
+    existingSignals = null;
+  }
+
+  const blockedCoreSignals = hasBlockedCoreFloodHealth(signals);
+  const canReuseExisting =
+    protectCache &&
+    existingSignals &&
+    hasCurrentSignalSchema(existingSignals) &&
+    !hasBlockedCoreFloodHealth(existingSignals);
+
+  if (blockedCoreSignals && canReuseExisting) {
+    return annotateRegionalSignals(existingSignals, {
+      status: "protected-cache",
+      attemptedAt: signals.ingestedAt,
+      servedAt: new Date().toISOString(),
+      reason: "Live refresh was blocked, so the latest good core-gauge snapshot was kept.",
+    });
+  }
+
+  if (!blockedCoreSignals || !existingSignals) {
+    await writeLatestSignals(latestSignalsPath, signals);
+    await appendRegionalHistory(historyDir, signals);
+  }
+
+  return annotateRegionalSignals(signals, {
+    status: blockedCoreSignals ? "blocked-refresh" : "refreshed",
+    attemptedAt: signals.ingestedAt,
+    servedAt: new Date().toISOString(),
+  });
 }
 
 export async function readOrRefreshRegionalSignals() {
   try {
-    return await readLatestSignals(latestSignalsPath);
+    const signals = migrateRegionalSignals(await readLatestSignals(latestSignalsPath));
+    return hasCurrentSignalSchema(signals)
+      ? annotateRegionalSignals(signals, {
+          status: "cache",
+          servedAt: new Date().toISOString(),
+        })
+      : await runRegionalIngestion({ protectCache: true });
   } catch {
-    return runRegionalIngestion();
+    return runRegionalIngestion({ protectCache: true });
   }
 }
 

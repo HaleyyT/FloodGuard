@@ -341,7 +341,30 @@ function sourceReliabilityLabel(source) {
   return "Unknown";
 }
 
-function buildReliabilitySummary(sources = []) {
+function formatHealthLabel(status) {
+  if (status === "pass") return "Live";
+  if (status === "warn") return "Partial";
+  if (status === "blocked") return "Blocked";
+  if (status === "not_connected") return "Not connected";
+  return "Unknown";
+}
+
+function buildReliabilitySummary(sources = [], ingestionHealth = null) {
+  if (ingestionHealth?.overallStatus) {
+    const labels = [
+      `Core gauges: ${formatHealthLabel(ingestionHealth.coreFloodStatus)}`,
+      `Context: ${formatHealthLabel(ingestionHealth.contextStatus)}`,
+      `Warnings: ${formatHealthLabel(ingestionHealth.warningStatus)}`,
+    ];
+
+    return {
+      label: formatHealthLabel(ingestionHealth.overallStatus),
+      note: `${ingestionHealth.summary || "Signal source health has been checked."} ${labels.join(
+        ". ",
+      )}.`,
+    };
+  }
+
   const coreSources = sources.filter((source) => ["rainfall", "river"].includes(source.type));
   const contextSources = sources.filter((source) => !["rainfall", "river"].includes(source.type));
   const coreLive = coreSources.every(
@@ -371,6 +394,27 @@ function buildReliabilitySummary(sources = []) {
     label: "Live",
     note: "Live rainfall and river gauges are current.",
   };
+}
+
+function formatRefreshStatus(refreshMetadata, sourceStatus) {
+  if (sourceStatus !== "api") return "Local fallback signals loaded";
+  if (refreshMetadata?.status === "protected-cache") return "Latest good API snapshot kept";
+  if (refreshMetadata?.status === "blocked-refresh") return "Live API refresh blocked";
+  if (refreshMetadata?.status === "cache") return "Live API cache loaded";
+  if (refreshMetadata?.status === "refreshed") return "Live API ingestion synced";
+  return "Live API ingestion synced";
+}
+
+function formatRefreshNote(refreshMetadata) {
+  if (refreshMetadata?.status === "protected-cache") {
+    return refreshMetadata.reason;
+  }
+
+  if (refreshMetadata?.status === "blocked-refresh") {
+    return "Live refresh returned blocked core data; source diagnostics explain the failure.";
+  }
+
+  return null;
 }
 
 function formatSourceAge(ageHours) {
@@ -443,7 +487,9 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
   const riskAssessment = buildRiskAssessment(signals, riverSummary, publicSignalCards);
   const latestRain = signals.rainfallSeries.latestValidRainfallMm;
   const sourceHealth = signals.sourceMetadata ?? [];
-  const reliabilitySummary = buildReliabilitySummary(sourceHealth);
+  const ingestionHealth = signals.ingestionHealth ?? null;
+  const reliabilitySummary = buildReliabilitySummary(sourceHealth, ingestionHealth);
+  const refreshMetadata = signals.refreshMetadata ?? null;
   const publicSignalSummary = signals.publicSignalSummary ?? {
     recentReports: 0,
     actionableReports: 0,
@@ -455,14 +501,10 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     note: "No public signal summary is available.",
   };
   const rainDisplay = latestRain !== null ? `${latestRain} mm` : "No recent reading";
-  const dataStatus =
-    sourceStatus === "api" && signals.freshness?.status === "stale"
-      ? "Live API with stale source"
-      : sourceStatus === "api" && signals.freshness?.status === "mixed"
-      ? "Live API with fallback source"
-      : sourceStatus === "api"
-      ? "Live API ingestion synced"
-      : "Local fallback signals loaded";
+  const dataStatus = liveStatus.isRefreshing
+    ? "Refreshing live area signals"
+    : formatRefreshStatus(refreshMetadata, sourceStatus);
+  const refreshNote = formatRefreshNote(refreshMetadata);
 
   return {
     areaName,
@@ -474,14 +516,16 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     riskSignals: buildRiskSignals(signals),
     sourceHealth,
     reliabilitySummary,
+    ingestionHealth,
+    refreshMetadata,
     locationRelevance: buildLocationRelevance(signals),
     decisionAudit: signals.riskAssessment?.decisionAudit ?? null,
     publicSignalSummary,
 
     officialSignals: {
-      warningStatus: liveStatus.isRefreshing ? "Refreshing live area signals" : dataStatus,
+      warningStatus: dataStatus,
       dataReliability: reliabilitySummary.label,
-      dataReliabilityNote: reliabilitySummary.note,
+      dataReliabilityNote: [reliabilitySummary.note, refreshNote].filter(Boolean).join(" "),
       areaSignalFit: formatAreaSignalFit(signals.areaRelevance),
       sourceFreshness: formatSourceFreshness(signals.freshness),
       spatialRadius: formatDistanceKm(signals.spatialRelevance?.coverageRadiusKm),
@@ -940,6 +984,7 @@ function sourceModeLabel(mode) {
   if (mode === "remote-derived") return "Live derived";
   if (mode === "remote") return "Live";
   if (mode === "local-fallback") return "Fallback";
+  if (mode === "not-configured") return "Not configured";
   if (mode === "planned") return "Planned";
   return mode || "Unknown";
 }
@@ -1278,7 +1323,7 @@ function ActionsPanel({ actions }) {
 }
 
 // #source health diagnostics card
-function SourceHealthPanel({ sources }) {
+function SourceHealthPanel({ sources, ingestionHealth }) {
   const sourceRows =
     sources.length > 0
       ? sources
@@ -1292,19 +1337,22 @@ function SourceHealthPanel({ sources }) {
             ageHours: null,
           },
         ];
-  const rows = [
-    ...sourceRows,
-    {
-      label: "NSW SES / HazardWatch warnings",
-      type: "warnings",
-      mode: "planned",
-      freshnessStatus: "not-connected",
-      observedAt: null,
-      ageHours: null,
-      sourceStrength: "official_warning",
-      note: "Official warning integration is planned but not connected yet.",
-    },
-  ];
+  const hasWarningSource = sourceRows.some((source) => source.type === "warnings");
+  const rows = hasWarningSource
+    ? sourceRows
+    : [
+        ...sourceRows,
+        {
+          label: "NSW SES / HazardWatch warnings",
+          type: "warnings",
+          mode: "planned",
+          freshnessStatus: "not-connected",
+          observedAt: null,
+          ageHours: null,
+          sourceStrength: "official_warning",
+          note: "Official warning integration is planned but not connected yet.",
+        },
+      ];
 
   return (
     <section className="card">
@@ -1313,7 +1361,16 @@ function SourceHealthPanel({ sources }) {
           <p className="section-label">Source diagnostics</p>
           <h3>Data sources</h3>
         </div>
+        {ingestionHealth?.overallStatus ? (
+          <span className={`source-badge ${ingestionHealth.overallStatus}`}>
+            {formatHealthLabel(ingestionHealth.overallStatus)}
+          </span>
+        ) : null}
       </div>
+
+      {ingestionHealth?.summary ? (
+        <p className="source-health-summary">{ingestionHealth.summary}</p>
+      ) : null}
 
       <div className="source-health-list">
         {rows.map((source) => (
@@ -1937,7 +1994,10 @@ export default function App() {
 
       {activeView === "signals" && (
         <section className="section-page">
-          <SourceHealthPanel sources={dashboardData.sourceHealth} />
+          <SourceHealthPanel
+            ingestionHealth={dashboardData.ingestionHealth}
+            sources={dashboardData.sourceHealth}
+          />
           <LocationRelevancePanel relevance={dashboardData.locationRelevance} />
           <DecisionAuditPanel audit={dashboardData.decisionAudit} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />

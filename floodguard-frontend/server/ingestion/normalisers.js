@@ -23,6 +23,50 @@ function parseBomLocalTimestamp(value) {
   return `${year}-${month}-${day}T${hour}:${minute}:${second}+10:00`;
 }
 
+function normaliseWarningLevel(value) {
+  const level = String(value || "none").toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+
+  if (["emergency_warning", "emergency"].includes(level)) return "emergency_warning";
+  if (["watch_and_act", "watch"].includes(level)) return "watch_and_act";
+  if (["advice", "minor", "moderate", "major"].includes(level)) return "advice";
+  if (["all_clear", "none", "no_current_warning", "not_current"].includes(level)) {
+    return "no_current_warning";
+  }
+
+  return "unknown";
+}
+
+function warningSeverityScore(level) {
+  if (level === "emergency_warning") return 100;
+  if (level === "watch_and_act") return 75;
+  if (level === "advice") return 45;
+  if (level === "unknown") return 20;
+  return 0;
+}
+
+function warningMatchesArea(warning, area) {
+  const areaIds = warning.areaIds ?? warning.area_ids ?? [];
+  const areas = warning.areas ?? warning.locations ?? warning.suburbs ?? [];
+  const text = [
+    warning.area,
+    warning.location,
+    warning.title,
+    warning.headline,
+    warning.description,
+    ...areas,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    areaIds.includes(area.id) ||
+    text.includes(area.id.replaceAll("-", " ")) ||
+    text.includes(area.name.toLowerCase().replace(", nsw", "")) ||
+    text.includes(area.catchment.toLowerCase())
+  );
+}
+
 export function normalizeWeather(raw) {
   const header = raw?.observations?.header?.[0] ?? {};
   const latest = raw?.observations?.data?.[0] ?? {};
@@ -44,6 +88,51 @@ export function normalizeWeather(raw) {
     visibilityKm: toNumber(latest.vis_km),
     windDirection: latest.wind_dir || null,
     windSpeedKmh: toNumber(latest.wind_spd_kmh),
+  };
+}
+
+export function normalizeOfficialWarnings(raw, area) {
+  const warnings = Array.isArray(raw?.warnings)
+    ? raw.warnings
+    : Array.isArray(raw?.features)
+      ? raw.features.map((feature) => feature.properties ?? feature)
+      : [];
+  const matchedWarnings = warnings.filter((warning) => warningMatchesArea(warning, area));
+  const globalLevel = normaliseWarningLevel(raw?.status ?? raw?.level ?? raw?.warningLevel);
+  const matchedLevel = matchedWarnings
+    .map((warning) => normaliseWarningLevel(warning.level ?? warning.status ?? warning.warningLevel))
+    .sort((a, b) => warningSeverityScore(b) - warningSeverityScore(a))[0];
+  const level = matchedLevel ?? globalLevel;
+  const observedAt =
+    raw?.observedAt ??
+    raw?.issuedAt ??
+    raw?.updatedAt ??
+    matchedWarnings[0]?.issuedAt ??
+    matchedWarnings[0]?.updatedAt ??
+    null;
+
+  return {
+    sourceLabel: raw?.sourceLabel ?? raw?.provider ?? "NSW SES / HazardWatch warning status",
+    provider: raw?.provider ?? "NSW SES / HazardWatch",
+    status: level,
+    statusLabel:
+      level === "no_current_warning"
+        ? "No current warning"
+        : level
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" "),
+    observedAt,
+    issuedAt: raw?.issuedAt ?? raw?.updatedAt ?? null,
+    warningCount: matchedWarnings.length,
+    warnings: matchedWarnings.map((warning) => ({
+      id: warning.id ?? warning.identifier ?? warning.url ?? warning.headline,
+      headline: warning.headline ?? warning.title ?? "Official warning",
+      level: normaliseWarningLevel(warning.level ?? warning.status ?? warning.warningLevel),
+      issuedAt: warning.issuedAt ?? warning.updatedAt ?? null,
+      area: warning.area ?? warning.location ?? area.name,
+      url: warning.url ?? raw?.sourceUrl ?? null,
+    })),
   };
 }
 

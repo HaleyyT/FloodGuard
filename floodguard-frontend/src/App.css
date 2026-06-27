@@ -445,6 +445,12 @@ p {
   gap: 10px;
 }
 
+.source-health-summary {
+  color: #354863;
+  font-size: 0.86rem;
+  margin-bottom: 12px;
+}
+
 .source-health-item {
   background: #fbfdff;
   border: 1px solid #e5ecf6;
@@ -551,6 +557,26 @@ p {
 .source-badge.current {
   background: #d8f6e1;
   color: #156f39;
+}
+
+.source-badge.pass {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
+.source-badge.warn {
+  background: #fff3d8;
+  color: #9a5d00;
+}
+
+.source-badge.blocked {
+  background: #fde8e8;
+  color: #a12a2a;
+}
+
+.source-badge.not_connected {
+  background: #e8eef7;
+  color: #42546f;
 }
 
 .source-badge.complete {

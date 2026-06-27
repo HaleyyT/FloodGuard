@@ -25,6 +25,21 @@ export async function loadSource(source) {
   const configuredUrl = process.env[source.envUrl] || process.env[source.roadmapEnvUrl] || source.defaultUrl;
   const fetchedAt = new Date().toISOString();
 
+  if (!configuredUrl && source.optional) {
+    return {
+      data: null,
+      metadata: {
+        label: source.label,
+        mode: "not-configured",
+        source: null,
+        sourceStrength: source.sourceStrength,
+        fetchedAt,
+        status: "not-connected",
+        note: `${source.envUrl} is not configured.`,
+      },
+    };
+  }
+
   if (configuredUrl) {
     try {
       return {

@@ -49,10 +49,6 @@ function sourceWarning(source) {
     return `${source.label} is a weather proxy; connect FLOODGUARD_RAINFALL_URL for a primary rainfall gauge or official rainfall bulletin.`;
   }
 
-  if (source.sourceStrength === "official_warning") {
-    return `${source.label} is warning context, not a gauge measurement.`;
-  }
-
   return null;
 }
 
@@ -65,7 +61,38 @@ function isContextSource(source) {
 }
 
 function sourceIssue(source) {
+  if (source.type === "warnings" && source.status === "not-connected") return null;
   return sourceModeIssue(source) || sourceStrengthIssue(source) || sourceFreshnessIssue(source);
+}
+
+function warningHealth(sources) {
+  const warningSource = sources.find((source) => source.type === "warnings");
+
+  if (!warningSource || warningSource.status === "not-connected") {
+    return {
+      status: "not_connected",
+      warning: "Official NSW SES/HazardWatch warning integration is planned but not connected yet.",
+    };
+  }
+
+  if (warningSource.status === "failed" || warningSource.mode === "unavailable") {
+    return {
+      status: "warn",
+      warning: "Official warning source is configured but unavailable.",
+    };
+  }
+
+  if (["stale", "unknown"].includes(warningSource.freshnessStatus)) {
+    return {
+      status: "warn",
+      warning: "Official warning source is configured but does not have a fresh timestamp.",
+    };
+  }
+
+  return {
+    status: "pass",
+    warning: null,
+  };
 }
 
 export function buildAreaIngestionHealth(areaSignals) {
@@ -111,11 +138,12 @@ export function buildAreaIngestionHealth(areaSignals) {
 
   const coreFloodStatus = coreIssues.length > 0 ? "blocked" : "pass";
   const contextStatus = contextIssues.length > 0 ? "warn" : "pass";
-  const warningStatus = "not_connected";
+  const warningLayer = warningHealth(sources);
+  const warningStatus = warningLayer.status;
   const overallStatus =
     coreFloodStatus === "blocked"
       ? "blocked"
-      : contextStatus === "warn" || warningStatus === "not_connected"
+      : contextStatus === "warn" || warningStatus !== "pass"
         ? "warn"
         : "pass";
 
@@ -129,13 +157,13 @@ export function buildAreaIngestionHealth(areaSignals) {
     warningStatus,
     ready: coreFloodStatus === "pass",
     issueCount: coreIssues.length,
-    warningCount: contextIssues.length + warnings.length + 1,
+    warningCount: contextIssues.length + warnings.length + (warningLayer.warning ? 1 : 0),
     issues: coreIssues,
     warnings: [
       ...contextIssues,
       ...warnings,
-      "Official NSW SES/HazardWatch warning integration is planned but not connected yet.",
-    ],
+      warningLayer.warning,
+    ].filter(Boolean),
     coreIssues,
     contextIssues,
     freshness: areaSignals.freshness,
@@ -170,11 +198,16 @@ export function buildRegionalIngestionHealth(regionalSignals) {
   const contextWarningAreas = areas.filter((area) => area.contextStatus === "warn");
   const coreFloodStatus = coreBlockedAreas.length > 0 ? "blocked" : "pass";
   const contextStatus = contextWarningAreas.length > 0 ? "warn" : "pass";
-  const warningStatus = "not_connected";
+  const warningStatuses = areas.map((area) => area.warningStatus);
+  const warningStatus = warningStatuses.includes("warn")
+    ? "warn"
+    : warningStatuses.includes("not_connected")
+      ? "not_connected"
+      : "pass";
   const overallStatus =
     coreFloodStatus === "blocked"
       ? "blocked"
-      : contextStatus === "warn" || warningStatus === "not_connected"
+      : contextStatus === "warn" || warningStatus !== "pass"
         ? "warn"
         : "pass";
 
@@ -195,8 +228,8 @@ export function buildRegionalIngestionHealth(regionalSignals) {
       overallStatus === "blocked"
         ? "Core live flood gauge data is blocked by stale, fallback, missing, or mismatched sources."
         : overallStatus === "warn"
-          ? "Core live flood gauges are working. Some supporting context sources are stale or not yet connected."
-          : "Core flood gauges and supporting context sources are live.",
+          ? "Core live flood gauges are working. Some supporting context or warning sources are stale or not yet connected."
+          : "Core flood gauges, supporting context, and official warning sources are live.",
     areas,
   };
 }

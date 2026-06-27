@@ -6,6 +6,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.
 export const rawDataDir = path.join(rootDir, "src/data/raw");
 export const storageDir = path.join(rootDir, "server/storage");
 export const historyDir = path.join(storageDir, "history");
+export const latestSignalsSchemaVersion = 3;
 
 function booleanEnv(name, fallback = false) {
   const value = process.env[name];
@@ -24,6 +25,7 @@ export const ingestionPolicy = {
     weather: numberEnv("FLOODGUARD_MAX_WEATHER_AGE_HOURS", 12),
     rainfall: numberEnv("FLOODGUARD_MAX_RAINFALL_AGE_HOURS", 6),
     river: numberEnv("FLOODGUARD_MAX_RIVER_AGE_HOURS", 6),
+    warnings: numberEnv("FLOODGUARD_MAX_WARNING_AGE_HOURS", 12),
   },
 };
 
@@ -55,6 +57,12 @@ export const sourceConfig = {
     sourceStrength: "primary_live_gauge",
     adapter: "floodsmart-river",
     stationCodes: ["567057", "567107", "567112", "567058", "567074", "567056"],
+  },
+  warnings: {
+    label: "NSW SES / HazardWatch warning status",
+    envUrl: "FLOODGUARD_WARNINGS_URL",
+    sourceStrength: "official_warning",
+    optional: true,
   },
 };
 
