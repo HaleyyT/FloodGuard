@@ -13,16 +13,31 @@ function predictionLabel(value) {
 function scoreRow(row) {
   const pressureScore =
     row.rainfallPressure * 0.35 + row.riverPressure * 0.3 + row.wetnessPressure * 0.2;
-  const tendencyScore = row.risingRiverStations * 12 + Math.max(row.scoreDelta ?? 0, 0) * 1.5;
+  const shortRainMomentum = (row.rainfall1hMm ?? 0) * 3 + (row.rainfall3hMm ?? 0) * 2;
+  const riverMomentum =
+    row.risingRiverStations * 10 + Math.max(row.riverHeightDeltaM ?? 0, 0) * 20;
+  const tendencyScore = riverMomentum + Math.max(row.scoreDelta ?? 0, 0) * 1.5;
   const qualityPenalty =
     row.staleSourceCount * 10 + row.fallbackSourceCount * 6 + row.failedSourceCount * 20;
-  const reliabilitySupport = (row.decisionReliabilityScore ?? 0) * 0.15;
-  const rawScore = pressureScore + tendencyScore + reliabilitySupport - qualityPenalty;
+  const reliabilitySupport =
+    (row.decisionReliabilityScore ?? 0) * 0.1 + (row.dataFreshnessScore ?? 0) * 0.05;
+  const rawScore =
+    pressureScore + shortRainMomentum + tendencyScore + reliabilitySupport - qualityPenalty;
 
   return clamp(Math.round(rawScore));
 }
 
 const modelInputs = [
+  {
+    field: "rainfall1hMm",
+    role: "rainfall-window",
+    explanation: "Very recent rainfall adds short-term rainfall momentum.",
+  },
+  {
+    field: "rainfall3hMm",
+    role: "rainfall-window",
+    explanation: "Three-hour rainfall helps detect fast-moving local events.",
+  },
   {
     field: "rainfallPressure",
     role: "pressure",
@@ -44,9 +59,19 @@ const modelInputs = [
     explanation: "Rising stations add a worsening-condition signal.",
   },
   {
+    field: "riverHeightDeltaM",
+    role: "river-baseline",
+    explanation: "River height above the recent station baseline adds level momentum.",
+  },
+  {
     field: "scoreDelta",
     role: "trend",
     explanation: "Recent rule-score increases add short-term momentum.",
+  },
+  {
+    field: "dataFreshnessScore",
+    role: "quality",
+    explanation: "Fresh source observations make the transparent baseline more trustworthy.",
   },
   {
     field: "decisionReliabilityScore",
@@ -151,6 +176,8 @@ export function buildBaselinePrediction(featureRows = []) {
       agreesWithRuleEngine: predictedElevatedConcern === latest.targetElevatedConcern,
       ruleEngineLabel: predictionLabel(latest.targetElevatedConcern),
       drivers: [
+        `1h rainfall ${latest.rainfall1hMm ?? 0} mm`,
+        `3h rainfall ${latest.rainfall3hMm ?? 0} mm`,
         `Rainfall pressure ${latest.rainfallPressure}/100`,
         `River pressure ${latest.riverPressure}/100`,
         `Wetness pressure ${latest.wetnessPressure}/100`,
@@ -186,7 +213,7 @@ export function buildBaselineModelCard(featureRows = [], datasetQuality = null) 
       label: "Scores >= 45 are classified as elevated concern.",
     },
     scoreFormula:
-      "rainfall pressure 35% + river pressure 30% + wetness pressure 20% + rising stations/momentum + reliability support - stale/fallback/failed source penalties",
+      "rainfall pressure 35% + river pressure 30% + wetness pressure 20% + short-rain windows + river baseline momentum + reliability/freshness support - stale/fallback/failed source penalties",
     inputs: modelInputs,
     evaluation: baseline.evaluation,
     readiness: baseline.readiness,

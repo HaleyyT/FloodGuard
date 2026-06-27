@@ -22,6 +22,7 @@ import {
   fetchEvidenceReviewQueue,
   fetchFloodguardAreas,
   fetchModelCard,
+  fetchModelExperiment,
   fetchParramattaSignals,
   localParramattaSignals,
   submitCommunityReport,
@@ -947,6 +948,52 @@ function useBaselinePrediction(selectedAreaId, lastUpdated) {
   return baselinePrediction;
 }
 
+function useModelExperiment(selectedAreaId, lastUpdated) {
+  const [modelExperiment, setModelExperiment] = useState({
+    modelFamily: "tabular flood-signal baseline",
+    status: "unavailable",
+    rowCount: 0,
+    classBalance: {
+      elevatedCount: 0,
+      lowCount: 0,
+      status: "unknown",
+    },
+    readiness: {
+      readyForComparison: false,
+      note: "Model experiment API is unavailable.",
+    },
+    candidates: [],
+    safeguards: ["Model experiment API is unavailable."],
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchModelExperiment({
+      areaId: selectedAreaId,
+      limit: 100,
+      signal: controller.signal,
+    })
+      .then(setModelExperiment)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setModelExperiment((current) => ({
+            ...current,
+            status: "unavailable",
+            readiness: {
+              ...current.readiness,
+              note: "Model experiment API is unavailable.",
+            },
+          }));
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return modelExperiment;
+}
+
 function useModelCard(selectedAreaId, lastUpdated) {
   const [modelCard, setModelCard] = useState({
     modelName: "transparent feature baseline",
@@ -1349,11 +1396,11 @@ function FrontPageSummary({ data }) {
       </div>
 
       <div className="frontpage-rainfall">
-        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
       </div>
 
       <div className="frontpage-factors">
-        <RainfallChart rainfallTrend={data.rainfallTrend} />
+        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
       </div>
 
       <div className="frontpage-map">
@@ -1742,7 +1789,9 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
               <p className="report-description">{report.description}</p>
               {report.imageEvidence && (
                 <p className="report-evidence">
-                  Image evidence linked - {report.imageEvidence.verification}
+                  Image evidence linked -{" "}
+                  {report.validation?.imageValidation?.severityHint?.class ??
+                    report.imageEvidence.verification}
                 </p>
               )}
               <p className="report-quality">
@@ -1790,6 +1839,12 @@ function EvidenceReviewPanel({ queue }) {
                 </span>
               </div>
               <p className="report-description">{item.caption}</p>
+              {item.imageValidation?.severityHint && (
+                <p className="report-evidence">
+                  Visual hint: {item.imageValidation.severityHint.class} -{" "}
+                  {item.imageValidation.severityHint.rationale}
+                </p>
+              )}
               <p className="report-evidence">{item.reasons.join("; ")}</p>
             </div>
           ))
@@ -1980,6 +2035,63 @@ function BaselinePredictionPanel({ baseline }) {
   );
 }
 
+// #model experiment comparison card
+function ModelExperimentPanel({ experiment }) {
+  const logisticCandidate =
+    experiment.candidates?.find((candidate) => candidate.name.includes("logistic")) ?? null;
+  const ruleCandidate =
+    experiment.candidates?.find((candidate) => candidate.name.includes("rule")) ?? null;
+  const logisticAccuracy =
+    logisticCandidate?.evaluation?.accuracy === null || logisticCandidate?.evaluation?.accuracy === undefined
+      ? logisticCandidate?.evaluation?.accuracyStatus ?? "collecting"
+      : `${logisticCandidate.evaluation.accuracy}%`;
+  const ruleScore =
+    ruleCandidate?.latestScore === null || ruleCandidate?.latestScore === undefined
+      ? "Waiting"
+      : `${ruleCandidate.latestScore}/100`;
+  const logisticScore =
+    logisticCandidate?.latestScore === null || logisticCandidate?.latestScore === undefined
+      ? "Waiting"
+      : `${logisticCandidate.latestScore}/100`;
+
+  return (
+    <section className="card model-experiment-card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Predictive modelling</p>
+          <h3>Model experiment</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Rows" value={String(experiment.rowCount ?? 0)} />
+        <InfoTile
+          label="Class balance"
+          value={`${experiment.classBalance?.lowCount ?? 0} low / ${
+            experiment.classBalance?.elevatedCount ?? 0
+          } elevated`}
+        />
+        <InfoTile label="Rule score" value={ruleScore} />
+        <InfoTile label="Logistic score" value={logisticScore} />
+      </div>
+
+      <ul className="factor-list history-list">
+        <li>{experiment.readiness?.note}</li>
+        <li>Logistic holdout: {logisticAccuracy}</li>
+        {(logisticCandidate?.topDrivers ?? []).slice(0, 3).map((driver) => (
+          <li key={driver.field}>
+            {driver.label}: {driver.value} ({driver.contribution >= 0 ? "+" : ""}
+            {driver.contribution})
+          </li>
+        ))}
+        {(experiment.safeguards ?? []).slice(0, 1).map((safeguard) => (
+          <li key={safeguard}>{safeguard}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // #model card panel
 function ModelCardPanel({ modelCard }) {
   return (
@@ -2062,6 +2174,7 @@ export default function App() {
   const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
   const datasetQuality = useDatasetQuality(selectedAreaId, liveStatus.lastUpdated);
   const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
+  const modelExperiment = useModelExperiment(selectedAreaId, liveStatus.lastUpdated);
   const modelCard = useModelCard(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = hasSelectedAreaSignals
     ? buildDashboardData(signals, sourceStatus, liveStatus)
@@ -2130,6 +2243,7 @@ export default function App() {
           <FeatureReadinessPanel dataset={featureDataset} />
           <DatasetQualityPanel quality={datasetQuality} />
           <BaselinePredictionPanel baseline={baselinePrediction} />
+          <ModelExperimentPanel experiment={modelExperiment} />
           <ModelCardPanel modelCard={modelCard} />
         </section>
       )}

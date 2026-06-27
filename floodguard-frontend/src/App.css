@@ -320,7 +320,7 @@ p {
   grid-template-areas:
     "actions river factors"
     "rainfall map map";
-  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.1fr) minmax(300px, 0.96fr);
+  grid-template-columns: minmax(420px, 480px) minmax(0, 1.08fr) minmax(240px, 0.82fr);
   grid-template-rows: minmax(0, auto) minmax(0, auto);
   margin-bottom: 12px;
   min-width: 0;
@@ -399,7 +399,7 @@ p {
   background: rgba(251, 253, 255, 0.5);
   border: 1px solid rgba(224, 234, 247, 0.8);
   border-radius: 10px;
-  margin-bottom: 0;
+  margin-bottom: 20px;
   padding: 10px 12px;
 }
 

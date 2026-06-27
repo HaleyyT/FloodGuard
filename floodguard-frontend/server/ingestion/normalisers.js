@@ -305,16 +305,26 @@ export function normalizeFloodSmartRiverContext(raw) {
     const previousValue = toNumber(previousEvent?.value);
     const delta = latestValue !== null && previousValue !== null ? latestValue - previousValue : 0;
     const tendency = delta > 0.01 ? "rising" : delta < -0.01 ? "falling" : "steady";
+    const points = (station.events ?? [])
+      .map((event) => ({
+        time: event.time,
+        heightM: toNumber(event.value),
+        qualityCode: event.validationCode || null,
+      }))
+      .filter((point) => point.time && point.heightM !== null);
 
     return {
       stationName: station.normalizedStationName,
       stationType: station.category,
       timeDay: station.observedAt,
       heightM: latestValue,
+      previousHeightM: previousValue,
+      heightDeltaM: latestValue !== null && previousValue !== null ? Number(delta.toFixed(3)) : null,
       gaugeDatum: station.unit === "m" ? "mAHD" : station.unit,
       tendency,
       statusLabel: normaliseStatusLabel(tendency),
       floodClassification: null,
+      points,
     };
   });
 

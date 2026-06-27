@@ -115,11 +115,91 @@ function normaliseImageEvidence(input = {}) {
   };
 }
 
+function imageSeverityHint(report) {
+  const text = `${report.description} ${report.imageEvidence?.caption ?? ""}`.toLowerCase();
+  const severeTerms = ["car", "vehicle", "waist", "rescue", "fast", "torrent", "evacu", "deep"];
+  const moderateTerms = ["road", "crossing", "blocked", "creek", "overflow", "knee", "pooling"];
+  const shallowTerms = ["puddle", "footpath", "gutter", "minor", "shallow"];
+
+  if (severeTerms.some((term) => text.includes(term))) {
+    return {
+      class: "possible-severe-flooding",
+      confidence: 72,
+      rationale: "Text around the image mentions severe flood indicators.",
+    };
+  }
+
+  if (moderateTerms.some((term) => text.includes(term))) {
+    return {
+      class: "possible-moderate-flooding",
+      confidence: 62,
+      rationale: "Text around the image mentions roads, crossings, creek overflow, or blocked access.",
+    };
+  }
+
+  if (shallowTerms.some((term) => text.includes(term))) {
+    return {
+      class: "possible-shallow-flooding",
+      confidence: 52,
+      rationale: "Text around the image suggests shallow or localised water.",
+    };
+  }
+
+  return {
+    class: "unclassified",
+    confidence: 35,
+    rationale: "Image URL is valid, but the text does not provide enough visual context.",
+  };
+}
+
+function buildImageValidation(report) {
+  if (!report.imageEvidence) {
+    return {
+      status: "no-image",
+      severityHint: null,
+      reviewRequired: false,
+      safeguards: [],
+    };
+  }
+
+  const severityHint = imageSeverityHint(report);
+  const reviewRequired =
+    report.severity === "high" ||
+    severityHint.class !== "unclassified" ||
+    report.validation?.flags?.length > 0;
+
+  return {
+    status: "metadata-validated",
+    severityHint,
+    reviewRequired,
+    reviewReason: reviewRequired
+      ? "Image evidence can support severity, but still needs human review before influencing the official decision."
+      : "Image evidence is stored as supplementary context only.",
+    safeguards: [
+      "Only HTTPS image URLs are accepted.",
+      "Localhost and private-network image hosts are blocked.",
+      "Raw image URLs stay in report storage; the queue exposes host and metadata only.",
+    ],
+  };
+}
+
 function imageEvidencePriority(report) {
   const severityScore = report.severity === "high" ? 70 : report.severity === "moderate" ? 45 : 20;
   const qualityScore = report.validation?.qualityScore ?? report.confidence ?? 0;
   const imageCaptionScore = report.imageEvidence?.caption ? 10 : 0;
-  const score = Math.min(100, Math.round(severityScore + qualityScore * 0.35 + imageCaptionScore));
+  const imageValidation = report.validation?.imageValidation ?? buildImageValidation(report);
+  const hintScore =
+    imageValidation.severityHint?.class === "possible-severe-flooding"
+      ? 15
+      : imageValidation.severityHint?.class === "possible-moderate-flooding"
+        ? 10
+        : imageValidation.severityHint?.class === "possible-shallow-flooding"
+          ? 5
+          : 0;
+  const score = Math.min(
+    100,
+    Math.round(severityScore + qualityScore * 0.35 + imageCaptionScore + hintScore),
+  );
 
   return {
     score,
@@ -144,6 +224,11 @@ export function buildImageEvidenceReviewItem(report) {
     reasons.push("image note is missing");
   }
 
+  const imageValidation = report.validation?.imageValidation ?? buildImageValidation(report);
+  if (imageValidation.severityHint) {
+    reasons.push(`${imageValidation.severityHint.class} (${imageValidation.severityHint.confidence}/100)`);
+  }
+
   return {
     id: report.id,
     areaId: report.areaId,
@@ -158,6 +243,7 @@ export function buildImageEvidenceReviewItem(report) {
     verification: report.imageEvidence.verification ?? "unreviewed",
     reviewStatus: "needs-human-review",
     priority,
+    imageValidation,
     reasons,
   };
 }
@@ -211,11 +297,19 @@ function buildValidation(report) {
     ),
   );
 
-  return {
+  const validation = {
     qualityScore,
     flags,
     actionable: qualityScore >= 55,
     imageEvidence: hasImageEvidence ? "linked-unreviewed" : "none",
+  };
+
+  return {
+    ...validation,
+    imageValidation: buildImageValidation({
+      ...report,
+      validation,
+    }),
   };
 }
 

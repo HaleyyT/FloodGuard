@@ -19,6 +19,7 @@ import {
 import { assessRisk } from "./riskEngine.js";
 import { buildDatasetQualityReport, buildFeatureRows, buildFeatureSummary } from "./features.js";
 import { buildBaselineModelCard, buildBaselinePrediction } from "./baselineModel.js";
+import { buildModelExperiment } from "./modelExperiment.js";
 import { buildRegionalIngestionHealth } from "./health.js";
 import { readCommunityReports, summariseCommunityReports } from "./communityReports.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
@@ -453,16 +454,17 @@ function disconnectedWarningMetadata(area, fetchedAt) {
 }
 
 function migrateAreaSignals(areaSignals, regionalIngestedAt) {
-  if ((areaSignals.sourceMetadata ?? []).some((source) => source.type === "warnings")) {
-    return areaSignals;
-  }
-
   const area = getAreaConfig(areaSignals.area?.id) ?? areaSignals.area;
-  const sourceMetadata = [
-    ...(areaSignals.sourceMetadata ?? []),
-    disconnectedWarningMetadata(area, regionalIngestedAt ?? areaSignals.ingestedAt),
-  ];
-  const warningSummary = normalizeOfficialWarnings(null, area);
+  const hasWarningSource = (areaSignals.sourceMetadata ?? []).some(
+    (source) => source.type === "warnings",
+  );
+  const sourceMetadata = hasWarningSource
+    ? (areaSignals.sourceMetadata ?? [])
+    : [
+        ...(areaSignals.sourceMetadata ?? []),
+        disconnectedWarningMetadata(area, regionalIngestedAt ?? areaSignals.ingestedAt),
+      ];
+  const warningSummary = areaSignals.warningSummary ?? normalizeOfficialWarnings(null, area);
   const freshness = buildFreshnessSummary(sourceMetadata);
   const migratedSignals = {
     ...areaSignals,
@@ -488,7 +490,7 @@ function migrateRegionalSignals(regionalSignals) {
     return regionalSignals;
   }
 
-  if (regionalSignals.schemaVersion !== 2) return regionalSignals;
+  if (![2, 3].includes(regionalSignals.schemaVersion)) return regionalSignals;
 
   const areas = Object.fromEntries(
     Object.entries(regionalSignals.areas ?? {}).map(([areaId, areaSignals]) => [
@@ -531,7 +533,9 @@ function hasCurrentSignalSchema(regionalSignals) {
 
   return Object.values(regionalSignals.areas ?? {}).every((areaSignals) =>
     (areaSignals.sourceMetadata ?? []).every((source) => source.sourceStrength) &&
-      (areaSignals.sourceMetadata ?? []).some((source) => source.type === "warnings"),
+      (areaSignals.sourceMetadata ?? []).some((source) => source.type === "warnings") &&
+      typeof areaSignals.riskAssessment?.features?.rainfall1hMm === "number" &&
+      typeof areaSignals.riskAssessment?.features?.dataFreshnessScore === "number",
   );
 }
 
@@ -750,6 +754,16 @@ export async function readAreaModelCard(areaId = defaultAreaId, limit = 100) {
   return {
     areaId,
     ...buildBaselineModelCard(rows, datasetQuality),
+  };
+}
+
+export async function readAreaModelExperiment(areaId = defaultAreaId, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaId, limit);
+  const rows = buildFeatureRows(history);
+
+  return {
+    areaId,
+    ...buildModelExperiment(rows),
   };
 }
 
