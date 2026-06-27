@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  BarChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  BarChart,
   Bar,
+  Cell,
+  ReferenceLine,
 } from "recharts";
 
 import { buildPublicSignalCards } from "./data/parramattaSignals";
@@ -195,6 +195,13 @@ function buildRiskSignals(signals) {
 
 
 /* Helper function to summarise the river data feed, extracting key information like the primary station, its current height and tendency, the highest station, and counts of rising/steady/falling tendencies across all stations. This summary can then be used in the dashboard and risk assessment logic.*/
+function formatRiverHeight(value) {
+  if (value === null || value === undefined) return null;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+  return Number(numericValue.toFixed(2)).toString();
+}
+
 function summariseRiverData(riverData) {
   const stations = riverData.stations || [];
 
@@ -223,10 +230,10 @@ function summariseRiverData(riverData) {
     issuedDate: riverData.issuedDate,
     stationCount: stations.length,
     primaryStationName: primaryStation?.stationName || "Unknown station",
-    primaryHeight: primaryStation?.heightM ?? null,
+    primaryHeight: formatRiverHeight(primaryStation?.heightM),
     primaryTendency: primaryStation?.tendency || "unknown",
     highestStationName: highestStation?.stationName || "Unknown station",
-    highestHeight: highestStation?.heightM ?? null,
+    highestHeight: formatRiverHeight(highestStation?.heightM),
     tendencyCounts,
   };
 }
@@ -281,13 +288,33 @@ function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards)
 }
 
 function buildRainfallTrend(signals) {
-  return (signals.rainfallSeries?.points ?? []).map((point) => ({
-    time: new Date(point.time).toLocaleDateString("en-AU", {
-      day: "numeric",
-      month: "short",
-    }),
-    rainfall: point.rainfallMm,
-  }));
+  return (signals.rainfallSeries?.points ?? []).map((point, index, points) => {
+    const timestamp = new Date(point.time);
+    const previousPoint = index > 0 ? points[index - 1] : null;
+    const change =
+      previousPoint && typeof previousPoint.rainfallMm === "number"
+        ? Number((point.rainfallMm - previousPoint.rainfallMm).toFixed(1))
+        : null;
+
+    return {
+      time: timestamp.toLocaleDateString("en-AU", {
+        day: "numeric",
+        month: "short",
+      }),
+      shortTime: timestamp.toLocaleTimeString("en-AU", {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      timestamp: timestamp.toLocaleString("en-AU", {
+        day: "numeric",
+        month: "short",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      rainfall: point.rainfallMm,
+      change,
+    };
+  });
 }
 
 function formatAreaSignalFit(areaRelevance) {
@@ -996,6 +1023,11 @@ function reliabilityLabel(audit) {
 
 // #signal visualisation rainfall chart
 function RainfallChart({ rainfallTrend }) {
+  const peakRainfall = rainfallTrend.reduce(
+    (maxValue, point) => Math.max(maxValue, Number(point.rainfall ?? 0)),
+    0
+  );
+
   return (
     <section className="card signal-chart-card">
       <div className="section-header compact">
@@ -1006,15 +1038,53 @@ function RainfallChart({ rainfallTrend }) {
       </div>
       <div className="chart-box">
         <ResponsiveContainer width="100%" height={255}>
-          <LineChart data={rainfallTrend}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="time" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="rainfall" strokeWidth={3} />
-          </LineChart>
+          <BarChart
+            data={rainfallTrend}
+            barCategoryGap="22%"
+            margin={{ top: 8, right: 10, left: -16, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="rainfallFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2d8cf0" stopOpacity={0.95} />
+                <stop offset="100%" stopColor="#8ec5ff" stopOpacity={0.55} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="time"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={22}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              width={36}
+              tickFormatter={(value) => `${value} mm`}
+            />
+            <Tooltip
+              cursor={{ fill: "rgba(45, 140, 240, 0.08)" }}
+              formatter={(value) => [`${value} mm`, "Rainfall"]}
+              labelFormatter={(_, payload) =>
+                payload?.[0]?.payload?.timestamp ?? "Rainfall reading"
+              }
+            />
+            <ReferenceLine y={0} stroke="#b8cde5" />
+            <Bar dataKey="rainfall" radius={[8, 8, 2, 2]} maxBarSize={28}>
+              {rainfallTrend.map((point, index) => (
+                <Cell
+                  key={`${point.timestamp}-${index}`}
+                  fill={point.rainfall === peakRainfall && peakRainfall > 0 ? "#0f6dcb" : "url(#rainfallFill)"}
+                />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </div>
+      <p className="chart-note">
+        Bars show each observed rainfall reading in millimetres, with the darkest bar marking the local peak.
+      </p>
     </section>
   );
 }
@@ -1189,6 +1259,25 @@ function AppNavigation({ activeView, onViewChange }) {
   );
 }
 
+// #area data loading guard
+function AreaDataGuard({ areaName, liveStatus }) {
+  return (
+    <section className="overview-panel card area-data-guard">
+      <div className="section-header">
+        <div>
+          <p className="section-label">Area signals</p>
+          <h2>{areaName}</h2>
+        </div>
+      </div>
+      <p className="overview-summary">
+        {liveStatus.errorMessage
+          ? `Could not load current signals for this area: ${liveStatus.errorMessage}`
+          : `Loading current rainfall, river, weather, and warning signals for ${areaName}.`}
+      </p>
+    </section>
+  );
+}
+
 // #monitored region overview
 function OverviewPanel({ data }) {
   return (
@@ -1260,11 +1349,11 @@ function FrontPageSummary({ data }) {
       </div>
 
       <div className="frontpage-rainfall">
-        <RainfallChart rainfallTrend={data.rainfallTrend} />
+        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
       </div>
 
       <div className="frontpage-factors">
-        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
       </div>
 
       <div className="frontpage-map">
@@ -1964,6 +2053,9 @@ export default function App() {
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
   const [activeView, setActiveView] = useState("overview");
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
+  const selectedArea = areas.find((area) => area.id === selectedAreaId);
+  const signalsAreaId = signals.area?.id ?? "parramatta";
+  const hasSelectedAreaSignals = signalsAreaId === selectedAreaId;
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
   const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
   const evidenceReviewQueue = useEvidenceReviewQueue(selectedAreaId, liveStatus.lastUpdated);
@@ -1971,7 +2063,10 @@ export default function App() {
   const datasetQuality = useDatasetQuality(selectedAreaId, liveStatus.lastUpdated);
   const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
   const modelCard = useModelCard(selectedAreaId, liveStatus.lastUpdated);
-  const dashboardData = buildDashboardData(signals, sourceStatus, liveStatus);
+  const dashboardData = hasSelectedAreaSignals
+    ? buildDashboardData(signals, sourceStatus, liveStatus)
+    : null;
+  const selectedAreaName = selectedArea?.name ?? selectedAreaId;
 
   return (
     <div className="app-shell">
@@ -1984,7 +2079,11 @@ export default function App() {
       />
       <AppNavigation activeView={activeView} onViewChange={setActiveView} />
 
-      {activeView === "overview" && (
+      {!hasSelectedAreaSignals && (
+        <AreaDataGuard areaName={selectedAreaName} liveStatus={liveStatus} />
+      )}
+
+      {hasSelectedAreaSignals && activeView === "overview" && (
         <>
           <OverviewPanel data={dashboardData} />
           <FrontPageSummary data={dashboardData} />
@@ -1992,7 +2091,7 @@ export default function App() {
         </>
       )}
 
-      {activeView === "signals" && (
+      {hasSelectedAreaSignals && activeView === "signals" && (
         <section className="section-page">
           <SourceHealthPanel
             ingestionHealth={dashboardData.ingestionHealth}
@@ -2010,7 +2109,7 @@ export default function App() {
         </section>
       )}
 
-      {activeView === "community" && (
+      {hasSelectedAreaSignals && activeView === "community" && (
         <section className="section-page community-page">
           <div className="community-column">
             <ReportsPanel reports={dashboardData.reports} />
@@ -2025,7 +2124,7 @@ export default function App() {
         </section>
       )}
 
-      {activeView === "model" && (
+      {hasSelectedAreaSignals && activeView === "model" && (
         <section className="section-page model-page">
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />
@@ -2035,7 +2134,7 @@ export default function App() {
         </section>
       )}
 
-      {activeView === "architecture" && (
+      {hasSelectedAreaSignals && activeView === "architecture" && (
         <section className="section-page architecture-page">
           <ArchitecturePanel />
           <EvidencePanel evidence={dashboardData.evidence} />
@@ -2059,26 +2158,48 @@ function MapPanel({ areaName }) {
       </div>
 
       <div className="map-panel">
+        <div className="map-grid"></div>
+        <div className="map-catchment-glow"></div>
         <div className="map-river"></div>
+        <div className="map-river-label">Parramatta River corridor</div>
 
         <div className="map-label suburb">{areaName}</div>
+        <div className="map-focus-ring"></div>
+        <div className="map-label precinct">Active community reports</div>
 
         <div className="map-pin high" style={{ top: "28%", left: "68%" }}>
-          !
+        </div>
+        <div className="map-event-label high" style={{ top: "23%", left: "73%" }}>
+          Road pooling
         </div>
         <div className="map-pin moderate" style={{ top: "48%", left: "42%" }}>
-          !
+        </div>
+        <div className="map-event-label moderate" style={{ top: "43%", left: "47%" }}>
+          Creek watch
         </div>
         <div className="map-pin low" style={{ top: "66%", left: "74%" }}>
-          !
+        </div>
+        <div className="map-event-label low" style={{ top: "62%", left: "56%" }}>
+          Minor debris
         </div>
 
         <div className="map-road road-1"></div>
         <div className="map-road road-2"></div>
+        <div className="map-road road-3"></div>
+        <div className="map-neighbourhood north">North Parramatta</div>
+        <div className="map-neighbourhood south">Parramatta CBD</div>
+        <div className="map-legend">
+          <span className="legend-dot high"></span>
+          High
+          <span className="legend-dot moderate"></span>
+          Moderate
+          <span className="legend-dot low"></span>
+          Low
+        </div>
       </div>
 
       <p className="map-note">
-      Prototype view showing flood-related community reports positioned around {shortAreaName}.
+        Snapshot combines suburb focus, river corridor, and clustered report severity around {shortAreaName}.
       </p>
     </section>
   );

@@ -318,8 +318,8 @@ p {
   display: grid;
   gap: 14px;
   grid-template-areas:
-    "actions river rainfall"
-    "factors map map";
+    "actions river factors"
+    "rainfall map map";
   grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.1fr) minmax(300px, 0.96fr);
   grid-template-rows: minmax(0, auto) minmax(0, auto);
   margin-bottom: 12px;
@@ -413,11 +413,11 @@ p {
 }
 
 .frontpage-rainfall .signal-chart-card .chart-box {
-  height: 215px;
+  height: 250px;
 }
 
 .frontpage-map .map-panel {
-  height: 250px;
+  height: 300px;
 }
 
 .frontpage-map .location-card {
@@ -1007,8 +1007,8 @@ p {
     grid-template-areas:
       "actions"
       "river"
-      "rainfall"
       "factors"
+      "rainfall"
       "map";
     grid-template-columns: 1fr;
   }
@@ -1026,11 +1026,11 @@ p {
   }
 
   .frontpage-map .map-panel {
-    height: 260px;
+    height: 280px;
   }
 
   .frontpage-rainfall .signal-chart-card .chart-box {
-    height: 260px;
+    height: 230px;
   }
 }
 
@@ -1072,11 +1072,11 @@ p {
   }
 
   .frontpage-map .map-panel {
-    height: 230px;
+    height: 260px;
   }
 
   .frontpage-rainfall .signal-chart-card .chart-box {
-    height: 230px;
+    height: 210px;
   }
 
   .section-header {
@@ -1089,6 +1089,12 @@ p {
 /* #signal visualisation and decision evidence charts */
 .signal-chart-card .chart-box {
   height: 235px;
+}
+
+.chart-note {
+  color: #56708f;
+  font-size: 0.82rem;
+  margin: 10px 0 0;
 }
 
 .chart-box {
@@ -1105,26 +1111,56 @@ p {
   position: relative;
   height: 210px;
   border-radius: 14px;
-  background: linear-gradient(180deg, #eef6ff, #e4f0fb);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.72), transparent 22%),
+    linear-gradient(180deg, #eef7ff, #ddebf8);
   border: 1px solid #d9e7f5;
   overflow: hidden;
   margin: 2px 0 14px;
 }
 
+.map-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(168, 188, 214, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 188, 214, 0.18) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+.map-catchment-glow {
+  position: absolute;
+  inset: 14% 10% 18% 16%;
+  border-radius: 28px;
+  background: rgba(75, 140, 208, 0.08);
+  border: 1px solid rgba(75, 140, 208, 0.12);
+}
+
 .map-river {
   position: absolute;
   width: 120%;
-  height: 34px;
-  background: rgba(88, 155, 222, 0.35);
-  top: 42%;
+  height: 38px;
+  background: linear-gradient(90deg, rgba(88, 155, 222, 0.3), rgba(61, 134, 209, 0.5));
+  top: 46%;
   left: -10%;
   transform: rotate(-12deg);
   border-radius: 999px;
+  box-shadow: 0 0 0 8px rgba(120, 182, 240, 0.08);
+}
+
+.map-river-label {
+  position: absolute;
+  top: 39%;
+  right: 18px;
+  color: #255b92;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .map-road {
   position: absolute;
-  background: rgba(120, 136, 158, 0.3);
+  background: rgba(120, 136, 158, 0.42);
   border-radius: 999px;
 }
 
@@ -1144,6 +1180,14 @@ p {
   transform: rotate(-18deg);
 }
 
+.road-3 {
+  width: 48%;
+  height: 8px;
+  top: 52%;
+  left: 2%;
+  transform: rotate(32deg);
+}
+
 .map-label.suburb {
   position: absolute;
   top: 16px;
@@ -1154,6 +1198,25 @@ p {
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.map-label.precinct {
+  position: absolute;
+  top: 52px;
+  left: 16px;
+  background: rgba(15, 109, 203, 0.1);
+  color: #0f6dcb;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.map-focus-ring {
+  position: absolute;
+  inset: 18% 18% 22% 22%;
+  border: 2px dashed rgba(15, 109, 203, 0.42);
+  border-radius: 30px;
 }
 
 
@@ -1173,7 +1236,11 @@ p {
 }
 
 .map-pin::before {
-  content: "!";
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
   transform: rotate(45deg);
 }
 
@@ -1186,6 +1253,78 @@ p {
 }
 
 .map-pin.low {
+  background: #56a56d;
+}
+
+.map-event-label,
+.map-neighbourhood,
+.map-legend {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(214, 226, 241, 0.95);
+  color: #19345a;
+  border-radius: 999px;
+  font-size: 0.74rem;
+}
+
+.map-event-label {
+  padding: 4px 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.map-event-label.high {
+  color: #9f2d2d;
+}
+
+.map-event-label.moderate {
+  color: #8d5a07;
+}
+
+.map-event-label.low {
+  color: #1d6c3c;
+}
+
+.map-neighbourhood {
+  padding: 4px 9px;
+}
+
+.map-neighbourhood.north {
+  top: 14%;
+  right: 14%;
+}
+
+.map-neighbourhood.south {
+  bottom: 14%;
+  left: 14%;
+}
+
+.map-legend {
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  font-weight: 700;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.high {
+  background: #d86c6c;
+}
+
+.legend-dot.moderate {
+  background: #d8a24d;
+}
+
+.legend-dot.low {
   background: #56a56d;
 }
 
