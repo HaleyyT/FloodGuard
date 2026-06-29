@@ -33,6 +33,29 @@ export const ingestionPolicy = {
   retryCount: numberEnv("FLOODGUARD_FETCH_RETRY_COUNT", 1),
 };
 
+export const floodFeatureThresholds = {
+  rainfall: {
+    oneHourConcernMm: numberEnv("FLOODGUARD_RAIN_1H_CONCERN_MM", 10),
+    threeHourConcernMm: numberEnv("FLOODGUARD_RAIN_3H_CONCERN_MM", 20),
+    twentyFourHourConcernMm: numberEnv("FLOODGUARD_RAIN_24H_CONCERN_MM", 50),
+    seventyTwoHourWetnessMm: numberEnv("FLOODGUARD_RAIN_72H_WETNESS_MM", 80),
+  },
+  river: {
+    rapidRiseOneHourM: numberEnv("FLOODGUARD_RIVER_RISE_1H_M", 0.15),
+    rapidRiseThreeHourM: numberEnv("FLOODGUARD_RIVER_RISE_3H_M", 0.3),
+    steadyDeltaM: numberEnv("FLOODGUARD_RIVER_STEADY_DELTA_M", 0.02),
+  },
+  confidence: {
+    minimumCoreCoverage: Number(numberEnv("FLOODGUARD_MIN_CORE_COVERAGE", 70) / 100),
+  },
+};
+
+export const notificationPolicy = {
+  cooldownMinutes: numberEnv("FLOODGUARD_NOTIFICATION_COOLDOWN_MINUTES", 60),
+  clearHysteresisMinutes: numberEnv("FLOODGUARD_RISK_CLEAR_HYSTERESIS_MINUTES", 90),
+  minPersistenceCycles: numberEnv("FLOODGUARD_MIN_PERSISTENCE_CYCLES", 2),
+};
+
 export const sourceConfig = {
   weather: {
     label: "Parramatta weather observations",
