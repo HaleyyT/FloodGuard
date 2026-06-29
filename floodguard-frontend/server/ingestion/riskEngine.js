@@ -1,3 +1,5 @@
+import { floodFeatureThresholds } from "./config.js";
+
 function clamp(value, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
@@ -73,6 +75,48 @@ function buildRiverBaselineFeatures(riverStations = [], primaryStation = null) {
       previousHeights.length || (typeof station?.previousHeightM === "number" ? 1 : 0),
     riverBaselineMethod: baselineMethod,
   };
+}
+
+function sortPointsByTime(points = []) {
+  return [...points]
+    .filter((point) => point.time)
+    .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+}
+
+function latestPointTime(points = []) {
+  const sorted = sortPointsByTime(points);
+  return sorted.at(-1)?.time ?? null;
+}
+
+function deltaOverHours(points = [], hours = 1) {
+  const sorted = sortPointsByTime(points);
+  const latest = sorted.at(-1) ?? null;
+  if (!latest || typeof latest.heightM !== "number") return null;
+
+  const latestMs = new Date(latest.time).getTime();
+  if (Number.isNaN(latestMs)) return null;
+  const cutoff = latestMs - hours * 60 * 60 * 1000;
+  const baseline = [...sorted]
+    .reverse()
+    .find((point) => typeof point.heightM === "number" && new Date(point.time).getTime() <= cutoff);
+
+  if (!baseline) return null;
+  return latest.heightM - baseline.heightM;
+}
+
+function riverTrend(delta1h, delta3h) {
+  const threshold = floodFeatureThresholds.river.steadyDeltaM;
+  const strongestDelta =
+    typeof delta3h === "number" && Math.abs(delta3h) >= threshold
+      ? delta3h
+      : typeof delta1h === "number"
+        ? delta1h
+        : null;
+
+  if (strongestDelta === null) return "unknown";
+  if (strongestDelta > threshold) return "rising";
+  if (strongestDelta < -threshold) return "falling";
+  return "steady";
 }
 
 function sourceDataMode(source) {
@@ -300,6 +344,11 @@ export function buildRiskSignals(signals) {
   const steadyCount = countByTendency(riverStations, "steady");
   const fallingCount = countByTendency(riverStations, "falling");
   const riverBaseline = buildRiverBaselineFeatures(riverStations, riverContext.primaryStation);
+  const primaryRiverPoints = riverContext.primaryStation?.points ?? [];
+  const riverDelta1h = deltaOverHours(primaryRiverPoints, 1);
+  const riverDelta3h = deltaOverHours(primaryRiverPoints, 3);
+  const latestRiverPointTime = latestPointTime(primaryRiverPoints);
+  const computedRiverTrend = riverTrend(riverDelta1h, riverDelta3h);
   const tendencyPressure = clamp(risingCount * 35 + steadyCount * 8 - fallingCount * 8);
   const riverLevelPressure =
     riverBaseline.riverHeightDeltaM === null
@@ -312,6 +361,13 @@ export function buildRiskSignals(signals) {
   );
   const wetnessPressure = clamp(
     Math.round(rainfall24h * 2.5 + antecedentWetness * 1.35 + maxRecentRainfall * 1.5),
+  );
+  const trendPressure = clamp(
+    Math.round(
+      Math.max(riverDelta1h ?? 0, 0) * 180 +
+        Math.max(riverDelta3h ?? 0, 0) * 120 +
+        (computedRiverTrend === "rising" ? 18 : computedRiverTrend === "falling" ? -10 : 0),
+    ),
   );
 
   const inputCoverage = [
@@ -349,15 +405,30 @@ export function buildRiskSignals(signals) {
       rainfall24hMm: Number(rainfall24h.toFixed(1)),
       rainfall72hMm: Number(rainfall72h.toFixed(1)),
       antecedentWetnessMm: Number(antecedentWetness.toFixed(1)),
+      wetnessIndex: Number(
+        Math.min(
+          1,
+          antecedentWetness / Math.max(1, floodFeatureThresholds.rainfall.seventyTwoHourWetnessMm),
+        ).toFixed(3),
+      ),
       riverStationCount: riverStations.length,
+      riverLatestM:
+        typeof riverBaseline.primaryRiverHeightM === "number" ? riverBaseline.primaryRiverHeightM : null,
+      riverDelta1hM: roundNumber(riverDelta1h, 3),
+      riverDelta3hM: roundNumber(riverDelta3h, 3),
+      riverTrend: computedRiverTrend,
+      riverLatestObservedAt: latestRiverPointTime,
       risingRiverStations: risingCount,
       steadyRiverStations: steadyCount,
       fallingRiverStations: fallingCount,
       riverTendencyPressure: Math.round(tendencyPressure),
       riverLevelPressure: Math.round(riverLevelPressure),
+      trendPressure,
       ...riverBaseline,
       dataFreshnessScore,
+      freshnessScore: Number((dataFreshnessScore / 100).toFixed(3)),
       inputCoverage: inputCoverageScore,
+      sourceCoverage: Number((coverageScore / 100).toFixed(3)),
       fallbackSourceCount,
       staleSourceCount,
       failedSourceCount,
@@ -472,6 +543,13 @@ export function assessRisk(signals) {
       confidence: riskSignals.confidence,
     },
     features: riskSignals.features,
+    pressureScores: {
+      rainfallPressure: Number((riskSignals.rainfallPressure / 100).toFixed(3)),
+      riverPressure: Number((riskSignals.riverPressure / 100).toFixed(3)),
+      wetnessPressure: Number((riskSignals.wetnessPressure / 100).toFixed(3)),
+      trendPressure: Number(((riskSignals.features.trendPressure ?? 0) / 100).toFixed(3)),
+      confidence: Number((riskSignals.confidence / 100).toFixed(3)),
+    },
     excludedSignals: riskSignals.features.excludedSignals ?? [],
     decisionAudit: buildDecisionAudit(signals, riskSignals, score, concernLevel),
   };
