@@ -75,6 +75,22 @@ function buildRiverBaselineFeatures(riverStations = [], primaryStation = null) {
   };
 }
 
+function sourceDataMode(source) {
+  return source.dataMode ?? source.mode ?? "unknown";
+}
+
+function isLiveCoreSource(source) {
+  return ["primary_live_gauge", "official_backup"].includes(source.sourceStrength);
+}
+
+function isUsableCoreSource(source) {
+  if (!source) return false;
+  if (!isLiveCoreSource(source)) return false;
+  if (source.status === "failed") return false;
+  if (!["current"].includes(source.freshnessStatus)) return false;
+  return !["local_demo_fallback", "cached_stale", "missing"].includes(sourceDataMode(source));
+}
+
 function buildFreshnessScore(sourceMetadata = []) {
   const scoredSources = sourceMetadata.map((source) => {
     if (source.status === "failed") return 0;
@@ -232,8 +248,12 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
 
 export function buildRiskSignals(signals) {
   const weather = signals.weatherObservations ?? {};
-  const rainfallSeries = signals.rainfallSeries ?? {};
-  const riverContext = signals.riverContext ?? {};
+  const rainfallSource = (signals.sourceMetadata ?? []).find((source) => source.type === "rainfall") ?? null;
+  const riverSource = (signals.sourceMetadata ?? []).find((source) => source.type === "river") ?? null;
+  const usableRainfall = isUsableCoreSource(rainfallSource);
+  const usableRiver = isUsableCoreSource(riverSource);
+  const rainfallSeries = usableRainfall ? signals.rainfallSeries ?? {} : { points: [], latestValidRainfallMm: 0 };
+  const riverContext = usableRiver ? signals.riverContext ?? {} : { stations: [], primaryStation: null };
   const rainfallValues = validRainfallValues(rainfallSeries.points);
   const riverStations = riverContext.stations ?? [];
   const fallbackSourceCount = signals.freshness?.fallbackSourceCount ?? 0;
@@ -249,7 +269,9 @@ export function buildRiskSignals(signals) {
   const staleContextCount = contextSources.filter(
     (source) => source.freshnessStatus === "stale",
   ).length;
-  const fallbackCoreCount = coreSources.filter((source) => source.mode === "local-fallback").length;
+  const fallbackCoreCount = coreSources.filter((source) =>
+    ["local-fallback", "local_demo_fallback"].includes(sourceDataMode(source)),
+  ).length;
   const failedCoreCount = coreSources.filter((source) => source.status === "failed").length;
   const coverageScore = signals.dataQuality?.coverageScore ?? 0;
   const areaRelevanceScore = signals.areaRelevance?.score ?? 100;
@@ -343,6 +365,18 @@ export function buildRiskSignals(signals) {
       staleContextCount,
     },
   };
+  riskSignals.features.excludedSignals = [
+    !usableRainfall && rainfallSource
+      ? `${rainfallSource.label} excluded from live core scoring (${rainfallSource.freshnessStatus}, ${sourceDataMode(
+          rainfallSource,
+        )}, ${rainfallSource.sourceStrength})`
+      : null,
+    !usableRiver && riverSource
+      ? `${riverSource.label} excluded from live core scoring (${riverSource.freshnessStatus}, ${sourceDataMode(
+          riverSource,
+        )}, ${riverSource.sourceStrength})`
+      : null,
+  ].filter(Boolean);
   riskSignals.features.contributingSignalCount = countContributingSignals(signals, riskSignals);
 
   return riskSignals;
@@ -416,6 +450,10 @@ export function assessRisk(signals) {
     reasons.push(`${shortAreaName} rainfall and river-height signals remain below concern thresholds`);
   }
 
+  for (const excludedSignal of riskSignals.features.excludedSignals ?? []) {
+    reasons.push(excludedSignal);
+  }
+
   return {
     concernLevel,
     score,
@@ -434,6 +472,7 @@ export function assessRisk(signals) {
       confidence: riskSignals.confidence,
     },
     features: riskSignals.features,
+    excludedSignals: riskSignals.features.excludedSignals ?? [],
     decisionAudit: buildDecisionAudit(signals, riskSignals, score, concernLevel),
   };
 }

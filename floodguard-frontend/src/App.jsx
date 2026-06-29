@@ -343,8 +343,11 @@ function formatSourceFreshness(freshness) {
 }
 
 function sourceReliabilityKind(source) {
-  if (source.freshnessStatus === "not-connected") return "not-connected";
-  if (source.mode === "local-fallback") return "fallback";
+  const mode = source.dataMode ?? source.mode;
+  if (source.freshnessStatus === "not-connected" || source.freshnessStatus === "missing") {
+    return "not-connected";
+  }
+  if (["local-fallback", "local_demo_fallback"].includes(mode)) return "fallback";
   if (source.type === "weather" && source.freshnessStatus === "stale") return "stale-context";
   if (
     ["rainfall", "river"].includes(source.type) &&
@@ -370,9 +373,12 @@ function sourceReliabilityLabel(source) {
 }
 
 function formatHealthLabel(status) {
+  if (status === "live") return "Live";
+  if (status === "partial") return "Partial";
   if (status === "pass") return "Live";
   if (status === "warn") return "Partial";
   if (status === "blocked") return "Blocked";
+  if (status === "missing") return "Missing";
   if (status === "not_connected") return "Not connected";
   return "Unknown";
 }
@@ -1055,10 +1061,15 @@ function buildHistorySummary(history = []) {
 }
 
 function sourceModeLabel(mode) {
-  if (mode === "remote-derived") return "Live derived";
+  if (mode === "derived_proxy" || mode === "remote-derived") return "Derived proxy";
   if (mode === "remote") return "Live";
-  if (mode === "local-fallback") return "Fallback";
+  if (mode === "live") return "Live";
+  if (mode === "live_summary_fallback") return "Summary fallback";
+  if (mode === "cached_recent") return "Recent cache";
+  if (mode === "cached_stale") return "Stale cache";
+  if (mode === "local-fallback" || mode === "local_demo_fallback") return "Demo fallback";
   if (mode === "not-configured") return "Not configured";
+  if (mode === "missing") return "Missing";
   if (mode === "planned") return "Planned";
   return mode || "Unknown";
 }

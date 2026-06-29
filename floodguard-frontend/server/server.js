@@ -169,6 +169,7 @@ function buildSourceHealth(areaSignals) {
       label: metadata.label,
       type: metadata.type,
       mode: metadata.mode,
+      dataMode: metadata.dataMode ?? metadata.mode ?? "unknown",
       status: metadata.status ?? "ok",
       source: metadata.source,
       sourceStrength: metadata.sourceStrength,
@@ -252,11 +253,6 @@ async function routeRequest(request, response) {
     return;
   }
 
-  if (url.pathname === "/api/source-registry") {
-    sendJson(response, 200, getSourceRegistry());
-    return;
-  }
-
   if (url.pathname === "/api/gauge-metadata") {
     sendJson(response, 200, await readGaugeMetadata());
     return;
@@ -266,6 +262,11 @@ async function routeRequest(request, response) {
   const regionalSignals = shouldRefresh
     ? await runRegionalIngestion({ protectCache: true })
     : await readOrRefreshRegionalSignals();
+
+  if (url.pathname === "/api/source-registry") {
+    sendJson(response, 200, getSourceRegistry(regionalSignals));
+    return;
+  }
 
   if (url.pathname === "/api/health") {
     const ingestionHealth = buildRegionalIngestionHealth(regionalSignals);

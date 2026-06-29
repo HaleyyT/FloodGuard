@@ -28,9 +28,77 @@ function registryEntry([id, source]) {
   };
 }
 
-export function getSourceRegistry() {
+function signalType(sourceType) {
+  return sourceType === "warnings" ? "warning" : sourceType;
+}
+
+function sourceDataMode(source) {
+  if (source.dataMode) return source.dataMode;
+  if (source.mode === "remote") return "live";
+  if (source.mode === "remote-derived") return "derived_proxy";
+  if (source.mode === "local-fallback") return "local_demo_fallback";
+  if (source.mode === "not-configured" || source.mode === "unavailable") return "missing";
+  return source.mode ?? "unknown";
+}
+
+function qualityNotes(source) {
+  const notes = [];
+
+  if (source.note) notes.push(source.note);
+  if (source.freshnessStatus === "stale") {
+    notes.push(`Observation is stale at ${source.ageMinutes ?? "unknown"} minute(s) old.`);
+  }
+  if (source.freshnessStatus === "missing") {
+    notes.push("No current observation timestamp is available.");
+  }
+  if (source.sourceStrength === "weather_proxy") {
+    notes.push("This source is displayed as context and excluded from live core flood scoring.");
+  }
+  if (sourceDataMode(source) === "local_demo_fallback") {
+    notes.push("This source is demo fallback data and cannot support a live core flood claim.");
+  }
+  if (Array.isArray(source.areaRelevance) && source.areaRelevance.length > 0) {
+    notes.push(`Expected local mapping: ${source.areaRelevance.join(", ")}.`);
+  }
+
+  return notes;
+}
+
+function buildAreaEvidence(areaSignals) {
   return {
-    generatedAt: new Date().toISOString(),
+    area: areaSignals.area.id,
+    areaName: areaSignals.area.name,
+    overallStatus: areaSignals.ingestionHealth?.overallStatus ?? null,
+    sources: (areaSignals.sourceMetadata ?? []).map((source, index) => ({
+      sourceId: `${areaSignals.area.id}-${source.type}-${index}`,
+      sourceName: source.label,
+      sourceUrl: source.source ?? null,
+      sourceStrength: source.sourceStrength ?? "unknown",
+      signalType: signalType(source.type),
+      area: areaSignals.area.id,
+      stationId:
+        source.type === "rainfall" && Array.isArray(source.areaRelevance) && source.areaRelevance.length === 1
+          ? String(source.areaRelevance[0])
+          : null,
+      stationName:
+        source.type === "river" && Array.isArray(source.areaRelevance) && source.areaRelevance.length === 1
+          ? source.areaRelevance[0]
+          : null,
+      observedAt: source.observedAt ?? null,
+      fetchedAt: source.fetchedAt,
+      ageMinutes: source.ageMinutes ?? null,
+      freshnessStatus: source.freshnessStatus ?? "unknown",
+      dataMode: sourceDataMode(source),
+      qualityNotes: qualityNotes(source),
+      stationMapping: Array.isArray(source.areaRelevance) ? source.areaRelevance : [],
+    })),
+  };
+}
+
+export function getSourceRegistry(regionalSignals = null) {
+  const generatedAt = new Date().toISOString();
+  const baseRegistry = {
+    generatedAt,
     policy: {
       allowLocalFallback: ingestionPolicy.allowLocalFallback,
       maxAgeHours: ingestionPolicy.maxAgeHours,
@@ -84,5 +152,12 @@ export function getSourceRegistry() {
     roadmapSources: Object.entries(dataSourceConfig)
       .map(registryEntry)
       .sort((a, b) => a.priority - b.priority),
+  };
+
+  if (!regionalSignals) return baseRegistry;
+
+  return {
+    ...baseRegistry,
+    areas: Object.values(regionalSignals.areas ?? {}).map((areaSignals) => buildAreaEvidence(areaSignals)),
   };
 }
