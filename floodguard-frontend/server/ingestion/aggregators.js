@@ -191,36 +191,49 @@ function staleAfterHours(type) {
   return ingestionPolicy.maxAgeHours[type] ?? 24;
 }
 
-function buildAreaSourceFreshness(area, sourceMetadata, signals, ingestedAt) {
+export function buildAreaSourceFreshness(area, sourceMetadata, signals, ingestedAt) {
   return buildAreaSourceMetadata(area, sourceMetadata).map((metadata) => {
     if (metadata.status === "not-connected") {
       return {
         ...metadata,
         observedAt: null,
         ageHours: null,
+        ageMinutes: null,
         staleAfterHours: staleAfterHours(metadata.type),
-        freshnessStatus: "not-connected",
+        freshnessStatus: "missing",
       };
     }
 
     const observedAt = sourceObservedAt(metadata, signals);
     const ageHours = observedAt ? hoursBetween(observedAt, ingestedAt) : null;
+    const ageMinutes = ageHours === null ? null : Math.round(ageHours * 60);
     const staleLimitHours = staleAfterHours(metadata.type);
     const isStale = ageHours !== null && ageHours > staleLimitHours;
+    const freshnessStatus =
+      metadata.status === "failed"
+        ? "missing"
+        : observedAt === null
+          ? "unknown"
+          : isStale
+            ? "stale"
+            : "current";
 
     return {
       ...metadata,
       observedAt,
       ageHours,
+      ageMinutes,
       staleAfterHours: staleLimitHours,
-      freshnessStatus: observedAt === null ? "unknown" : isStale ? "stale" : "current",
+      freshnessStatus,
     };
   });
 }
 
 function buildFreshnessSummary(sourceMetadata) {
   const failedSources = sourceMetadata.filter((metadata) => metadata.status === "failed");
-  const fallbackSources = sourceMetadata.filter((metadata) => metadata.mode === "local-fallback");
+  const fallbackSources = sourceMetadata.filter((metadata) =>
+    ["local-fallback", "local_demo_fallback"].includes(metadata.mode),
+  );
   const staleSources = sourceMetadata.filter((metadata) => metadata.freshnessStatus === "stale");
   const fetchedTimes = sourceMetadata
     .map((metadata) => metadata.fetchedAt)
@@ -250,7 +263,7 @@ function buildFreshnessSummary(sourceMetadata) {
                 `${metadata.label} source data is ${metadata.ageHours}h old; expected within ${metadata.staleAfterHours}h.`,
             )
         : fallbackSources.length > 0
-          ? fallbackSources.map((metadata) => `${metadata.label} is using local fallback data.`)
+          ? fallbackSources.map((metadata) => `${metadata.label} is using local demo fallback data.`)
         : ["All configured signal sources were available."],
   };
 }
@@ -261,7 +274,7 @@ function buildDataQuality(signals) {
   if ((signals.rainfallSeries?.points ?? []).length === 0) missing.push("rainfall");
   if ((signals.riverContext?.stations ?? []).length === 0) missing.push("river");
   const fallbackSources = (signals.sourceMetadata ?? []).filter(
-    (metadata) => metadata.mode === "local-fallback",
+    (metadata) => ["local-fallback", "local_demo_fallback"].includes(metadata.mode),
   );
   const staleSources = (signals.sourceMetadata ?? []).filter(
     (metadata) => metadata.freshnessStatus === "stale",
@@ -439,6 +452,7 @@ function disconnectedWarningMetadata(area, fetchedAt) {
     type: "warnings",
     note: "Official warning integration is configured as an optional source and is not connected yet.",
     mode: "not-configured",
+    dataMode: "missing",
     source: null,
     sourceStrength: "official_warning",
     fetchedAt,
@@ -448,8 +462,9 @@ function disconnectedWarningMetadata(area, fetchedAt) {
     areaRelevance: [area.name, area.catchment],
     observedAt: null,
     ageHours: null,
+    ageMinutes: null,
     staleAfterHours: staleAfterHours("warnings"),
-    freshnessStatus: "not-connected",
+    freshnessStatus: "missing",
   };
 }
 
@@ -509,6 +524,7 @@ function migrateRegionalSignals(regionalSignals) {
           type: "warnings",
           note: "Official warning integration is configured as an optional source and is not connected yet.",
           mode: "not-configured",
+          dataMode: "missing",
           source: null,
           sourceStrength: "official_warning",
           fetchedAt: regionalSignals.ingestedAt,
@@ -578,14 +594,15 @@ export async function buildRegionalSignals() {
     note: "Nearby rainfall time series normalised from the ingestion pipeline.",
   };
 
-  if (rainfallSource.metadata.mode !== "remote" && weatherSource.metadata.mode === "remote") {
+    if (rainfallSource.metadata.mode !== "remote" && weatherSource.metadata.mode === "remote") {
     rainfallSeries = normalizeWeatherRainfall(weatherSource.data);
     rainfallMetadata = {
       ...weatherSource.metadata,
       label: "BoM Parramatta rain trace observations",
       type: "rainfall",
       note: "Live BoM rain-trace observations are used for the graph until a primary rainfall gauge is available.",
-      mode: "remote-derived",
+      mode: "derived_proxy",
+      dataMode: "derived_proxy",
       sourceStrength: "weather_proxy",
       derivedFrom: weatherSource.metadata.source,
     };

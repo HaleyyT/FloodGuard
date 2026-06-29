@@ -98,6 +98,13 @@ async function hydrateStation(station, metric) {
     lastModified: latestEvent?.lastModified ?? selectedTimeseries?.last_modified ?? null,
     eventStatus: eventsPayload.error ? "fallback-to-timeseries-summary" : "ok",
     eventNote: eventsPayload.error ?? null,
+    dataMode: eventsPayload.error ? "live_summary_fallback" : "live",
+    qualityNotes: eventsPayload.error
+      ? [
+          "Detailed event rows were unavailable.",
+          "The official timeseries summary end/last_value was used instead.",
+        ]
+      : ["Detailed live event rows were used."],
     events,
   };
 }

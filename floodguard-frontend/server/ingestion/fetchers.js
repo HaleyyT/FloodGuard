@@ -31,6 +31,7 @@ export async function loadSource(source) {
       metadata: {
         label: source.label,
         mode: "not-configured",
+        dataMode: "missing",
         source: null,
         sourceStrength: source.sourceStrength,
         fetchedAt,
@@ -49,6 +50,7 @@ export async function loadSource(source) {
         metadata: {
           label: source.label,
           mode: "remote",
+          dataMode: "live",
           source: configuredUrl,
           sourceStrength: source.sourceStrength,
           adapter: source.adapter ?? "json",
@@ -69,6 +71,7 @@ export async function loadSource(source) {
       metadata: {
         label: source.label,
         mode: "unavailable",
+        dataMode: "missing",
         source: source.fallbackFile,
         sourceStrength: "unavailable",
         fetchedAt,
@@ -83,7 +86,8 @@ export async function loadSource(source) {
       data: await readFallbackJson(source.fallbackFile),
       metadata: {
         label: source.label,
-        mode: "local-fallback",
+        mode: "local_demo_fallback",
+        dataMode: "local_demo_fallback",
         source: source.fallbackFile,
         sourceStrength: "local_fallback",
         fetchedAt,
@@ -96,6 +100,7 @@ export async function loadSource(source) {
       metadata: {
         label: source.label,
         mode: "unavailable",
+        dataMode: "missing",
         source: source.fallbackFile,
         sourceStrength: "unavailable",
         fetchedAt,
