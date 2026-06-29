@@ -6,6 +6,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.
 export const rawDataDir = path.join(rootDir, "src/data/raw");
 export const storageDir = path.join(rootDir, "server/storage");
 export const historyDir = path.join(storageDir, "history");
+export const sourceCacheDir = path.join(storageDir, "source-cache");
 export const latestSignalsSchemaVersion = 4;
 
 function booleanEnv(name, fallback = false) {
@@ -23,10 +24,13 @@ export const ingestionPolicy = {
   allowLocalFallback: booleanEnv("FLOODGUARD_ALLOW_LOCAL_FALLBACK", true),
   maxAgeHours: {
     weather: numberEnv("FLOODGUARD_MAX_WEATHER_AGE_HOURS", 12),
-    rainfall: numberEnv("FLOODGUARD_MAX_RAINFALL_AGE_HOURS", 6),
-    river: numberEnv("FLOODGUARD_MAX_RIVER_AGE_HOURS", 6),
-    warnings: numberEnv("FLOODGUARD_MAX_WARNING_AGE_HOURS", 12),
+    rainfall: numberEnv("FLOODGUARD_MAX_RAINFALL_AGE_HOURS", 1),
+    river: numberEnv("FLOODGUARD_MAX_RIVER_AGE_HOURS", 1),
+    warnings: numberEnv("FLOODGUARD_MAX_WARNING_AGE_HOURS", 1),
   },
+  cacheRecentMaxMinutes: numberEnv("FLOODGUARD_CACHE_RECENT_MAX_MINUTES", 30),
+  fetchTimeoutMs: numberEnv("FLOODGUARD_FETCH_TIMEOUT_MS", 6000),
+  retryCount: numberEnv("FLOODGUARD_FETCH_RETRY_COUNT", 1),
 };
 
 export const sourceConfig = {

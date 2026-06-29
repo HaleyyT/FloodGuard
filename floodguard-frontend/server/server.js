@@ -185,6 +185,23 @@ function buildSourceHealth(areaSignals) {
   };
 }
 
+function buildCoreDataModes(ingestionHealth) {
+  const areaModes = Object.fromEntries(
+    (ingestionHealth.areas ?? []).map((area) => [
+      area.areaId,
+      area.sources
+        .filter((source) => ["rainfall", "river"].includes(source.type))
+        .map((source) => ({
+          type: source.type,
+          dataMode: source.dataMode ?? source.mode ?? "unknown",
+          freshnessStatus: source.freshnessStatus,
+        })),
+    ]),
+  );
+
+  return areaModes;
+}
+
 function sendAreaSignals(response, regionalSignals, areaId, selector) {
   const areaSignals = selectAreaSignals(regionalSignals, areaId);
 
@@ -287,6 +304,7 @@ async function routeRequest(request, response) {
         blockedAreaCount: ingestionHealth.blockedAreaCount,
         warningAreaCount: ingestionHealth.warningAreaCount,
         summary: ingestionHealth.summary,
+        coreDataModes: buildCoreDataModes(ingestionHealth),
       },
       sourcePolicy: {
         allowLocalFallback: ingestionPolicy.allowLocalFallback,

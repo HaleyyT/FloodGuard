@@ -99,3 +99,22 @@ export async function readAreaHistory(historyDir, areaId, limit = 24) {
     throw error;
   }
 }
+
+function sourceCachePath(cacheDir, cacheKey) {
+  return path.join(cacheDir, `${cacheKey}.json`);
+}
+
+export async function writeSourceCache(cacheDir, cacheKey, payload) {
+  await mkdir(cacheDir, { recursive: true });
+  await writeFile(sourceCachePath(cacheDir, cacheKey), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+export async function readSourceCache(cacheDir, cacheKey) {
+  try {
+    const content = await readFile(sourceCachePath(cacheDir, cacheKey), "utf8");
+    return JSON.parse(content);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+}
