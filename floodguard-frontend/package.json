@@ -10,7 +10,9 @@
     "check:ingestion": "node server/check-ingestion.js",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test server/ingestion/__tests__/*.test.js",
+    "test:unit": "node --test server/ingestion/__tests__/*.test.js"
   },
   "dependencies": {
     "react": "^19.2.4",
