@@ -140,6 +140,14 @@ function dependencies() {
         },
       ],
     }),
+    readAreaMlReadiness: async () => ({
+      areaId: "parramatta",
+      rows: 24,
+      labelSource: "rule_derived",
+      hasIndependentLabels: false,
+      readyForTraining: false,
+      reason: "Insufficient reliable history for training or comparison.",
+    }),
   };
 }
 
@@ -168,4 +176,12 @@ test("notifications endpoint returns current notification candidates", async () 
   const { body } = await requestJson("/api/notifications/parramatta", dependencies());
   assert.equal(body.areaId, "parramatta");
   assert.equal(body.candidates[0].type, "data_reliability_degraded");
+});
+
+test("ml readiness endpoint reports honest training readiness state", async () => {
+  const { body } = await requestJson("/api/ml/readiness/parramatta", dependencies());
+  assert.equal(body.areaId, "parramatta");
+  assert.equal(body.labelSource, "rule_derived");
+  assert.equal(body.hasIndependentLabels, false);
+  assert.equal(body.readyForTraining, false);
 });

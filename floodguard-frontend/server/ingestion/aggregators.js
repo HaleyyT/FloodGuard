@@ -790,6 +790,38 @@ export async function readAreaNotifications(areaSignals, limit = 100) {
   return buildNotificationCandidates(areaSignals, history);
 }
 
+export async function readAreaMlReadiness(areaId = defaultAreaId, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaId, limit);
+  const rows = buildFeatureRows(history);
+  const quality = buildDatasetQualityReport(rows);
+  const summary = buildFeatureSummary(rows);
+  const classBalance = rows.reduce(
+    (counts, row) => {
+      const level = row.targetRiskLevel ?? "Unknown";
+      counts[level] = (counts[level] ?? 0) + 1;
+      return counts;
+    },
+    {},
+  );
+
+  return {
+    areaId,
+    rows: rows.length,
+    labelSource: "rule_derived",
+    hasIndependentLabels: false,
+    classBalance,
+    readyForTraining: false,
+    readyForRuleComparison: quality.readyForModelComparison,
+    reason: quality.readyForModelComparison
+      ? "Feature history is sufficient for shadow-model comparison, but labels are still rule-derived."
+      : quality.warnings[0] ?? "Insufficient reliable history for training or comparison.",
+    readiness: summary.readinessNote,
+    datasetQuality: quality,
+    nextStep:
+      "Keep Node as the live product system and use a future floodguard-ml Python workspace for offline training and evaluation.",
+  };
+}
+
 export function readSpatialRelevance({ areaId = null, lat = null, lon = null } = {}) {
   return resolveSpatialQuery({ areaId, lat, lon });
 }

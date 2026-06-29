@@ -5,6 +5,7 @@ import {
   readAreaFeatureDataset,
   readAreaModelExperiment,
   readAreaModelCard,
+  readAreaMlReadiness,
   readAreaNotifications,
   readOrRefreshRegionalSignals,
   readHistoricalSignals,
@@ -69,6 +70,7 @@ function routes() {
     "/api/baseline-prediction?area=parramatta",
     "/api/model-experiment?area=parramatta",
     "/api/model-card?area=parramatta",
+    "/api/ml/readiness?area=parramatta",
     "/api/notifications?area=parramatta",
     "/api/source-health?area=parramatta",
     "/api/spatial-relevance?area=parramatta",
@@ -151,7 +153,7 @@ function resolveAreaId(url) {
   if (queryArea) return queryArea;
 
   const pathMatch = url.pathname.match(
-    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment)\/([^/]+)$/,
+    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment|notifications|ml\/readiness)\/([^/]+)$/,
   );
   return pathMatch?.[1] ?? defaultAreaId;
 }
@@ -245,6 +247,7 @@ const defaultDependencies = {
   readAreaFeatureDataset,
   readAreaModelCard,
   readAreaModelExperiment,
+  readAreaMlReadiness,
   readAreaNotifications,
   readCommunityReports,
   readGaugeMetadata,
@@ -493,6 +496,22 @@ export async function routeRequest(request, response, deps = defaultDependencies
     return;
   }
 
+  if (url.pathname === "/api/ml/readiness") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await deps.readAreaMlReadiness(areaId, limit));
+    return;
+  }
+
   if (url.pathname === "/api/notifications") {
     const areaId = resolveAreaId(url);
     const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
@@ -611,6 +630,22 @@ export async function routeRequest(request, response, deps = defaultDependencies
     }
 
     sendJson(response, 200, await deps.readAreaModelExperiment(areaId, limit));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/ml/readiness/")) {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await deps.readAreaMlReadiness(areaId, limit));
     return;
   }
 
