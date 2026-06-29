@@ -370,9 +370,12 @@ function sourceReliabilityLabel(source) {
 }
 
 function formatHealthLabel(status) {
+  if (status === "live") return "Live";
+  if (status === "partial") return "Partial";
   if (status === "pass") return "Live";
   if (status === "warn") return "Partial";
   if (status === "blocked") return "Blocked";
+  if (status === "missing") return "Missing";
   if (status === "not_connected") return "Not connected";
   return "Unknown";
 }

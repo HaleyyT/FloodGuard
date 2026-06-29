@@ -1,7 +1,9 @@
 function sourceModeIssue(source) {
   if (source.status === "failed") return `${source.label} failed during ingestion.`;
   if (source.mode === "unavailable") return `${source.label} is unavailable.`;
-  if (source.mode === "local-fallback") return `${source.label} is using local fallback data.`;
+  if (["local-fallback", "local_demo_fallback"].includes(source.mode) || source.dataMode === "local_demo_fallback") {
+    return `${source.label} is using local demo fallback data.`;
+  }
   return null;
 }
 
@@ -22,11 +24,13 @@ function sourceStrengthIssue(source) {
 
   if (
     source.type === "rainfall" &&
-    ["local_fallback", "historical_context", "unavailable"].includes(source.sourceStrength)
+    ["local_fallback", "historical_context", "unavailable", "weather_proxy"].includes(
+      source.sourceStrength,
+    )
   ) {
     return `${source.label} is ${sourceStrengthLabel(
       source.sourceStrength,
-    )}; rainfall needs a live gauge, official backup, or clearly labelled weather proxy.`;
+    )}; rainfall needs a live gauge or official backup source for live core flood status.`;
   }
 
   return null;
@@ -35,6 +39,10 @@ function sourceStrengthIssue(source) {
 function sourceFreshnessIssue(source) {
   if (source.freshnessStatus === "stale") {
     return `${source.label} is stale (${source.ageHours}h old, expected within ${source.staleAfterHours}h).`;
+  }
+
+  if (source.freshnessStatus === "missing") {
+    return `${source.label} is missing a usable observation timestamp or reading.`;
   }
 
   if (source.freshnessStatus === "unknown") {
@@ -46,7 +54,7 @@ function sourceFreshnessIssue(source) {
 
 function sourceWarning(source) {
   if (source.sourceStrength === "weather_proxy") {
-    return `${source.label} is a weather proxy; connect FLOODGUARD_RAINFALL_URL for a primary rainfall gauge or official rainfall bulletin.`;
+    return `${source.label} is a weather proxy and is shown as supporting context only.`;
   }
 
   return null;
@@ -70,8 +78,8 @@ function warningHealth(sources) {
 
   if (!warningSource || warningSource.status === "not-connected") {
     return {
-      status: "not_connected",
-      warning: "Official NSW SES/HazardWatch warning integration is planned but not connected yet.",
+      status: "missing",
+      warning: "Official NSW SES/HazardWatch warning integration is not connected yet.",
     };
   }
 
@@ -144,26 +152,33 @@ export function buildAreaIngestionHealth(areaSignals) {
     coreFloodStatus === "blocked"
       ? "blocked"
       : contextStatus === "warn" || warningStatus !== "pass"
-        ? "warn"
-        : "pass";
+        ? "partial"
+        : "live";
+  const blockers = [...coreIssues];
+  const mergedWarnings = [...contextIssues, ...warnings, warningLayer.warning].filter(Boolean);
+  const reasons = [...blockers, ...mergedWarnings];
 
   return {
     areaId: areaSignals.area.id,
     areaName: areaSignals.area.name,
-    status: overallStatus === "pass" ? "ready" : overallStatus === "warn" ? "warning" : "blocked",
+    status:
+      overallStatus === "live"
+        ? "ready"
+        : overallStatus === "partial"
+          ? "warning"
+          : "blocked",
     overallStatus,
     coreFloodStatus,
     contextStatus,
     warningStatus,
     ready: coreFloodStatus === "pass",
+    generatedAt: new Date().toISOString(),
     issueCount: coreIssues.length,
-    warningCount: contextIssues.length + warnings.length + (warningLayer.warning ? 1 : 0),
+    warningCount: mergedWarnings.length,
     issues: coreIssues,
-    warnings: [
-      ...contextIssues,
-      ...warnings,
-      warningLayer.warning,
-    ].filter(Boolean),
+    reasons,
+    blockers,
+    warnings: mergedWarnings,
     coreIssues,
     contextIssues,
     freshness: areaSignals.freshness,
@@ -181,6 +196,7 @@ export function buildAreaIngestionHealth(areaSignals) {
       mode: source.mode,
       sourceStrength: source.sourceStrength ?? "unknown",
       status: source.status,
+      dataMode: source.dataMode ?? source.mode ?? "unknown",
       freshnessStatus: source.freshnessStatus,
       observedAt: source.observedAt,
       ageHours: source.ageHours,
@@ -193,7 +209,7 @@ export function buildAreaIngestionHealth(areaSignals) {
 export function buildRegionalIngestionHealth(regionalSignals) {
   const areas = Object.values(regionalSignals.areas ?? {}).map(buildAreaIngestionHealth);
   const blockedAreas = areas.filter((area) => area.overallStatus === "blocked");
-  const warningAreas = areas.filter((area) => area.overallStatus === "warn");
+  const warningAreas = areas.filter((area) => area.overallStatus === "partial");
   const coreBlockedAreas = areas.filter((area) => area.coreFloodStatus === "blocked");
   const contextWarningAreas = areas.filter((area) => area.contextStatus === "warn");
   const coreFloodStatus = coreBlockedAreas.length > 0 ? "blocked" : "pass";
@@ -201,34 +217,46 @@ export function buildRegionalIngestionHealth(regionalSignals) {
   const warningStatuses = areas.map((area) => area.warningStatus);
   const warningStatus = warningStatuses.includes("warn")
     ? "warn"
-    : warningStatuses.includes("not_connected")
-      ? "not_connected"
+    : warningStatuses.includes("missing")
+      ? "missing"
       : "pass";
   const overallStatus =
     coreFloodStatus === "blocked"
       ? "blocked"
       : contextStatus === "warn" || warningStatus !== "pass"
-        ? "warn"
-        : "pass";
+        ? "partial"
+        : "live";
+  const blockers = coreBlockedAreas.flatMap((area) => area.blockers ?? []);
+  const warnings = warningAreas.flatMap((area) => area.warnings ?? []);
+  const reasons = [...blockers, ...warnings];
 
   return {
-    status: overallStatus === "pass" ? "ready" : overallStatus === "warn" ? "warning" : "blocked",
+    status:
+      overallStatus === "live"
+        ? "ready"
+        : overallStatus === "partial"
+          ? "warning"
+          : "blocked",
     overallStatus,
     coreFloodStatus,
     contextStatus,
     warningStatus,
     ready: coreFloodStatus === "pass",
     checkedAt: new Date().toISOString(),
+    generatedAt: new Date().toISOString(),
     areaCount: areas.length,
     blockedAreaCount: blockedAreas.length,
     warningAreaCount: warningAreas.length,
     coreBlockedAreaCount: coreBlockedAreas.length,
     contextWarningAreaCount: contextWarningAreas.length,
+    reasons,
+    blockers,
+    warnings,
     summary:
       overallStatus === "blocked"
         ? "Core live flood gauge data is blocked by stale, fallback, missing, or mismatched sources."
-        : overallStatus === "warn"
-          ? "Core live flood gauges are working. Some supporting context or warning sources are stale or not yet connected."
+        : overallStatus === "partial"
+          ? "Core live flood gauges are current. Some supporting context or official warning layers are stale or missing."
           : "Core flood gauges, supporting context, and official warning sources are live.",
     areas,
   };

@@ -564,6 +564,11 @@ p {
   color: #156f39;
 }
 
+.source-badge.live {
+  background: #d8f6e1;
+  color: #156f39;
+}
+
 .source-badge.warn {
   background: #fff3d8;
   color: #9a5d00;
@@ -575,6 +580,11 @@ p {
 }
 
 .source-badge.not_connected {
+  background: #e8eef7;
+  color: #42546f;
+}
+
+.source-badge.missing {
   background: #e8eef7;
   color: #42546f;
 }
