@@ -5,6 +5,7 @@ import {
   readAreaFeatureDataset,
   readAreaModelExperiment,
   readAreaModelCard,
+  readAreaNotifications,
   readOrRefreshRegionalSignals,
   readHistoricalSignals,
   readSpatialRelevance,
@@ -68,6 +69,7 @@ function routes() {
     "/api/baseline-prediction?area=parramatta",
     "/api/model-experiment?area=parramatta",
     "/api/model-card?area=parramatta",
+    "/api/notifications?area=parramatta",
     "/api/source-health?area=parramatta",
     "/api/spatial-relevance?area=parramatta",
     "/api/spatial-relevance?lat=-33.8&lon=151",
@@ -232,7 +234,28 @@ function sendAreaSignals(response, regionalSignals, areaId, selector) {
   sendJson(response, 200, selector(enrichedAreaSignals));
 }
 
-async function routeRequest(request, response) {
+const defaultDependencies = {
+  buildRegionalIngestionHealth,
+  buildImageEvidenceReviewQueue,
+  createCommunityReport,
+  featureRowsToCsv,
+  getSourceRegistry,
+  readAreaBaselinePrediction,
+  readAreaDatasetQuality,
+  readAreaFeatureDataset,
+  readAreaModelCard,
+  readAreaModelExperiment,
+  readAreaNotifications,
+  readCommunityReports,
+  readGaugeMetadata,
+  readHistoricalSignals,
+  readOrRefreshRegionalSignals,
+  readSpatialRelevance,
+  runRegionalIngestion,
+  selectAreaSignals,
+};
+
+export async function routeRequest(request, response, deps = defaultDependencies) {
   if (request.method === "OPTIONS") {
     sendJson(response, 204, {});
     return;
@@ -257,7 +280,7 @@ async function routeRequest(request, response) {
       }
 
       const body = await readJsonBody(request);
-      const report = await createCommunityReport(body);
+      const report = await deps.createCommunityReport(body);
       sendJson(response, 201, report);
     } catch (error) {
       sendJson(response, error.statusCode ?? 400, { error: error.message });
@@ -271,22 +294,22 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === "/api/gauge-metadata") {
-    sendJson(response, 200, await readGaugeMetadata());
+    sendJson(response, 200, await deps.readGaugeMetadata());
     return;
   }
 
   const shouldRefresh = url.searchParams.get("refresh") === "true";
   const regionalSignals = shouldRefresh
-    ? await runRegionalIngestion({ protectCache: true })
-    : await readOrRefreshRegionalSignals();
+    ? await deps.runRegionalIngestion({ protectCache: true })
+    : await deps.readOrRefreshRegionalSignals();
 
   if (url.pathname === "/api/source-registry") {
-    sendJson(response, 200, getSourceRegistry(regionalSignals));
+    sendJson(response, 200, deps.getSourceRegistry(regionalSignals));
     return;
   }
 
   if (url.pathname === "/api/health") {
-    const ingestionHealth = buildRegionalIngestionHealth(regionalSignals);
+    const ingestionHealth = deps.buildRegionalIngestionHealth(regionalSignals);
 
     sendJson(response, 200, {
       status: "ok",
@@ -321,7 +344,7 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === "/api/ingestion-health") {
-    sendJson(response, 200, buildRegionalIngestionHealth(regionalSignals));
+    sendJson(response, 200, deps.buildRegionalIngestionHealth(regionalSignals));
     return;
   }
 
@@ -334,7 +357,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 24);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -342,7 +365,7 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readHistoricalSignals(areaId, limit));
+    sendJson(response, 200, await deps.readHistoricalSignals(areaId, limit));
     return;
   }
 
@@ -350,7 +373,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 20);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -358,7 +381,7 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readCommunityReports(areaId, limit));
+    sendJson(response, 200, await deps.readCommunityReports(areaId, limit));
     return;
   }
 
@@ -366,7 +389,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 20);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -374,10 +397,10 @@ async function routeRequest(request, response) {
       return;
     }
 
-    const reports = await readCommunityReports(areaId, Math.min(Math.max(limit * 2, 20), 100));
+    const reports = await deps.readCommunityReports(areaId, Math.min(Math.max(limit * 2, 20), 100));
     sendJson(response, 200, {
       areaId,
-      ...buildImageEvidenceReviewQueue(reports, limit),
+      ...deps.buildImageEvidenceReviewQueue(reports, limit),
     });
     return;
   }
@@ -387,7 +410,7 @@ async function routeRequest(request, response) {
     const limit = Number(url.searchParams.get("limit") ?? 100);
     const format = url.searchParams.get("format") ?? "json";
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -395,10 +418,10 @@ async function routeRequest(request, response) {
       return;
     }
 
-    const dataset = await readAreaFeatureDataset(areaId, limit);
+    const dataset = await deps.readAreaFeatureDataset(areaId, limit);
 
     if (format === "csv") {
-      sendText(response, 200, featureRowsToCsv(dataset.rows), "text/csv; charset=utf-8");
+      sendText(response, 200, deps.featureRowsToCsv(dataset.rows), "text/csv; charset=utf-8");
       return;
     }
 
@@ -410,7 +433,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 100);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -418,7 +441,7 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readAreaBaselinePrediction(areaId, limit));
+    sendJson(response, 200, await deps.readAreaBaselinePrediction(areaId, limit));
     return;
   }
 
@@ -426,7 +449,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 100);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -434,7 +457,7 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readAreaModelExperiment(areaId, limit));
+    sendJson(response, 200, await deps.readAreaModelExperiment(areaId, limit));
     return;
   }
 
@@ -442,7 +465,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 100);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -450,7 +473,7 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readAreaDatasetQuality(areaId, limit));
+    sendJson(response, 200, await deps.readAreaDatasetQuality(areaId, limit));
     return;
   }
 
@@ -458,7 +481,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 100);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -466,7 +489,23 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readAreaModelCard(areaId, limit));
+    sendJson(response, 200, await deps.readAreaModelCard(areaId, limit));
+    return;
+  }
+
+  if (url.pathname === "/api/notifications") {
+    const areaId = resolveAreaId(url);
+    const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
+
+    if (!areaSignals) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await deps.readAreaNotifications(areaSignals));
     return;
   }
 
@@ -479,7 +518,7 @@ async function routeRequest(request, response) {
     const areaId = url.searchParams.get("area");
     const lat = parseCoordinate(url.searchParams.get("lat"));
     const lon = parseCoordinate(url.searchParams.get("lon"));
-    const result = readSpatialRelevance({ areaId, lat, lon });
+    const result = deps.readSpatialRelevance({ areaId, lat, lon });
 
     if (!result) {
       sendJson(response, 400, {
@@ -547,7 +586,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 100);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -555,7 +594,7 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readAreaBaselinePrediction(areaId, limit));
+    sendJson(response, 200, await deps.readAreaBaselinePrediction(areaId, limit));
     return;
   }
 
@@ -563,7 +602,7 @@ async function routeRequest(request, response) {
     const areaId = resolveAreaId(url);
     const limit = Number(url.searchParams.get("limit") ?? 100);
 
-    if (!selectAreaSignals(regionalSignals, areaId)) {
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
         error: `Unknown area: ${areaId}`,
         availableAreas: regionalSignals.areaList,
@@ -571,7 +610,23 @@ async function routeRequest(request, response) {
       return;
     }
 
-    sendJson(response, 200, await readAreaModelExperiment(areaId, limit));
+    sendJson(response, 200, await deps.readAreaModelExperiment(areaId, limit));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/notifications/")) {
+    const areaId = resolveAreaId(url);
+    const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
+
+    if (!areaSignals) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await deps.readAreaNotifications(areaSignals));
     return;
   }
 
@@ -581,16 +636,27 @@ async function routeRequest(request, response) {
   });
 }
 
-const server = http.createServer((request, response) => {
-  routeRequest(request, response).catch((error) => {
-    console.error(error);
-    sendJson(response, 500, {
-      error: "FloodGuard API failed to serve this request",
-      detail: error.message,
+export function createFloodguardServer(overrides = {}) {
+  const deps = {
+    ...defaultDependencies,
+    ...overrides,
+  };
+
+  return http.createServer((request, response) => {
+    routeRequest(request, response, deps).catch((error) => {
+      console.error(error);
+      sendJson(response, 500, {
+        error: "FloodGuard API failed to serve this request",
+        detail: error.message,
+      });
     });
   });
-});
+}
 
-server.listen(port, host, () => {
-  console.log(`FloodGuard API listening at http://${host}:${port}`);
-});
+const server = createFloodguardServer();
+
+if (process.argv[1] && process.argv[1].endsWith("/server/server.js")) {
+  server.listen(port, host, () => {
+    console.log(`FloodGuard API listening at http://${host}:${port}`);
+  });
+}

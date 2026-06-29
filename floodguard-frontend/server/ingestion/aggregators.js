@@ -20,6 +20,7 @@ import { assessRisk } from "./riskEngine.js";
 import { buildDatasetQualityReport, buildFeatureRows, buildFeatureSummary } from "./features.js";
 import { buildBaselineModelCard, buildBaselinePrediction } from "./baselineModel.js";
 import { buildModelExperiment } from "./modelExperiment.js";
+import { buildNotificationCandidates } from "./notificationRules.js";
 import { buildRegionalIngestionHealth } from "./health.js";
 import { readCommunityReports, summariseCommunityReports } from "./communityReports.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
@@ -782,6 +783,11 @@ export async function readAreaModelExperiment(areaId = defaultAreaId, limit = 10
     areaId,
     ...buildModelExperiment(rows),
   };
+}
+
+export async function readAreaNotifications(areaSignals, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaSignals.area.id, limit);
+  return buildNotificationCandidates(areaSignals, history);
 }
 
 export function readSpatialRelevance({ areaId = null, lat = null, lon = null } = {}) {
