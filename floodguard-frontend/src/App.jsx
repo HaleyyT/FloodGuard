@@ -15,6 +15,7 @@ import {
 import { buildPublicSignalCards } from "./data/parramattaSignals";
 import {
   fetchBaselinePrediction,
+  fetchAreaNotifications,
   fetchAreaFeatures,
   fetchAreaHistory,
   fetchDatasetQuality,
@@ -27,6 +28,11 @@ import {
   localParramattaSignals,
   submitCommunityReport,
 } from "./data/apiSignals";
+import {
+  buildDataEvidenceRows,
+  buildNotificationBannerModel,
+  buildRiskSummaryModel,
+} from "./dashboardPresentation";
 
 const fallbackAreas = [
   {
@@ -518,22 +524,7 @@ function buildOfficialWarning(signals) {
 }
 
 function DataEvidencePanel({ sources }) {
-  // This is the fast "trust dashboard" panel so viewers can spot live/cached/stale/not-connected states without digging deeper.
-  const rows = sources.map((source) => ({
-    key: `${source.type}-${source.label}`,
-    label:
-      source.type === "rainfall"
-        ? "Rainfall"
-        : source.type === "river"
-          ? "River"
-          : source.type === "weather"
-            ? "Weather"
-            : "Warnings",
-    sourceName: source.label,
-    status: sourceReliabilityLabel(source),
-    observedAt: source.observedAt ? formatObservedAt(source.observedAt) : "No source timestamp",
-    note: source.note || `${source.type} source is ${source.freshnessStatus ?? "unknown"}.`,
-  }));
+  const rows = buildDataEvidenceRows(sources);
 
   return (
     <section className="card">
@@ -550,15 +541,75 @@ function DataEvidencePanel({ sources }) {
             <div className="source-health-top">
               <div>
                 <h4>{row.label}</h4>
-                <p>{row.sourceName}</p>
+                <p>{row.sourceName}{row.stationReference ? ` • ${row.stationReference}` : ""}</p>
               </div>
-              <span className="source-badge">{row.status}</span>
+              <span className={`source-badge ${row.statusKind}`}>{row.statusLabel}</span>
             </div>
-            <p className="source-health-meta">{row.observedAt}</p>
+            <p className="source-health-meta">
+              {row.observedAt ? formatObservedAt(row.observedAt) : "No source timestamp"}
+            </p>
             <p className="report-form-message">{row.note}</p>
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function NotificationBanner({ notifications }) {
+  const model = buildNotificationBannerModel(notifications);
+
+  if (!model.primary) return null;
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Notification preview</p>
+          <h3>Current awareness notices</h3>
+        </div>
+      </div>
+
+      <div className="reports-list">
+        {model.officialWarnings.map((notice) => (
+          <div className="report-card" key={notice.id}>
+            <div className="report-top">
+              <div>
+                <h4>{notice.title}</h4>
+                <p className="report-time">Official warning</p>
+              </div>
+              <span className={`severity ${notice.severity.toLowerCase()}`}>{notice.severity}</span>
+            </div>
+            <p className="report-description">{notice.message}</p>
+          </div>
+        ))}
+        {model.appRiskNotices.map((notice) => (
+          <div className="report-card" key={notice.id}>
+            <div className="report-top">
+              <div>
+                <h4>{notice.title}</h4>
+                <p className="report-time">FloodGuard local awareness</p>
+              </div>
+              <span className={`severity ${notice.severity.toLowerCase()}`}>{notice.severity}</span>
+            </div>
+            <p className="report-description">{notice.message}</p>
+          </div>
+        ))}
+        {model.dataQualityNotices.map((notice) => (
+          <div className="report-card" key={notice.id}>
+            <div className="report-top">
+              <div>
+                <h4>{notice.title}</h4>
+                <p className="report-time">Data quality</p>
+              </div>
+              <span className={`severity ${notice.severity.toLowerCase()}`}>{notice.severity}</span>
+            </div>
+            <p className="report-description">{notice.message}</p>
+          </div>
+        ))}
+      </div>
+
+      {model.suppressed.length > 0 ? <p className="report-form-message">{model.suppressed[0].reason}</p> : null}
     </section>
   );
 }
@@ -957,6 +1008,29 @@ function useAreaFeatures(selectedAreaId, lastUpdated) {
   }, [selectedAreaId, lastUpdated]);
 
   return featureDataset;
+}
+
+function useAreaNotifications(selectedAreaId, lastUpdated) {
+  const [notifications, setNotifications] = useState({ candidates: [], suppressed: [] });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchAreaNotifications({
+      areaId: selectedAreaId,
+      signal: controller.signal,
+    })
+      .then(setNotifications)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setNotifications({ candidates: [], suppressed: [] });
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return notifications;
 }
 
 function useDatasetQuality(selectedAreaId, lastUpdated) {
@@ -1473,6 +1547,8 @@ function AreaDataGuard({ areaName, liveStatus }) {
 
 // #monitored region overview
 function OverviewPanel({ data }) {
+  const riskSummary = buildRiskSummaryModel(data);
+
   return (
     <section className="overview-panel card">
       <div className="section-header">
@@ -1480,12 +1556,12 @@ function OverviewPanel({ data }) {
           <p className="section-label">Monitored region</p>
           <h2>{data.location}</h2>
         </div>
-        <span className={`risk-pill ${data.riskLevel.toLowerCase()}`}>
-          {data.riskLevel} Risk
+        <span className={`risk-pill ${riskSummary.riskLevel.toLowerCase()}`}>
+          {riskSummary.riskLevel} Risk
         </span>
       </div>
 
-      <p className="overview-summary">{data.summary}</p>
+      <p className="overview-summary">{riskSummary.summary}</p>
 
       <div className="overview-grid">
         <InfoTile
@@ -1522,6 +1598,14 @@ function OverviewPanel({ data }) {
         />
       </div>
       <p className="reliability-note">{data.officialSignals.dataReliabilityNote}</p>
+      <p className="reliability-note">Confidence: {riskSummary.confidenceLabel}</p>
+      {riskSummary.warnings.length > 0 ? (
+        <ul className="factor-list history-list audit-warning-list">
+          {riskSummary.warnings.slice(0, 2).map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }
@@ -2322,6 +2406,7 @@ export default function App() {
   const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
   const modelExperiment = useModelExperiment(selectedAreaId, liveStatus.lastUpdated);
   const modelCard = useModelCard(selectedAreaId, liveStatus.lastUpdated);
+  const notifications = useAreaNotifications(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = hasSelectedAreaSignals
     ? buildDashboardData(signals, sourceStatus, liveStatus)
     : null;
@@ -2344,6 +2429,7 @@ export default function App() {
 
       {hasSelectedAreaSignals && activeView === "overview" && (
         <>
+          <NotificationBanner notifications={notifications} />
           <OverviewPanel data={dashboardData} />
           <DataEvidencePanel sources={dashboardData.sourceHealth} />
           <WarningStatusPanel warning={dashboardData.officialWarning} />

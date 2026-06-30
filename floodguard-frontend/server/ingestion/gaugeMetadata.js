@@ -1,4 +1,4 @@
-import { areaConfigs } from "./areaConfig.js";
+import { areaConfigs, stationCatalog } from "./areaConfig.js";
 import { dataSourceConfig } from "./config.js";
 
 function distanceKm(from, to) {
@@ -54,6 +54,88 @@ function localStations(features, type, area) {
     .slice(0, 20);
 }
 
+function catalogMatch(area, signalType, configuredId) {
+  if (signalType === "weather") {
+    return stationCatalog.find((station) => station.type === "weather" && station.name === configuredId) ?? null;
+  }
+
+  if (signalType === "rainfall") {
+    return stationCatalog.find(
+      (station) => station.type === "rainfall" && station.stationNumber === configuredId,
+    ) ?? null;
+  }
+
+  return stationCatalog.find((station) => station.type === "river" && station.name === configuredId) ?? null;
+}
+
+function metadataMatch(signalType, configuredId, nearestRainGauges, nearestRiverGauges) {
+  if (signalType === "rainfall") {
+    return nearestRainGauges.find((station) => station.stationNumber === configuredId) ?? null;
+  }
+
+  if (signalType === "river") {
+    return nearestRiverGauges.find((station) => station.name === configuredId) ?? null;
+  }
+
+  return null;
+}
+
+function mappingEvidence(area, nearestRainGauges, nearestRiverGauges) {
+  const configuredRows = Object.entries(area.relevantStations).flatMap(([signalType, configuredIds]) =>
+    configuredIds.map((configuredId) => {
+      const catalogStation = catalogMatch(area, signalType, configuredId);
+      const metadataStation = metadataMatch(
+        signalType,
+        configuredId,
+        nearestRainGauges,
+        nearestRiverGauges,
+      );
+      const status = catalogStation && (signalType === "weather" || metadataStation) ? "matched" : "warn";
+
+      return {
+        signalType,
+        stationId: catalogStation?.stationNumber ?? catalogStation?.id ?? configuredId,
+        stationName: catalogStation?.name ?? configuredId,
+        source: signalType === "weather" ? "Station catalog" : "BoM NFGN metadata + station catalog",
+        coordinates:
+          typeof catalogStation?.lat === "number" && typeof catalogStation?.lon === "number"
+            ? { lat: catalogStation.lat, lon: catalogStation.lon }
+            : null,
+        areaRelevanceReason:
+          signalType === "rainfall"
+            ? `${area.name} is configured to use rainfall gauge ${configuredId}.`
+            : signalType === "river"
+              ? `${catalogStation?.name ?? configuredId} is one of the configured creek/river stations for ${area.name}.`
+              : `${configuredId} is the configured weather context station for ${area.name}.`,
+        metadataMatched: Boolean(signalType === "weather" || metadataStation),
+        metadataSource:
+          signalType === "rainfall"
+            ? metadataStation?.agency ?? null
+            : signalType === "river"
+              ? metadataStation?.agency ?? null
+              : "Station catalog",
+        status,
+      };
+    }),
+  );
+
+  const issues = configuredRows
+    .filter((row) => row.status !== "matched")
+    .map((row) =>
+      row.signalType === "weather"
+        ? `${row.stationName} is configured as weather context but only verified through the local station catalog.`
+        : `${row.stationName} is configured for ${area.name} but was not found in nearby BoM metadata evidence.`,
+    );
+
+  return {
+    status: issues.length === 0 ? "pass" : "warn",
+    configuredSignalCount: configuredRows.length,
+    matchedSignalCount: configuredRows.length - issues.length,
+    issues,
+    configuredSignals: configuredRows,
+  };
+}
+
 export async function readGaugeMetadata() {
   const metadataConfig = dataSourceConfig.bomNfgnMetadata;
   const [rainGeojson, riverGeojson] = await Promise.all([
@@ -71,20 +153,29 @@ export async function readGaugeMetadata() {
       note: "Metadata is used for station discovery and mapping evidence. It is not a live measurement feed.",
     },
     areas: Object.fromEntries(
-      Object.values(areaConfigs).map((area) => [
-        area.id,
-        {
-          area: {
-            id: area.id,
-            name: area.name,
-            lat: area.lat,
-            lon: area.lon,
+      Object.values(areaConfigs).map((area) => {
+        const nearestRainGauges = localStations(rainGeojson.features ?? [], "rainfall", area);
+        const nearestRiverGauges = localStations(riverGeojson.features ?? [], "river", area);
+        const mapping = mappingEvidence(area, nearestRainGauges, nearestRiverGauges);
+
+        return [
+          area.id,
+          {
+            area: {
+              id: area.id,
+              name: area.name,
+              lat: area.lat,
+              lon: area.lon,
+            },
+            configuredStations: area.relevantStations,
+            configuredSignals: mapping.configuredSignals,
+            mappingStatus: mapping.status,
+            mappingIssues: mapping.issues,
+            nearestRainGauges,
+            nearestRiverGauges,
           },
-          configuredStations: area.relevantStations,
-          nearestRainGauges: localStations(rainGeojson.features ?? [], "rainfall", area),
-          nearestRiverGauges: localStations(riverGeojson.features ?? [], "river", area),
-        },
-      ]),
+        ];
+      }),
     ),
   };
 }

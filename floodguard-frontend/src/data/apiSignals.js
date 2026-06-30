@@ -11,6 +11,7 @@ const defaultDatasetQualityUrl = `${defaultApiBaseUrl}/api/dataset-quality`;
 const defaultBaselineUrl = `${defaultApiBaseUrl}/api/baseline-prediction`;
 const defaultModelExperimentUrl = `${defaultApiBaseUrl}/api/model-experiment`;
 const defaultModelCardUrl = `${defaultApiBaseUrl}/api/model-card`;
+const defaultNotificationsUrl = `${defaultApiBaseUrl}/api/notifications`;
 
 export const parramattaSignalsApiUrl =
   import.meta.env.VITE_FLOODGUARD_API_URL || defaultApiUrl;
@@ -32,6 +33,8 @@ export const floodguardModelExperimentApiUrl =
   import.meta.env.VITE_FLOODGUARD_MODEL_EXPERIMENT_API_URL || defaultModelExperimentUrl;
 export const floodguardModelCardApiUrl =
   import.meta.env.VITE_FLOODGUARD_MODEL_CARD_API_URL || defaultModelCardUrl;
+export const floodguardNotificationsApiUrl =
+  import.meta.env.VITE_FLOODGUARD_NOTIFICATIONS_API_URL || defaultNotificationsUrl;
 
 function buildSignalsUrl(areaId, refresh = false) {
   const url = new URL(parramattaSignalsApiUrl);
@@ -193,6 +196,19 @@ export async function fetchModelCard({ areaId, limit = 100, signal } = {}) {
 
   if (!response.ok) {
     throw new Error(`FloodGuard model card API returned ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchAreaNotifications({ areaId, signal } = {}) {
+  const url = new URL(floodguardNotificationsApiUrl);
+  if (areaId) url.searchParams.set("area", areaId);
+
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    throw new Error(`FloodGuard notifications API returned ${response.status}`);
   }
 
   return response.json();
