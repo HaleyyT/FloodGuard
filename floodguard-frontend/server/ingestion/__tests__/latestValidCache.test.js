@@ -62,3 +62,62 @@ test("uses cached_recent data when remote weather fetch fails after a recent suc
     delete process.env.FLOODGUARD_TEST_CACHE_WEATHER_URL;
   }
 });
+
+test("marks cached data as stale when the latest successful reading is too old", async () => {
+  const originalFetch = global.fetch;
+  const source = {
+    label: "Test stale cache weather source",
+    envUrl: "FLOODGUARD_TEST_STALE_CACHE_WEATHER_URL",
+    fallbackFile: "/does/not/exist.json",
+    sourceStrength: "official_backup",
+  };
+  process.env.FLOODGUARD_TEST_STALE_CACHE_WEATHER_URL = "https://example.test/weather-cache-stale";
+
+  try {
+    global.fetch = async () => ({
+      ok: true,
+      async json() {
+        return weatherPayload("20200101000000");
+      },
+    });
+
+    const first = await loadSource(source);
+    assert.equal(first.metadata.dataMode, "live");
+
+    global.fetch = async () => {
+      throw new Error("network down");
+    };
+
+    const cached = await loadSource(source);
+    assert.equal(cached.metadata.dataMode, "cached_stale");
+    assert.equal(cached.metadata.status, "failed");
+    assert.match(cached.metadata.note, /stale cached data/i);
+  } finally {
+    global.fetch = originalFetch;
+    delete process.env.FLOODGUARD_TEST_STALE_CACHE_WEATHER_URL;
+  }
+});
+
+test("returns unavailable when live fetch fails and no cache exists", async () => {
+  const originalFetch = global.fetch;
+  const source = {
+    label: "Test missing cache weather source",
+    envUrl: "FLOODGUARD_TEST_MISSING_CACHE_WEATHER_URL",
+    fallbackFile: "/does/not/exist.json",
+    sourceStrength: "official_backup",
+  };
+  process.env.FLOODGUARD_TEST_MISSING_CACHE_WEATHER_URL = "https://example.test/weather-cache-missing";
+
+  try {
+    global.fetch = async () => {
+      throw new Error("network down");
+    };
+
+    const result = await loadSource(source);
+    assert.equal(result.metadata.dataMode, "missing");
+    assert.equal(result.metadata.status, "failed");
+  } finally {
+    global.fetch = originalFetch;
+    delete process.env.FLOODGUARD_TEST_MISSING_CACHE_WEATHER_URL;
+  }
+});

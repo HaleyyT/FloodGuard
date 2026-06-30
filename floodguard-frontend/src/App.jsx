@@ -471,6 +471,98 @@ function formatObservedAt(value) {
   return new Date(timestamp).toLocaleString("en-AU");
 }
 
+function formatWarningAdapterStatus(status) {
+  if (status === "connected") return "Official warning available";
+  if (status === "not_configured") return "Not connected";
+  if (status === "source_unavailable") return "Source unavailable";
+  if (status === "stale") return "Stale warning feed";
+  if (status === "no_relevant_warning") return "No relevant official warning";
+  return "Warning status unknown";
+}
+
+function buildOfficialWarning(signals) {
+  const warningSource = (signals.sourceMetadata ?? []).find(
+    (source) => source.type === "warnings"
+  );
+  const warningSummary = signals.warningSummary ?? {};
+  const warningCount = warningSummary.warningCount ?? 0;
+
+  let adapterStatus = "not_configured";
+  if (warningSource && warningSource.status !== "not-connected") {
+    adapterStatus =
+      warningSource.status === "failed"
+        ? "source_unavailable"
+        : warningSource.freshnessStatus === "stale"
+          ? "stale"
+          : warningCount > 0 && warningSummary.status !== "no_current_warning"
+            ? "connected"
+            : "no_relevant_warning";
+  }
+
+  return {
+    adapterStatus,
+    label: formatWarningAdapterStatus(adapterStatus),
+    level:
+      warningCount > 0 && warningSummary.statusLabel
+        ? warningSummary.statusLabel
+        : "No current official warning",
+    issuedAt: warningSummary.issuedAt || warningSummary.observedAt || null,
+    note:
+      warningCount > 0
+        ? "Official warning wording is preserved separately from FloodGuard's local risk score."
+        : warningSource?.note ||
+          "FloodGuard's sensor-derived local risk remains separate from NSW SES / HazardWatch warning status.",
+    headlines: (warningSummary.warnings ?? []).map((warning) => warning.headline),
+    sourceLabel: warningSource?.label ?? "NSW SES / HazardWatch warning status",
+  };
+}
+
+function DataEvidencePanel({ sources }) {
+  // This is the fast "trust dashboard" panel so viewers can spot live/cached/stale/not-connected states without digging deeper.
+  const rows = sources.map((source) => ({
+    key: `${source.type}-${source.label}`,
+    label:
+      source.type === "rainfall"
+        ? "Rainfall"
+        : source.type === "river"
+          ? "River"
+          : source.type === "weather"
+            ? "Weather"
+            : "Warnings",
+    sourceName: source.label,
+    status: sourceReliabilityLabel(source),
+    observedAt: source.observedAt ? formatObservedAt(source.observedAt) : "No source timestamp",
+    note: source.note || `${source.type} source is ${source.freshnessStatus ?? "unknown"}.`,
+  }));
+
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Data evidence</p>
+          <h3>Source status at a glance</h3>
+        </div>
+      </div>
+
+      <div className="source-health-list">
+        {rows.map((row) => (
+          <div className="source-health-item" key={row.key}>
+            <div className="source-health-top">
+              <div>
+                <h4>{row.label}</h4>
+                <p>{row.sourceName}</p>
+              </div>
+              <span className="source-badge">{row.status}</span>
+            </div>
+            <p className="source-health-meta">{row.observedAt}</p>
+            <p className="report-form-message">{row.note}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function formatFitStatus(status) {
   if (status === "complete") return "Complete";
   if (status === "partial") return "Partial";
@@ -515,6 +607,7 @@ function buildLocationRelevance(signals) {
 }
 
 function buildDashboardData(signals, sourceStatus, liveStatus) {
+  // The UI mostly consumes one composed dashboard object so the FloodGuard framework is easier to trace from one place.
   const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
   const publicSignalCards = buildPublicSignalCards(signals);
@@ -539,6 +632,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     ? "Refreshing live area signals"
     : formatRefreshStatus(refreshMetadata, sourceStatus);
   const refreshNote = formatRefreshNote(refreshMetadata);
+  const officialWarning = buildOfficialWarning(signals);
 
   return {
     areaName,
@@ -557,6 +651,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     publicSignalSummary,
 
     officialSignals: {
+      // These top-line values stay short so the first screen communicates reliability before users inspect raw data.
       warningStatus: dataStatus,
       dataReliability: reliabilitySummary.label,
       dataReliabilityNote: [reliabilitySummary.note, refreshNote].filter(Boolean).join(" "),
@@ -573,6 +668,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
             ).toLocaleString("en-AU")}`
           : `River feed issued ${riverSummary.issuedDate}`,
     },
+    officialWarning,
 
     contributingFactors: [
       ...riskAssessment.reasons,
@@ -1143,6 +1239,45 @@ function RainfallChart({ rainfallTrend }) {
       <p className="chart-note">
         Bars show each observed rainfall reading in millimetres, with the darkest bar marking the local peak.
       </p>
+    </section>
+  );
+}
+
+function WarningStatusPanel({ warning }) {
+  return (
+    <section className="card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Official warning layer</p>
+          <h3>NSW SES / HazardWatch</h3>
+        </div>
+        <span className={`source-badge ${warning.adapterStatus}`}>
+          {warning.label}
+        </span>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Official level" value={warning.level} />
+        <InfoTile
+          label="Latest warning update"
+          value={warning.issuedAt ? formatObservedAt(warning.issuedAt) : "No source timestamp"}
+        />
+      </div>
+
+      <p className="reliability-note">{warning.note}</p>
+
+      {warning.headlines.length > 0 ? (
+        <ul className="factor-list history-list">
+          {warning.headlines.map((headline) => (
+            <li key={headline}>{headline}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="report-form-message">
+          {warning.sourceLabel} is shown separately so official emergency guidance is not merged into
+          FloodGuard&apos;s own risk score.
+        </p>
+      )}
     </section>
   );
 }
@@ -2210,6 +2345,8 @@ export default function App() {
       {hasSelectedAreaSignals && activeView === "overview" && (
         <>
           <OverviewPanel data={dashboardData} />
+          <DataEvidencePanel sources={dashboardData.sourceHealth} />
+          <WarningStatusPanel warning={dashboardData.officialWarning} />
           <FrontPageSummary data={dashboardData} />
           <EvidencePanel evidence={dashboardData.evidence} />
         </>
@@ -2221,6 +2358,7 @@ export default function App() {
             ingestionHealth={dashboardData.ingestionHealth}
             sources={dashboardData.sourceHealth}
           />
+          <WarningStatusPanel warning={dashboardData.officialWarning} />
           <LocationRelevancePanel relevance={dashboardData.locationRelevance} />
           <DecisionAuditPanel audit={dashboardData.decisionAudit} />
           <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />

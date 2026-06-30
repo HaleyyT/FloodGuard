@@ -7,6 +7,21 @@ function mockRegionalSignals() {
   const areaSignals = {
     area: { id: "parramatta", name: "Parramatta, NSW" },
     ingestedAt: "2026-06-29T03:00:00Z",
+    weatherObservations: {
+      stationName: "Parramatta North",
+      observedAt: "2026-06-29T02:50:00Z",
+      rainfallTraceMm: 0.2,
+    },
+    rainfallSeries: {
+      latestValidRainfallMm: 5,
+      sourceLabel: "FloodSmart rainfall",
+      points: [{ time: "2026-06-29T02:55:00Z", rainfallMm: 5 }],
+    },
+    riverContext: {
+      stationCount: 1,
+      primaryStation: { stationName: "Parramatta River at Riverside Theatre", heightM: 1.2 },
+      stations: [{ stationName: "Parramatta River at Riverside Theatre", heightM: 1.2 }],
+    },
     sourceMetadata: [
       {
         label: "FloodSmart rainfall",
@@ -17,6 +32,9 @@ function mockRegionalSignals() {
         sourceStrength: "primary_live_gauge",
         fetchedAt: "2026-06-29T03:00:00Z",
         observedAt: "2026-06-29T02:55:00Z",
+        source: "https://example.test/rainfall",
+        note: "Rainfall source current.",
+        areaRelevance: ["67111"],
       },
       {
         label: "FloodSmart river",
@@ -27,6 +45,22 @@ function mockRegionalSignals() {
         sourceStrength: "primary_live_gauge",
         fetchedAt: "2026-06-29T03:00:00Z",
         observedAt: "2026-06-29T02:40:00Z",
+        source: "https://example.test/river",
+        note: "River source using recent cache.",
+        areaRelevance: ["Parramatta River at Riverside Theatre"],
+      },
+      {
+        label: "Parramatta weather observations",
+        type: "weather",
+        mode: "remote",
+        dataMode: "live",
+        freshnessStatus: "current",
+        sourceStrength: "official_backup",
+        fetchedAt: "2026-06-29T03:00:00Z",
+        observedAt: "2026-06-29T02:50:00Z",
+        source: "https://example.test/weather",
+        note: "Current weather context.",
+        areaRelevance: ["Parramatta North"],
       },
     ],
     freshness: { staleSourceCount: 0, fallbackSourceCount: 0, failedSourceCount: 0 },
@@ -50,6 +84,10 @@ function mockRegionalSignals() {
       excludedSignals: [],
       decisionAudit: {
         reliability: { score: 82, level: "High" },
+      },
+      notificationEligibility: {
+        notificationType: "awareness_notice",
+        strongAppAlertEligible: false,
       },
     },
     ingestionHealth: {
@@ -108,7 +146,38 @@ function dependencies() {
         {
           area: "parramatta",
           areaName: "Parramatta, NSW",
-          sources: regionalSignals.areas.parramatta.sourceMetadata,
+          sources: [
+            {
+              sourceName: "FloodSmart rainfall",
+              sourceUrl: "https://example.test/rainfall",
+              sourceOwner: "City of Parramatta",
+              sourceStrength: "primary_live_gauge",
+              sourceType: "rainfall",
+              isOfficial: false,
+              isQualityControlled: true,
+              limitations: [],
+              lastFetchedAt: "2026-06-29T03:00:00Z",
+              latestObservedAt: "2026-06-29T02:55:00Z",
+              freshnessStatus: "current",
+              dataMode: "live",
+              qualityNotes: ["Rainfall source current."],
+            },
+            {
+              sourceName: "FloodSmart river",
+              sourceUrl: "https://example.test/river",
+              sourceOwner: "City of Parramatta",
+              sourceStrength: "primary_live_gauge",
+              sourceType: "river",
+              isOfficial: false,
+              isQualityControlled: true,
+              limitations: ["Latest reading is recent cache rather than a fresh live fetch."],
+              lastFetchedAt: "2026-06-29T03:00:00Z",
+              latestObservedAt: "2026-06-29T02:40:00Z",
+              freshnessStatus: "current",
+              dataMode: "cached_recent",
+              qualityNotes: ["River source using recent cache."],
+            },
+          ],
         },
       ],
     }),
@@ -136,9 +205,19 @@ function dependencies() {
         {
           id: "parramatta-data_reliability_degraded",
           type: "data_reliability_degraded",
+          notificationType: "data_quality_notice",
           severity: "info",
         },
       ],
+      suppressed: [],
+    }),
+    readAreaWarningStatus: () => ({
+      area: "Parramatta, NSW",
+      hasWarning: false,
+      sourceName: "NSW SES HazardWatch",
+      sourceUrl: "https://www.hazardwatch.gov.au/",
+      adapterStatus: "not_configured",
+      officialText: "Official warning source is not currently connected.",
     }),
     readAreaMlReadiness: async () => ({
       areaId: "parramatta",
@@ -164,18 +243,35 @@ test("risk endpoint returns features, pressure scores, and excluded signals cont
   assert.equal(typeof body.features.rainfall1hMm, "number");
   assert.equal(typeof body.pressureScores.rainfallPressure, "number");
   assert.ok(Array.isArray(body.excludedSignals));
+  assert.equal(body.notificationEligibility.notificationType, "awareness_notice");
 });
 
 test("source registry endpoint exposes source evidence and data modes per area", async () => {
   const { body } = await requestJson("/api/source-registry", dependencies());
   assert.equal(body.areas[0].area, "parramatta");
   assert.equal(body.areas[0].sources[1].dataMode, "cached_recent");
+  assert.equal(body.areas[0].sources[0].sourceOwner, "City of Parramatta");
+  assert.equal(body.areas[0].sources[0].sourceType, "rainfall");
 });
 
 test("notifications endpoint returns current notification candidates", async () => {
   const { body } = await requestJson("/api/notifications/parramatta", dependencies());
   assert.equal(body.areaId, "parramatta");
   assert.equal(body.candidates[0].type, "data_reliability_degraded");
+  assert.equal(body.candidates[0].notificationType, "data_quality_notice");
+});
+
+test("notifications preview endpoint returns the same stable contract", async () => {
+  const { body } = await requestJson("/api/notifications/preview/parramatta", dependencies());
+  assert.equal(body.areaId, "parramatta");
+  assert.ok(Array.isArray(body.suppressed));
+});
+
+test("warnings endpoint returns separate official warning status", async () => {
+  const { body } = await requestJson("/api/warnings/parramatta", dependencies());
+  assert.equal(body.area, "Parramatta, NSW");
+  assert.equal(body.adapterStatus, "not_configured");
+  assert.equal(body.sourceName, "NSW SES HazardWatch");
 });
 
 test("ml readiness endpoint reports honest training readiness state", async () => {
@@ -184,4 +280,18 @@ test("ml readiness endpoint reports honest training readiness state", async () =
   assert.equal(body.labelSource, "rule_derived");
   assert.equal(body.hasIndependentLabels, false);
   assert.equal(body.readyForTraining, false);
+});
+
+test("signals endpoint returns weather, rainfall, river, and source metadata", async () => {
+  const { body } = await requestJson("/api/signals/parramatta", dependencies());
+  assert.equal(body.rainfallSeries.latestValidRainfallMm, 5);
+  assert.equal(body.riverContext.stationCount, 1);
+  assert.equal(body.weatherObservations.stationName, "Parramatta North");
+  assert.ok(Array.isArray(body.sourceMetadata));
+});
+
+test("unknown area returns 404 instead of leaking default area data", async () => {
+  const { statusCode, body } = await requestJson("/api/signals/unknown-area", dependencies());
+  assert.equal(statusCode, 404);
+  assert.match(body.error, /Unknown area/i);
 });

@@ -32,6 +32,23 @@ function signalType(sourceType) {
   return sourceType === "warnings" ? "warning" : sourceType;
 }
 
+function sourceOwner(source) {
+  if (source.type === "warnings") return "NSW SES / HazardWatch";
+  if (source.sourceStrength === "official_backup" || source.sourceStrength === "weather_proxy") {
+    return "Bureau of Meteorology";
+  }
+  if (source.sourceStrength === "primary_live_gauge") return "City of Parramatta";
+  return "FloodGuard";
+}
+
+function isOfficialSource(source) {
+  return ["official_backup", "official_warning", "weather_proxy"].includes(source.sourceStrength);
+}
+
+function isQualityControlled(source) {
+  return ["primary_live_gauge", "official_backup", "official_warning"].includes(source.sourceStrength);
+}
+
 function sourceDataMode(source) {
   if (source.dataMode) return source.dataMode;
   if (source.mode === "remote") return "live";
@@ -42,6 +59,7 @@ function sourceDataMode(source) {
 }
 
 function qualityNotes(source) {
+  // Quality notes explain what happened in this snapshot, while `limitations` explains the source's structural caveats.
   const notes = [];
 
   if (source.note) notes.push(source.note);
@@ -64,7 +82,31 @@ function qualityNotes(source) {
   return notes;
 }
 
+function limitations(source) {
+  // Limitations are durable caveats about what this source can and cannot support in the FloodGuard framework.
+  const notes = [];
+
+  if (sourceDataMode(source) === "derived_proxy") {
+    notes.push("Rainfall is being proxied from weather observations rather than a mapped rainfall gauge.");
+  }
+  if (sourceDataMode(source) === "cached_recent") {
+    notes.push("Latest reading is recent cache rather than a fresh live fetch.");
+  }
+  if (sourceDataMode(source) === "cached_stale") {
+    notes.push("Only stale cached data is available, so this source cannot support a live claim.");
+  }
+  if (sourceDataMode(source) === "missing") {
+    notes.push("Source is missing, unavailable, or not connected.");
+  }
+  if (source.freshnessStatus === "unknown") {
+    notes.push("Latest observation timestamp is missing or could not be parsed.");
+  }
+
+  return notes;
+}
+
 function buildAreaEvidence(areaSignals) {
+  // This registry shape is richer than raw `sourceMetadata` so one contract can drive evidence panels, audits, and honesty checks.
   return {
     area: areaSignals.area.id,
     areaName: areaSignals.area.name,
@@ -73,9 +115,13 @@ function buildAreaEvidence(areaSignals) {
       sourceId: `${areaSignals.area.id}-${source.type}-${index}`,
       sourceName: source.label,
       sourceUrl: source.source ?? null,
+      sourceOwner: sourceOwner(source),
       sourceStrength: source.sourceStrength ?? "unknown",
+      sourceType: signalType(source.type),
       signalType: signalType(source.type),
       area: areaSignals.area.id,
+      isOfficial: isOfficialSource(source),
+      isQualityControlled: isQualityControlled(source),
       stationId:
         source.type === "rainfall" && Array.isArray(source.areaRelevance) && source.areaRelevance.length === 1
           ? String(source.areaRelevance[0])
@@ -86,10 +132,13 @@ function buildAreaEvidence(areaSignals) {
           : null,
       observedAt: source.observedAt ?? null,
       fetchedAt: source.fetchedAt,
+      lastFetchedAt: source.fetchedAt,
+      latestObservedAt: source.observedAt ?? null,
       ageMinutes: source.ageMinutes ?? null,
       freshnessStatus: source.freshnessStatus ?? "unknown",
       dataMode: sourceDataMode(source),
       qualityNotes: qualityNotes(source),
+      limitations: limitations(source),
       stationMapping: Array.isArray(source.areaRelevance) ? source.areaRelevance : [],
     })),
   };
@@ -100,6 +149,7 @@ export function getSourceRegistry(regionalSignals = null) {
   const baseRegistry = {
     generatedAt,
     policy: {
+      // These policy rules document what can support a live claim, what blocks it, and what only downgrades trust.
       allowLocalFallback: ingestionPolicy.allowLocalFallback,
       maxAgeHours: ingestionPolicy.maxAgeHours,
       passStrengthByType,

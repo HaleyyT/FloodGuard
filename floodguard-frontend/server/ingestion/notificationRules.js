@@ -12,6 +12,16 @@ function severityForRiskLevel(level) {
   return "info";
 }
 
+function notificationTypeForCandidate(type, severity = null) {
+  if (type === "official_warning_detected") return "official_warning";
+  if (["data_reliability_degraded", "data_reliability_restored"].includes(type)) {
+    return "data_quality_notice";
+  }
+  if (type === "risk_level_increased") return severity === "watch" ? "awareness_notice" : "risk_escalation";
+  if (["rapid_rainfall_increase", "rapid_river_rise"].includes(type)) return "awareness_notice";
+  return "none";
+}
+
 function hasOfficialWarning(warningSummary = {}) {
   return !["no_current_warning", "unknown"].includes(warningSummary.status ?? "unknown");
 }
@@ -49,6 +59,7 @@ function toTimestamp(value) {
 }
 
 function previousRecord(history = [], currentIngestedAt) {
+  // History can arrive in mixed order, so sort it here before dedupe/cooldown decisions.
   const chronological = [...history].sort((a, b) => toTimestamp(a.ingestedAt) - toTimestamp(b.ingestedAt));
   if (chronological.length === 0) return null;
   const last = chronological.at(-1);
@@ -63,6 +74,7 @@ function withinCooldown(previous, currentIngestedAt) {
 }
 
 function reliabilityState(recordLike) {
+  // Notifications use a coarse reliability state because history snapshots only persist the fields needed to replay past alert decisions.
   const sourceFreshness = recordLike?.sourceFreshness ?? [];
   if (sourceFreshness.some((source) => ["local_demo_fallback", "cached_stale"].includes(source.dataMode ?? source.mode))) {
     return "blocked";
@@ -81,6 +93,7 @@ function candidate({ areaSignals, type, severity, title, message, evidence, risk
     id: `${areaSignals.area.id}-${type}-${dedupeKey}`,
     area: areaSignals.area.id,
     type,
+    notificationType: notificationTypeForCandidate(type, severity),
     severity,
     title,
     message,
@@ -92,7 +105,9 @@ function candidate({ areaSignals, type, severity, title, message, evidence, risk
 }
 
 export function buildNotificationCandidates(areaSignals, history = []) {
+  // This is the "should FloodGuard tell someone?" layer, keeping official alerts separate from gauge-derived alerts and recording suppressed reasons for auditability.
   const candidates = [];
+  const suppressed = [];
   const currentRisk = areaSignals.riskAssessment ?? {};
   const currentLevel = currentRisk.concernLevel ?? "Low";
   const previous = previousRecord(history, areaSignals.ingestedAt);
@@ -107,6 +122,7 @@ export function buildNotificationCandidates(areaSignals, history = []) {
     (riverSource?.freshnessStatus ?? "unknown") === "current";
 
   if (hasOfficialWarning(areaSignals.warningSummary)) {
+    // Official warning text keeps NSW SES/HazardWatch severity separate from FloodGuard's own wording.
     candidates.push(
       candidate({
         areaSignals,
@@ -124,9 +140,9 @@ export function buildNotificationCandidates(areaSignals, history = []) {
   if (
     riskRank[currentLevel] > riskRank[previousLevel] &&
     coreLive &&
-    !withinCooldown(previous, areaSignals.ingestedAt) &&
-    (currentLevel === "High" || previous?.riskLevel === currentLevel)
+    !withinCooldown(previous, areaSignals.ingestedAt)
   ) {
+    // App-generated escalation is only allowed when both core gauges are live and current.
     candidates.push(
       candidate({
         areaSignals,
@@ -139,6 +155,27 @@ export function buildNotificationCandidates(areaSignals, history = []) {
         dedupeKey: `risk-${currentLevel}`,
       }),
     );
+  } else if (riskRank[currentLevel] > riskRank[previousLevel] && !coreLive) {
+    suppressed.push({
+      type: "risk_level_increased",
+      reason: "Core live gauge evidence is degraded, so strong app-generated escalation was suppressed.",
+      previousLevel,
+      currentLevel,
+    });
+  } else if (currentLevel === "High" && previousLevel === "High") {
+    suppressed.push({
+      type: "risk_level_increased",
+      reason: "High-risk alert was unchanged and was suppressed to avoid duplicate spam.",
+      previousLevel,
+      currentLevel,
+    });
+  } else if (riskRank[currentLevel] > riskRank[previousLevel] && withinCooldown(previous, areaSignals.ingestedAt)) {
+    suppressed.push({
+      type: "risk_level_increased",
+      reason: "Escalation is within the configured cooldown window.",
+      previousLevel,
+      currentLevel,
+    });
   }
 
   const rainfall1h = currentRisk.features?.rainfall1hMm ?? 0;
@@ -190,6 +227,7 @@ export function buildNotificationCandidates(areaSignals, history = []) {
   }
 
   if (previousReliability && previousReliability !== currentReliability) {
+    // Reliability changes matter even when risk does not, because the UI should surface when evidence quality got worse or better.
     const degraded = ["partial", "blocked"].includes(currentReliability) && currentReliability !== previousReliability;
     const restored = currentReliability === "live" && previousReliability !== "live";
     if (degraded || restored) {
@@ -217,5 +255,6 @@ export function buildNotificationCandidates(areaSignals, history = []) {
     areaName: areaSignals.area.name,
     generatedAt: areaSignals.ingestedAt,
     candidates,
+    suppressed,
   };
 }

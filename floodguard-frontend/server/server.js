@@ -7,6 +7,7 @@ import {
   readAreaModelCard,
   readAreaMlReadiness,
   readAreaNotifications,
+  readAreaWarningStatus,
   readOrRefreshRegionalSignals,
   readHistoricalSignals,
   readSpatialRelevance,
@@ -72,6 +73,8 @@ function routes() {
     "/api/model-card?area=parramatta",
     "/api/ml/readiness?area=parramatta",
     "/api/notifications?area=parramatta",
+    "/api/notifications/preview?area=parramatta",
+    "/api/warnings?area=parramatta",
     "/api/source-health?area=parramatta",
     "/api/spatial-relevance?area=parramatta",
     "/api/spatial-relevance?lat=-33.8&lon=151",
@@ -153,7 +156,7 @@ function resolveAreaId(url) {
   if (queryArea) return queryArea;
 
   const pathMatch = url.pathname.match(
-    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment|notifications|ml\/readiness)\/([^/]+)$/,
+    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment|notifications(?:\/preview)?|warnings|ml\/readiness)\/([^/]+)$/,
   );
   return pathMatch?.[1] ?? defaultAreaId;
 }
@@ -249,6 +252,7 @@ const defaultDependencies = {
   readAreaModelExperiment,
   readAreaMlReadiness,
   readAreaNotifications,
+  readAreaWarningStatus,
   readCommunityReports,
   readGaugeMetadata,
   readHistoricalSignals,
@@ -259,6 +263,7 @@ const defaultDependencies = {
 };
 
 export async function routeRequest(request, response, deps = defaultDependencies) {
+  // Keep routing explicit here so FloodGuard's product API contracts stay easy to trace during demos and testing.
   if (request.method === "OPTIONS") {
     sendJson(response, 204, {});
     return;
@@ -305,6 +310,8 @@ export async function routeRequest(request, response, deps = defaultDependencies
   const regionalSignals = shouldRefresh
     ? await deps.runRegionalIngestion({ protectCache: true })
     : await deps.readOrRefreshRegionalSignals();
+
+  // Everything below serves from the same regional snapshot to avoid mixing ingestion states across related endpoints.
 
   if (url.pathname === "/api/source-registry") {
     sendJson(response, 200, deps.getSourceRegistry(regionalSignals));
@@ -512,7 +519,7 @@ export async function routeRequest(request, response, deps = defaultDependencies
     return;
   }
 
-  if (url.pathname === "/api/notifications") {
+  if (url.pathname === "/api/notifications" || url.pathname === "/api/notifications/preview") {
     const areaId = resolveAreaId(url);
     const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
 
@@ -525,6 +532,22 @@ export async function routeRequest(request, response, deps = defaultDependencies
     }
 
     sendJson(response, 200, await deps.readAreaNotifications(areaSignals));
+    return;
+  }
+
+  if (url.pathname === "/api/warnings") {
+    const areaId = resolveAreaId(url);
+    const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
+
+    if (!areaSignals) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, deps.readAreaWarningStatus(areaSignals));
     return;
   }
 
@@ -649,7 +672,10 @@ export async function routeRequest(request, response, deps = defaultDependencies
     return;
   }
 
-  if (url.pathname.startsWith("/api/notifications/")) {
+  if (
+    url.pathname.startsWith("/api/notifications/") &&
+    !url.pathname.startsWith("/api/notifications/preview/")
+  ) {
     const areaId = resolveAreaId(url);
     const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
 
@@ -662,6 +688,38 @@ export async function routeRequest(request, response, deps = defaultDependencies
     }
 
     sendJson(response, 200, await deps.readAreaNotifications(areaSignals));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/notifications/preview/")) {
+    const areaId = resolveAreaId(url);
+    const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
+
+    if (!areaSignals) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, await deps.readAreaNotifications(areaSignals));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/warnings/")) {
+    const areaId = resolveAreaId(url);
+    const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
+
+    if (!areaSignals) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    sendJson(response, 200, deps.readAreaWarningStatus(areaSignals));
     return;
   }
 

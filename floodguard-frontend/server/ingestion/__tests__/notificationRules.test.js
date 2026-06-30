@@ -69,6 +69,98 @@ test("emits official warning notification candidates with official wording separ
 
   assert.equal(notifications.candidates[0].type, "official_warning_detected");
   assert.match(notifications.candidates[0].message, /check NSW SES \/ HazardWatch/i);
+  assert.equal(notifications.candidates[0].notificationType, "official_warning");
+});
+
+test("emits an awareness notice when risk moves from low to moderate", () => {
+  const notifications = buildNotificationCandidates(
+    areaSignals({
+      riskAssessment: {
+        concernLevel: "Moderate",
+        score: 48,
+        features: {
+          rainfall1hMm: 6,
+          rainfall3hMm: 11,
+          riverDelta1hM: 0.02,
+          riverDelta3hM: 0.04,
+        },
+      },
+    }),
+    [
+      {
+        ingestedAt: "2026-06-29T00:30:00Z",
+        riskLevel: "Low",
+        riskFeatures: { rainfall1hMm: 0, rainfall3hMm: 1, riverDelta1hM: 0, riverDelta3hM: 0 },
+        sourceFreshness: [{ dataMode: "live", freshnessStatus: "current" }],
+        freshness: { staleSourceCount: 0 },
+      },
+    ],
+  );
+
+  assert.equal(notifications.candidates[0].type, "risk_level_increased");
+  assert.equal(notifications.candidates[0].notificationType, "awareness_notice");
+  assert.doesNotMatch(notifications.candidates[0].message, /emergency/i);
+});
+
+test("emits a risk escalation when risk moves from moderate to high", () => {
+  const notifications = buildNotificationCandidates(
+    areaSignals({
+      riskAssessment: {
+        concernLevel: "High",
+        score: 79,
+        features: {
+          rainfall1hMm: 15,
+          rainfall3hMm: 25,
+          riverDelta1hM: 0.21,
+          riverDelta3hM: 0.35,
+        },
+      },
+    }),
+    [
+      {
+        ingestedAt: "2026-06-29T00:30:00Z",
+        riskLevel: "Moderate",
+        riskFeatures: { rainfall1hMm: 6, rainfall3hMm: 10, riverDelta1hM: 0.05, riverDelta3hM: 0.12 },
+        sourceFreshness: [{ dataMode: "live", freshnessStatus: "current" }],
+        freshness: { staleSourceCount: 0 },
+      },
+    ],
+  );
+
+  assert.equal(notifications.candidates[0].type, "risk_level_increased");
+  assert.equal(notifications.candidates[0].severity, "urgent");
+});
+
+test("records a suppressed reason when high risk is unchanged", () => {
+  const notifications = buildNotificationCandidates(
+    areaSignals({
+      riskAssessment: {
+        concernLevel: "High",
+        score: 78,
+        features: {
+          rainfall1hMm: 12,
+          rainfall3hMm: 22,
+          riverDelta1hM: 0.18,
+          riverDelta3hM: 0.31,
+        },
+      },
+    }),
+    [
+      {
+        ingestedAt: "2026-06-29T00:30:00Z",
+        riskLevel: "High",
+        riskFeatures: { rainfall1hMm: 11, rainfall3hMm: 20, riverDelta1hM: 0.16, riverDelta3hM: 0.3 },
+        sourceFreshness: [{ dataMode: "live", freshnessStatus: "current" }],
+        freshness: { staleSourceCount: 0 },
+      },
+    ],
+  );
+
+  assert.equal(
+    notifications.candidates.some((candidate) => candidate.type === "risk_level_increased"),
+    false,
+  );
+  assert.match(notifications.suppressed[0].reason, /duplicate spam/i);
 });
 
 test("suppresses risk escalation when core evidence is degraded by cache or fallback", () => {
@@ -112,6 +204,7 @@ test("suppresses risk escalation when core evidence is degraded by cache or fall
     notifications.candidates.some((candidate) => candidate.type === "risk_level_increased"),
     false,
   );
+  assert.match(notifications.suppressed[0].reason, /degraded/i);
 });
 
 test("emits reliability degraded notification when reliability moves from live to partial", () => {

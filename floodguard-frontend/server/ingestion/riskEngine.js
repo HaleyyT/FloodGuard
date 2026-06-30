@@ -257,6 +257,7 @@ function buildReliability(signals, riskSignals) {
 }
 
 function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
+  // The decision audit is the explainer payload for the dashboard and future validation work.
   const components = buildScoreComponents(riskSignals);
   const reliability = buildReliability(signals, riskSignals);
 
@@ -290,7 +291,35 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
   };
 }
 
+function buildNotificationEligibility(signals, concernLevel) {
+  // Risk scoring and notification permission are related but not identical, so high risk can still block strong app alerts.
+  const coreStatus = signals.ingestionHealth?.coreFloodStatus ?? "unknown";
+  const overallStatus = signals.ingestionHealth?.overallStatus ?? "unknown";
+  const hasOfficialWarning = !["no_current_warning", "unknown"].includes(
+    signals.warningSummary?.status ?? "unknown",
+  );
+  const strongAppAlertEligible = coreStatus === "pass";
+
+  return {
+    notificationType:
+      hasOfficialWarning
+        ? "official_warning"
+        : concernLevel === "High"
+          ? "risk_escalation"
+          : concernLevel === "Moderate"
+            ? "awareness_notice"
+            : "none",
+    strongAppAlertEligible,
+    officialWarningEligible: hasOfficialWarning,
+    sourceStatus: overallStatus,
+    reason: strongAppAlertEligible
+      ? "Core live gauges are current enough for app-generated awareness notifications."
+      : "Core live gauges are degraded, so strong app-generated escalation should be suppressed.",
+  };
+}
+
 export function buildRiskSignals(signals) {
+  // Core flood features only use sources that pass the live-gauge reliability bar; degraded core sources are zeroed out and explained later.
   const weather = signals.weatherObservations ?? {};
   const rainfallSource = (signals.sourceMetadata ?? []).find((source) => source.type === "rainfall") ?? null;
   const riverSource = (signals.sourceMetadata ?? []).find((source) => source.type === "river") ?? null;
@@ -389,6 +418,8 @@ export function buildRiskSignals(signals) {
         staleContextCount * 4,
     ),
   );
+
+  // Confidence is separate from risk and answers how much we trust the evidence behind this snapshot.
   const riskSignals = {
     rainfallPressure,
     weatherPressure: clamp(weatherPressure),
@@ -552,5 +583,6 @@ export function assessRisk(signals) {
     },
     excludedSignals: riskSignals.features.excludedSignals ?? [],
     decisionAudit: buildDecisionAudit(signals, riskSignals, score, concernLevel),
+    notificationEligibility: buildNotificationEligibility(signals, concernLevel),
   };
 }

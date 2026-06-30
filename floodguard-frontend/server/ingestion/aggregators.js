@@ -732,6 +732,71 @@ export async function readHistoricalSignals(areaId = defaultAreaId, limit = 24) 
   return readAreaHistory(historyDir, areaId, limit);
 }
 
+function buildWarningAdapterStatus(areaSignals) {
+  const warningSource = (areaSignals.sourceMetadata ?? []).find((source) => source.type === "warnings");
+  const warningSummary = areaSignals.warningSummary ?? {};
+
+  if (!warningSource || warningSource.status === "not-connected") return "not_configured";
+  if (warningSource.status === "failed") return "source_unavailable";
+  if (warningSource.freshnessStatus === "stale") return "stale";
+  if ((warningSummary.warningCount ?? 0) === 0 || warningSummary.status === "no_current_warning") {
+    return "no_relevant_warning";
+  }
+
+  return "connected";
+}
+
+function presentWarningLevel(level) {
+  if (level === "advice") return "Advice";
+  if (level === "watch_and_act") return "Watch and Act";
+  if (level === "emergency_warning") return "Emergency Warning";
+  return undefined;
+}
+
+function inferHazardType(warnings = []) {
+  const text = warnings
+    .map((warning) => [warning.headline, warning.area].filter(Boolean).join(" "))
+    .join(" ")
+    .toLowerCase();
+
+  if (text.includes("flood")) return "Flood";
+  if (text.includes("storm")) return "Storm";
+  if (text.includes("weather")) return "Severe Weather";
+  return warnings.length > 0 ? "Other" : undefined;
+}
+
+export function readAreaWarningStatus(areaSignals) {
+  // Warning status is published separately so the frontend can show official emergency communication alongside FloodGuard risk, not blended into it.
+  const warningSource = (areaSignals.sourceMetadata ?? []).find((source) => source.type === "warnings");
+  const warningSummary = areaSignals.warningSummary ?? {};
+  const adapterStatus = buildWarningAdapterStatus(areaSignals);
+  const hasWarning = adapterStatus === "connected" && (warningSummary.warningCount ?? 0) > 0;
+
+  return {
+    area: areaSignals.area.name,
+    hasWarning,
+    warningLevel: hasWarning ? presentWarningLevel(warningSummary.status) : undefined,
+    hazardType: hasWarning ? inferHazardType(warningSummary.warnings ?? []) : undefined,
+    issuedAt: warningSummary.issuedAt ?? undefined,
+    updatedAt: warningSummary.observedAt ?? undefined,
+    sourceName: "NSW SES HazardWatch",
+    sourceUrl: warningSource?.source ?? "https://www.hazardwatch.gov.au/",
+    adapterStatus,
+    officialText:
+      hasWarning && (warningSummary.warnings ?? []).length > 0
+        ? warningSummary.warnings.map((warning) => warning.headline).join(" | ")
+        : warningSource?.note ?? "Official warning source is not currently connected.",
+    warningCount: warningSummary.warningCount ?? 0,
+    warnings: warningSummary.warnings ?? [],
+    sourceFreshness: {
+      observedAt: warningSource?.observedAt ?? null,
+      fetchedAt: warningSource?.fetchedAt ?? null,
+      freshnessStatus: warningSource?.freshnessStatus ?? "missing",
+      dataMode: warningSource?.dataMode ?? warningSource?.mode ?? "missing",
+    },
+  };
+}
+
 export async function readAreaFeatureDataset(areaId = defaultAreaId, limit = 100) {
   const history = await readAreaHistory(historyDir, areaId, limit);
   const rows = buildFeatureRows(history);
