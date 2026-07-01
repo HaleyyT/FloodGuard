@@ -1,0 +1,136 @@
+{
+  "mode": "shadow",
+  "liveScoringEnabled": false,
+  "readyForValidatedML": false,
+  "datasets": {
+    "real_export": {
+      "status": "completed",
+      "bestPrototypeModel": "random_forest",
+      "warnings": [
+        "Dataset has severe class imbalance: 18 elevated row(s) out of 3000.",
+        "Positive rate is only 0.6%; plain accuracy would be misleading.",
+        "Labels are rule-derived, not independent flood outcomes, so metrics are illustrative only.",
+        "No High class examples are available in this dataset.",
+        "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive."
+      ],
+      "summary": {
+        "datasetName": "real_export",
+        "rowCount": 3000,
+        "excludedRowCount": 0,
+        "areaCount": 3,
+        "areas": [
+          "North Parramatta, NSW",
+          "Parramatta, NSW",
+          "Toongabbie, NSW"
+        ],
+        "uniqueTimestamps": 999,
+        "labelSourceCounts": {
+          "rule_derived": 3000
+        },
+        "ruleConcernLevelCounts": {
+          "Low": 2982,
+          "Moderate": 18
+        },
+        "targetCounts": {
+          "0": 2982,
+          "1": 18
+        },
+        "positiveRate": 0.006,
+        "missingByColumn": {
+          "areaId": 0,
+          "areaName": 0,
+          "observedAt": 0,
+          "riskScore": 0,
+          "ruleConcernLevel": 0,
+          "targetElevatedConcern": 0,
+          "labelSource": 0,
+          "rainfallLatestMm": 0,
+          "rainfall1hMm": 0,
+          "rainfall3hMm": 0,
+          "rainfall24hMm": 0,
+          "rainfall72hMm": 0,
+          "antecedentWetnessMm": 0,
+          "antecedentRainfallIndex": 2868,
+          "riverLatestM": 3,
+          "riverDelta1hM": 2868,
+          "riverDelta3hM": 3000,
+          "riverTrendCode": 2868,
+          "rateOfRiseMPerHour": 2868,
+          "dataFreshnessScore": 0,
+          "sourceCoverage": 0,
+          "decisionReliabilityScore": 0,
+          "confidence": 0,
+          "warningActive": 2868,
+          "warningStatus": 2868,
+          "areaRelevanceScore": 0,
+          "nearestStationDistanceKm": 0,
+          "trainingEligibility": 0
+        }
+      }
+    },
+    "scenario_stress_test": {
+      "status": "completed",
+      "bestPrototypeModel": "logistic_regression",
+      "warnings": [
+        "12 row(s) were excluded from training due to eligibility gates."
+      ],
+      "summary": {
+        "datasetName": "scenario_stress_test",
+        "rowCount": 84,
+        "excludedRowCount": 12,
+        "areaCount": 3,
+        "areas": [
+          "North Parramatta, NSW",
+          "Parramatta, NSW",
+          "Toongabbie, NSW"
+        ],
+        "uniqueTimestamps": 36,
+        "labelSourceCounts": {
+          "scenario_generated": 84
+        },
+        "ruleConcernLevelCounts": {
+          "Low": 36,
+          "Moderate": 24,
+          "High": 24
+        },
+        "targetCounts": {
+          "1": 48,
+          "0": 36
+        },
+        "positiveRate": 0.5714285714285714,
+        "missingByColumn": {
+          "areaId": 0,
+          "areaName": 0,
+          "observedAt": 0,
+          "riskScore": 0,
+          "ruleConcernLevel": 0,
+          "targetElevatedConcern": 0,
+          "labelSource": 0,
+          "rainfallLatestMm": 0,
+          "rainfall1hMm": 0,
+          "rainfall3hMm": 0,
+          "rainfall24hMm": 0,
+          "rainfall72hMm": 0,
+          "antecedentWetnessMm": 0,
+          "antecedentRainfallIndex": 0,
+          "riverLatestM": 0,
+          "riverDelta1hM": 0,
+          "riverDelta3hM": 0,
+          "riverTrendCode": 0,
+          "rateOfRiseMPerHour": 0,
+          "dataFreshnessScore": 0,
+          "sourceCoverage": 0,
+          "decisionReliabilityScore": 0,
+          "confidence": 0,
+          "warningActive": 0,
+          "warningStatus": 0,
+          "areaRelevanceScore": 0,
+          "nearestStationDistanceKm": 0,
+          "scenarioName": 0,
+          "trainingEligibility": 0
+        }
+      }
+    }
+  },
+  "summary": "Prototype model comparison only. Live app remains rule-based."
+}
