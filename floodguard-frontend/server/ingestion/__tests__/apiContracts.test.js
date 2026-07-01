@@ -129,7 +129,35 @@ async function requestJson(path, deps) {
   await routeRequest(request, response, deps);
   return {
     statusCode: responseState.statusCode,
+    headers: responseState.headers,
     body: JSON.parse(responseState.body),
+  };
+}
+
+async function requestText(path, deps) {
+  const responseState = { statusCode: null, headers: null, body: "" };
+  const request = {
+    method: "GET",
+    url: path,
+    headers: { host: "127.0.0.1:5174" },
+    socket: { remoteAddress: "127.0.0.1" },
+    on() {},
+  };
+  const response = {
+    writeHead(statusCode, headers) {
+      responseState.statusCode = statusCode;
+      responseState.headers = headers;
+    },
+    end(body) {
+      responseState.body = body;
+    },
+  };
+
+  await routeRequest(request, response, deps);
+  return {
+    statusCode: responseState.statusCode,
+    headers: responseState.headers,
+    body: responseState.body,
   };
 }
 
@@ -222,11 +250,50 @@ function dependencies() {
     readAreaMlReadiness: async () => ({
       areaId: "parramatta",
       rows: 24,
+      areas: ["Parramatta, NSW"],
       labelSource: "rule_derived",
       hasIndependentLabels: false,
+      classBalance: { low: 18, elevated: 6 },
+      readyForPrototypeTraining: false,
+      readyForValidatedML: false,
       readyForTraining: false,
       reason: "Insufficient reliable history for training or comparison.",
     }),
+    readAreaMlDataset: async () => ({
+      areaId: "parramatta",
+      areaName: "Parramatta, NSW",
+      labelSource: "rule_derived",
+      fields: [
+        "areaId",
+        "areaName",
+        "observedAt",
+        "rainfall1hMm",
+        "riverDelta1hM",
+        "targetElevatedConcern",
+      ],
+      generatedAt: "2026-06-29T03:00:00Z",
+      rows: [
+        {
+          areaId: "parramatta",
+          areaName: "Parramatta, NSW",
+          observedAt: "2026-06-29T03:00:00Z",
+          rainfall1hMm: 5,
+          riverDelta1hM: 0.11,
+          targetElevatedConcern: 1,
+          labelSource: "rule_derived",
+          warningActive: 0,
+        },
+      ],
+      readiness: {
+        rows: 1,
+        labelSource: "rule_derived",
+      },
+    }),
+    mlDatasetRowsToCsv: (rows) =>
+      [
+        "areaId,areaName,observedAt,rainfall1hMm,riverDelta1hM,targetElevatedConcern,labelSource,warningActive",
+        `${rows[0].areaId},${rows[0].areaName},${rows[0].observedAt},${rows[0].rainfall1hMm},${rows[0].riverDelta1hM},${rows[0].targetElevatedConcern},${rows[0].labelSource},${rows[0].warningActive}`,
+      ].join("\n"),
   };
 }
 
@@ -279,7 +346,30 @@ test("ml readiness endpoint reports honest training readiness state", async () =
   assert.equal(body.areaId, "parramatta");
   assert.equal(body.labelSource, "rule_derived");
   assert.equal(body.hasIndependentLabels, false);
+  assert.equal(body.readyForPrototypeTraining, false);
+  assert.equal(body.readyForValidatedML, false);
   assert.equal(body.readyForTraining, false);
+});
+
+test("ml dataset endpoint returns required rows and explicit label source", async () => {
+  const { body } = await requestJson("/api/ml/dataset/parramatta", dependencies());
+  assert.equal(body.areaId, "parramatta");
+  assert.equal(body.labelSource, "rule_derived");
+  assert.ok(Array.isArray(body.rows));
+  assert.equal(body.rows[0].targetElevatedConcern, 1);
+  assert.equal(body.rows[0].labelSource, "rule_derived");
+  assert.equal(typeof body.rows[0].rainfall1hMm, "number");
+});
+
+test("ml dataset endpoint exports csv rows without crashing", async () => {
+  const { statusCode, headers, body } = await requestText(
+    "/api/ml/dataset/parramatta?format=csv",
+    dependencies(),
+  );
+  assert.equal(statusCode, 200);
+  assert.match(headers["content-type"], /text\/csv/i);
+  assert.match(body, /areaId,areaName,observedAt/);
+  assert.match(body, /rule_derived/);
 });
 
 test("signals endpoint returns weather, rainfall, river, and source metadata", async () => {
