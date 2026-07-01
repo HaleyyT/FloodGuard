@@ -1,0 +1,256 @@
+{
+  "datasetName": "scenario_stress_test",
+  "datasetPath": "/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-ml/data/floodguard_scenario_features.csv",
+  "mode": "shadow",
+  "liveScoringEnabled": false,
+  "readyForValidatedML": false,
+  "summary": {
+    "datasetName": "scenario_stress_test",
+    "rowCount": 84,
+    "excludedRowCount": 12,
+    "areaCount": 3,
+    "areas": [
+      "North Parramatta, NSW",
+      "Parramatta, NSW",
+      "Toongabbie, NSW"
+    ],
+    "uniqueTimestamps": 36,
+    "labelSourceCounts": {
+      "scenario_generated": 84
+    },
+    "ruleConcernLevelCounts": {
+      "Low": 36,
+      "Moderate": 24,
+      "High": 24
+    },
+    "targetCounts": {
+      "1": 48,
+      "0": 36
+    },
+    "positiveRate": 0.5714285714285714,
+    "missingByColumn": {
+      "areaId": 0,
+      "areaName": 0,
+      "observedAt": 0,
+      "riskScore": 0,
+      "ruleConcernLevel": 0,
+      "targetElevatedConcern": 0,
+      "labelSource": 0,
+      "rainfallLatestMm": 0,
+      "rainfall1hMm": 0,
+      "rainfall3hMm": 0,
+      "rainfall24hMm": 0,
+      "rainfall72hMm": 0,
+      "antecedentWetnessMm": 0,
+      "antecedentRainfallIndex": 0,
+      "riverLatestM": 0,
+      "riverDelta1hM": 0,
+      "riverDelta3hM": 0,
+      "riverTrendCode": 0,
+      "rateOfRiseMPerHour": 0,
+      "dataFreshnessScore": 0,
+      "sourceCoverage": 0,
+      "decisionReliabilityScore": 0,
+      "confidence": 0,
+      "warningActive": 0,
+      "warningStatus": 0,
+      "areaRelevanceScore": 0,
+      "nearestStationDistanceKm": 0,
+      "scenarioName": 0,
+      "trainingEligibility": 0
+    }
+  },
+  "warnings": [
+    "12 row(s) were excluded from training due to eligibility gates."
+  ],
+  "split": {
+    "strategy": "stratified_random_fallback_from_time_order",
+    "trainRows": 58,
+    "testRows": 26,
+    "trainPositiveCount": 33,
+    "testPositiveCount": 15,
+    "trainTimeRange": {
+      "start": "2026-07-01T00:00:00+00:00",
+      "end": "2026-07-06T11:00:00+00:00"
+    },
+    "testTimeRange": {
+      "start": "2026-07-01T00:00:00+00:00",
+      "end": "2026-07-05T04:00:00+00:00"
+    }
+  },
+  "models": [
+    {
+      "modelName": "majority_baseline",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 0.5769230769230769,
+        "balancedAccuracy": 0.5,
+        "precision": 0.5769230769230769,
+        "recall": 1.0,
+        "f1": 0.7317073170731707,
+        "support": {
+          "negative": 11,
+          "positive": 15
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              0,
+              11
+            ],
+            [
+              0,
+              15
+            ]
+          ]
+        },
+        "rocAuc": 0.5,
+        "prAuc": 0.5769230769230769
+      },
+      "classWeight": null,
+      "warnings": [
+        "This baseline is expected to look strong on plain accuracy because elevated cases are rare."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverDelta3hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    },
+    {
+      "modelName": "logistic_regression",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 1.0,
+        "balancedAccuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": {
+          "negative": 11,
+          "positive": 15
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              11,
+              0
+            ],
+            [
+              0,
+              15
+            ]
+          ]
+        },
+        "rocAuc": 1.0,
+        "prAuc": 1.0
+      },
+      "classWeight": "balanced",
+      "warnings": [
+        "Logistic regression is still trained on rule-derived labels and should remain shadow-only."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverDelta3hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    },
+    {
+      "modelName": "random_forest",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 1.0,
+        "balancedAccuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": {
+          "negative": 11,
+          "positive": 15
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              11,
+              0
+            ],
+            [
+              0,
+              15
+            ]
+          ]
+        },
+        "rocAuc": 1.0,
+        "prAuc": 1.0
+      },
+      "classWeight": "balanced",
+      "warnings": [
+        "Random-forest importance is useful for prototype interpretation, not production flood causality claims."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverDelta3hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    }
+  ],
+  "bestPrototypeModel": "logistic_regression",
+  "status": "completed"
+}

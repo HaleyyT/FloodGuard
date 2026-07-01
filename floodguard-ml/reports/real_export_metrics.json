@@ -1,0 +1,258 @@
+{
+  "datasetName": "real_export",
+  "datasetPath": "/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-ml/data/floodguard_features.csv",
+  "mode": "shadow",
+  "liveScoringEnabled": false,
+  "readyForValidatedML": false,
+  "summary": {
+    "datasetName": "real_export",
+    "rowCount": 3000,
+    "excludedRowCount": 0,
+    "areaCount": 3,
+    "areas": [
+      "North Parramatta, NSW",
+      "Parramatta, NSW",
+      "Toongabbie, NSW"
+    ],
+    "uniqueTimestamps": 999,
+    "labelSourceCounts": {
+      "rule_derived": 3000
+    },
+    "ruleConcernLevelCounts": {
+      "Low": 2982,
+      "Moderate": 18
+    },
+    "targetCounts": {
+      "0": 2982,
+      "1": 18
+    },
+    "positiveRate": 0.006,
+    "missingByColumn": {
+      "areaId": 0,
+      "areaName": 0,
+      "observedAt": 0,
+      "riskScore": 0,
+      "ruleConcernLevel": 0,
+      "targetElevatedConcern": 0,
+      "labelSource": 0,
+      "rainfallLatestMm": 0,
+      "rainfall1hMm": 0,
+      "rainfall3hMm": 0,
+      "rainfall24hMm": 0,
+      "rainfall72hMm": 0,
+      "antecedentWetnessMm": 0,
+      "antecedentRainfallIndex": 2868,
+      "riverLatestM": 3,
+      "riverDelta1hM": 2868,
+      "riverDelta3hM": 3000,
+      "riverTrendCode": 2868,
+      "rateOfRiseMPerHour": 2868,
+      "dataFreshnessScore": 0,
+      "sourceCoverage": 0,
+      "decisionReliabilityScore": 0,
+      "confidence": 0,
+      "warningActive": 2868,
+      "warningStatus": 2868,
+      "areaRelevanceScore": 0,
+      "nearestStationDistanceKm": 0,
+      "trainingEligibility": 0
+    }
+  },
+  "warnings": [
+    "Dataset has severe class imbalance: 18 elevated row(s) out of 3000.",
+    "Positive rate is only 0.6%; plain accuracy would be misleading.",
+    "Labels are rule-derived, not independent flood outcomes, so metrics are illustrative only.",
+    "No High class examples are available in this dataset.",
+    "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive."
+  ],
+  "split": {
+    "strategy": "stratified_random_fallback_from_time_order",
+    "trainRows": 2100,
+    "testRows": 900,
+    "trainPositiveCount": 13,
+    "testPositiveCount": 5,
+    "trainTimeRange": {
+      "start": "2026-06-24T16:28:13.485000+00:00",
+      "end": "2026-06-30T06:56:47.412000+00:00"
+    },
+    "testTimeRange": {
+      "start": "2026-06-24T16:28:13.485000+00:00",
+      "end": "2026-06-30T06:55:47.413000+00:00"
+    }
+  },
+  "models": [
+    {
+      "modelName": "majority_baseline",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 0.9944444444444445,
+        "balancedAccuracy": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": {
+          "negative": 895,
+          "positive": 5
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              895,
+              0
+            ],
+            [
+              5,
+              0
+            ]
+          ]
+        },
+        "rocAuc": 0.5,
+        "prAuc": 0.005555555555555556
+      },
+      "classWeight": null,
+      "warnings": [
+        "This baseline is expected to look strong on plain accuracy because elevated cases are rare.",
+        "Skipped always-missing feature columns: riverDelta3hM."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    },
+    {
+      "modelName": "logistic_regression",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 0.5888888888888889,
+        "balancedAccuracy": 0.7932960893854748,
+        "precision": 0.013333333333333334,
+        "recall": 1.0,
+        "f1": 0.02631578947368421,
+        "support": {
+          "negative": 895,
+          "positive": 5
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              525,
+              370
+            ],
+            [
+              0,
+              5
+            ]
+          ]
+        },
+        "rocAuc": 0.8688268156424582,
+        "prAuc": 0.6056657223796034
+      },
+      "classWeight": "balanced",
+      "warnings": [
+        "Logistic regression is still trained on rule-derived labels and should remain shadow-only.",
+        "Skipped always-missing feature columns: riverDelta3hM."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    },
+    {
+      "modelName": "random_forest",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 0.7466666666666667,
+        "balancedAccuracy": 0.8726256983240224,
+        "precision": 0.02145922746781116,
+        "recall": 1.0,
+        "f1": 0.04201680672268908,
+        "support": {
+          "negative": 895,
+          "positive": 5
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              667,
+              228
+            ],
+            [
+              0,
+              5
+            ]
+          ]
+        },
+        "rocAuc": 0.9229050279329609,
+        "prAuc": 0.6086206896551724
+      },
+      "classWeight": "balanced",
+      "warnings": [
+        "Random-forest importance is useful for prototype interpretation, not production flood causality claims.",
+        "Skipped always-missing feature columns: riverDelta3hM."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    }
+  ],
+  "bestPrototypeModel": "random_forest",
+  "status": "completed"
+}
