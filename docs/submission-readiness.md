@@ -2,94 +2,86 @@
 
 _Updated: 2026-07-01_
 
-## Day 1 objective
+## Day 5 objective
 
-This note freezes the current submission scope, records the real verification results, and lists what still needs attention before a camera-ready Coding Fest submission.
-
-## Release branch
-
-- Current Day 1 branch: `release/coding-fest-camera-ready`
+This note records the current camera-ready state of FloodGuard after the Day 5 submission-polish pass.
 
 ## Verification checks run
 
-All commands were run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/package.json:1).
+All commands below were run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/package.json:1) on July 1, 2026.
 
 | Command | Result | Notes |
 |---|---|---|
 | `npm run lint` | pass | ESLint completed with no reported errors. |
-| `npm run test` | pass | `43/43` backend and contract tests passed. |
-| `npm run build` | pass with warning | Production build succeeds; Vite reports a large bundle warning for the main JS chunk. |
-| `npm run check:ingestion` | blocked | Current live-ingestion health is blocked because core gauge sources are stale/fallback and official warnings are still not configured. |
+| `npm run test` | pass | `50/50` backend and contract tests passed. |
+| `npm run build` | pass with warning | Production build succeeds; Vite reports a large main-chunk warning. |
+| `npm run check:ingestion` | blocked | Core live gauges are currently stale cached data and official warnings are still not connected. |
 
-## Current implementation audit
+## What is now submission-ready
 
-| Layer | Current status | Needed before submission |
-|---|---|---|
-| Live rainfall ingestion | issue | Keep the feature, but describe current runs honestly when live gauges are stale or fetches fail. |
-| Live river ingestion | issue | Same as rainfall: keep the backbone, but do not imply guaranteed live availability. |
-| BoM weather context | stale / partial | Keep it framed as supporting context rather than the core flood signal. |
-| Warning layer | contract-only | State clearly that the warning layer is architected and surfaced, but not fully connected operationally. |
-| Source registry | pass | Optionally simplify wording for non-technical judges. |
-| Risk engine | pass | Keep a calibration note because thresholds remain heuristic. |
-| Notifications | pass | Keep wording conservative and make clear this is candidate logic, not a delivery platform. |
-| History | JSONL prototype | Good enough for feature generation and comparison, but document its prototype-grade storage limits. |
-| ML | scaffold / shadow-mode backend | Implement the Python training/evaluation pipeline before claiming a prototype ML pipeline is complete. |
-| Dashboard | pass / needs polish | Current dashboard is demoable, but final screenshots should use the strongest states and cleanest layouts. |
+- Overview dashboard is cleaner and screenshot-oriented, with concern summary, rainfall, river, public signals, map context, source evidence, official-warning separation, and ML shadow summary visible without leaving the main flow.
+- README and package-level documentation now describe the system honestly and consistently.
+- Poster text, abstract text, and demo-script wording now exist in `docs/`.
+- ML integration is visible and clearly labelled as shadow mode rather than live decision authority.
+- Backend verification remains strong, with passing tests and a successful production build.
 
 ## Current ingestion reality
 
-`npm run check:ingestion` reported:
+`npm run check:ingestion` currently reports:
 
 - overall ingestion health: `blocked`
 - core flood gauges: `blocked`
 - supporting context: `warn`
 - official warnings: `missing`
 
-Observed reasons in the current run:
+Observed reasons in the latest run:
 
-- FloodSmart rainfall gauge ingestion failed and fell back to stale cached state.
-- FloodSmart river gauge ingestion failed and fell back to stale cached state.
-- Parramatta weather observations were unavailable in the current run and remained stale context.
-- Official NSW SES / HazardWatch integration is still not configured.
+- FloodSmart rainfall gauge ingestion failed and only `cached_stale` rainfall data was available.
+- FloodSmart river gauge ingestion failed and only `cached_stale` river data was available.
+- Parramatta weather context was also stale in the checked run.
+- NSW SES / HazardWatch official-warning integration is still `not-configured`.
 
 What this means:
 
-- the architecture, fallback handling, and honesty logic are working;
-- the live run is not currently healthy enough to claim fully live flood-signal operation without qualification.
+- the honesty and degraded-source logic are working correctly;
+- the current run is not healthy enough to claim fully live flood-gauge operation;
+- submission/demo wording must continue to describe live ingestion as architecture with degraded-state handling, not guaranteed current operation.
 
-## Public claims freeze
+## Safe public claims
 
 Allowed claims:
 
-- live local gauge ingestion architecture exists;
-- source freshness, provenance, and degraded-data checks are implemented;
-- explainable rule-based flood concern scoring is implemented;
-- notification decision logic is implemented;
-- historical feature rows and ML-readiness APIs are implemented;
-- FloodGuard supports shadow-mode model comparison and a Python ML pipeline path.
+- FloodGuard has a real ingestion architecture for rainfall, river, weather, source trust, and dashboard delivery.
+- FloodGuard explicitly checks freshness, fallback state, and provenance before presenting data as live.
+- FloodGuard includes explainable rule-based concern scoring, decision audit output, and notification decision logic.
+- FloodGuard stores historical snapshots, exports feature rows, and includes a Python ML prototype pipeline in shadow mode.
+- FloodGuard surfaces ML comparison results without letting ML override the live rule engine.
 
 Avoid claims:
 
-- official emergency warning system;
-- validated production flood prediction;
-- operational ML flood alerting;
-- calibrated hydrological forecasting system;
-- fully connected official-warning feed in production conditions.
+- fully operational official emergency-warning ingestion
+- validated production flood prediction
+- live ML flood alerting
+- calibrated hydrological forecasting
+- always-live gauge operation in the current repo state
 
-## Highest-priority remaining work after Day 1
+## Remaining weaknesses before final submission
 
-1. Implement the real Python ML pipeline promised by the project scope, using exported feature rows and shadow-mode evaluation.
-2. Keep improving dashboard polish and screenshot selection for submission materials.
-3. Either improve live ingestion reliability or document degraded-source behavior very clearly in the final submission.
-4. Reduce bundle size if time permits, but treat it as secondary to correctness and honesty.
+1. Live rainfall and river ingestion are still blocked in the latest verified run.
+2. Official warning integration is architected and surfaced, but not yet connected as a stable live feed.
+3. Risk thresholds remain heuristic rather than event-calibrated.
+4. The current ML dataset is still rule-derived and heavily imbalanced, so ML remains comparison-only.
+5. The production build still carries a large main bundle warning.
 
-## Day 1 conclusion
+## Camera-ready artifact list
 
-FloodGuard is in a good state for a controlled final sprint:
+- [Readme.md](/Users/haleytran/Desktop/Projects/FloodGuard/Readme.md:1)
+- [floodguard-frontend/README.md](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/README.md:1)
+- [docs/abstract.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/abstract.md:1)
+- [docs/poster-copy.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/poster-copy.md:1)
+- [docs/demo-script.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/demo-script.md:1)
+- [docs/ml-scope.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/ml-scope.md:1)
 
-- the codebase linted cleanly;
-- tests passed;
-- the production build passed;
-- the ingestion audit exposed honest live-data weaknesses instead of hiding them.
+## Day 5 conclusion
 
-The main gap between the current repo and the full 6-day target is no longer the reliability/rule-engine backbone. The main remaining technical gap is turning the existing ML-readiness and shadow-mode scaffolding into a real Python training and evaluation pipeline.
+FloodGuard is now in a strong submission state as a reliability-aware flood-awareness prototype. The main story is credible: explainable rule logic, explicit source-trust handling, notification safeguards, and a real Python ML shadow pipeline. The main caveat is also clear and verified: current live gauge ingestion is still degraded, so the final submission should highlight honesty and resilience rather than overclaiming current operational coverage.
