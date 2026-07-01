@@ -524,8 +524,9 @@ function buildOfficialWarning(signals) {
   };
 }
 
-function DataEvidencePanel({ sources }) {
+function DataEvidencePanel({ sources, maxItems = null }) {
   const rows = buildDataEvidenceRows(sources);
+  const visibleRows = maxItems ? rows.slice(0, maxItems) : rows;
 
   return (
     <section className="card">
@@ -537,7 +538,7 @@ function DataEvidencePanel({ sources }) {
       </div>
 
       <div className="source-health-list">
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <div className="source-health-item" key={row.key}>
             <div className="source-health-top">
               <div>
@@ -552,6 +553,26 @@ function DataEvidencePanel({ sources }) {
             <p className="report-form-message">{row.note}</p>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function OverviewSupportGrid({ data, report, experiment, riskLevel }) {
+  return (
+    <section className="overview-support-grid">
+      <div className="overview-support-card">
+        <DataEvidencePanel maxItems={3} sources={data.sourceHealth} />
+      </div>
+      <div className="overview-support-card">
+        <WarningStatusPanel warning={data.officialWarning} />
+      </div>
+      <div className="overview-support-card">
+        <MlPrototypePanel
+          report={report}
+          experiment={experiment}
+          riskLevel={riskLevel}
+        />
       </div>
     </section>
   );
@@ -764,10 +785,6 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
       },
     ],
   };
-}
-
-function topPriorityFactors(factors = []) {
-  return factors.slice(0, 4);
 }
 
 function useParramattaSignals(selectedAreaId) {
@@ -1303,6 +1320,14 @@ function RainfallChart({ rainfallTrend }) {
     (maxValue, point) => Math.max(maxValue, Number(point.rainfall ?? 0)),
     0
   );
+  const totalRainfall = rainfallTrend.reduce(
+    (sum, point) => sum + Number(point.rainfall ?? 0),
+    0
+  );
+  const latestRainfall =
+    rainfallTrend.length > 0 ? Number(rainfallTrend[rainfallTrend.length - 1].rainfall ?? 0) : 0;
+  const uniqueDays = new Set(rainfallTrend.map((point) => point.time)).size;
+  const xAxisKey = uniqueDays <= 1 ? "shortTime" : "time";
 
   return (
     <section className="card signal-chart-card">
@@ -1311,6 +1336,11 @@ function RainfallChart({ rainfallTrend }) {
           <p className="section-label">Signal visualisation</p>
           <h3>Recent rainfall trend</h3>
         </div>
+      </div>
+      <div className="rainfall-summary-grid">
+        <InfoTile label="Latest" value={`${latestRainfall.toFixed(1)} mm`} />
+        <InfoTile label="Peak" value={`${peakRainfall.toFixed(1)} mm`} />
+        <InfoTile label="Observed total" value={`${totalRainfall.toFixed(1)} mm`} />
       </div>
       <div className="chart-box">
         <ResponsiveContainer width="100%" height={255}>
@@ -1327,7 +1357,7 @@ function RainfallChart({ rainfallTrend }) {
             </defs>
             <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
             <XAxis
-              dataKey="time"
+              dataKey={xAxisKey}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -1359,7 +1389,7 @@ function RainfallChart({ rainfallTrend }) {
         </ResponsiveContainer>
       </div>
       <p className="chart-note">
-        Bars show each observed rainfall reading in millimetres, with the darkest bar marking the local peak.
+        Bars show each observed rainfall reading in millimetres, with the darkest bar marking the local peak and the summary tiles showing the latest and cumulative rain observed in this window.
       </p>
     </section>
   );
@@ -1666,6 +1696,10 @@ function FrontPageSummary({ data }) {
         <ActionsPanel actions={data.recommendedActions} />
       </div>
 
+      <div className="frontpage-rainfall">
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
+      </div>
+
       <div className="frontpage-river">
         <RiverStatusPanel
           areaName={data.areaName}
@@ -1673,12 +1707,8 @@ function FrontPageSummary({ data }) {
         />
       </div>
 
-      <div className="frontpage-rainfall">
-        <RainfallChart rainfallTrend={data.rainfallTrend} />
-      </div>
-
-      <div className="frontpage-factors">
-        <FactorsPanel factors={topPriorityFactors(data.contributingFactors)} />
+      <div className="frontpage-reports">
+        <ReportsPanel reports={data.reports.slice(0, 3)} />
       </div>
 
       <div className="frontpage-map">
@@ -1695,25 +1725,6 @@ function InfoTile({ label, value }) {
       <p className="section-label">{label}</p>
       <h3>{value}</h3>
     </div>
-  );
-}
-
-// #contributing factors card
-function FactorsPanel({ factors }) {
-  return (
-    <section className="card">
-      <div className="section-header compact">
-        <div>
-          <p className="section-label">Why this alert was assigned</p>
-          <h3>Contributing factors</h3>
-        </div>
-      </div>
-      <ul className="factor-list">
-        {factors.map((factor, index) => (
-          <li key={index}>{factor}</li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
@@ -2395,6 +2406,7 @@ function ModelCardPanel({ modelCard }) {
   );
 }
 
+// #compact shadow-mode ml summary card
 function MlPrototypePanel({ report, experiment, riskLevel }) {
   const logisticCandidate =
     report.models.includes("logistic_regression")
@@ -2545,10 +2557,13 @@ export default function App() {
         <>
           <NotificationBanner notifications={notifications} />
           <OverviewPanel data={dashboardData} />
-          <DataEvidencePanel sources={dashboardData.sourceHealth} />
-          <WarningStatusPanel warning={dashboardData.officialWarning} />
           <FrontPageSummary data={dashboardData} />
-          <EvidencePanel evidence={dashboardData.evidence} />
+          <OverviewSupportGrid
+            data={dashboardData}
+            experiment={modelExperiment}
+            report={mlReport}
+            riskLevel={dashboardData.riskLevel}
+          />
         </>
       )}
 

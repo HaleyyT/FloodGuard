@@ -318,12 +318,33 @@ p {
   display: grid;
   gap: 14px;
   grid-template-areas:
-    "actions river factors"
-    "rainfall map map";
-  grid-template-columns: minmax(420px, 480px) minmax(0, 1.08fr) minmax(240px, 0.82fr);
+    "actions rainfall river"
+    "actions map reports";
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr) minmax(300px, 0.9fr);
   grid-template-rows: minmax(0, auto) minmax(0, auto);
   margin-bottom: 12px;
   min-width: 0;
+}
+
+.overview-support-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  margin-bottom: 12px;
+}
+
+.overview-support-card,
+.overview-support-card .card {
+  height: 100%;
+}
+
+.overview-support-card .card {
+  background: linear-gradient(160deg, #fbfdff, #dcecf8);
+}
+
+.overview-support-card .history-grid,
+.overview-support-card .ml-prototype-card .history-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .frontpage-actions {
@@ -341,8 +362,8 @@ p {
   grid-area: rainfall;
 }
 
-.frontpage-factors {
-  grid-area: factors;
+.frontpage-reports {
+  grid-area: reports;
 }
 
 .frontpage-map {
@@ -350,7 +371,7 @@ p {
 }
 
 .frontpage-actions,
-.frontpage-factors,
+.frontpage-reports,
 .frontpage-map,
 .frontpage-rainfall,
 .frontpage-river {
@@ -360,7 +381,7 @@ p {
 }
 
 .frontpage-actions .card,
-.frontpage-factors .card,
+.frontpage-reports .card,
 .frontpage-map .card,
 .frontpage-rainfall .card,
 .frontpage-river .card {
@@ -368,44 +389,47 @@ p {
 }
 
 .frontpage-actions .card,
-.frontpage-factors .card {
+.frontpage-reports .card {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
-.frontpage-actions .section-header,
-.frontpage-factors .section-header {
-  justify-content: center;
-  text-align: center;
+.frontpage-actions .card {
+  background: linear-gradient(160deg, #fffdf3, #dff0ea);
 }
 
-.frontpage-actions .section-label,
-.frontpage-factors .section-label {
-  margin-bottom: 10px;
+.frontpage-rainfall .card,
+.frontpage-river .card,
+.frontpage-map .card {
+  background: linear-gradient(160deg, #fbfdff, #d9ebf7);
 }
 
-.frontpage-actions .action-list,
-.frontpage-factors .factor-list {
+.frontpage-actions .section-header {
+  margin-bottom: 14px;
+}
+
+.frontpage-actions .action-list {
   display: grid;
   gap: 10px;
   list-style: none;
   padding-left: 0;
-  text-align: center;
 }
 
 .frontpage-actions .action-list li,
-.frontpage-factors .factor-list li {
-  background: rgba(251, 253, 255, 0.5);
-  border: 1px solid rgba(224, 234, 247, 0.8);
+.frontpage-reports .report-card {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(221, 232, 242, 0.9);
   border-radius: 10px;
-  margin-bottom: 20px;
   padding: 10px 12px;
 }
 
+.frontpage-actions .action-list li {
+  margin-bottom: 0;
+}
+
 .frontpage-river .river-status-card {
-  align-self: center;
-  width: calc(100% - 40px);
+  width: 100%;
 }
 
 .frontpage-river .river-grid {
@@ -413,11 +437,42 @@ p {
 }
 
 .frontpage-rainfall .signal-chart-card .chart-box {
-  height: 250px;
+  height: 235px;
+}
+
+.rainfall-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.rainfall-summary-grid .info-tile {
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.frontpage-reports {
+  align-self: start;
+}
+
+.frontpage-reports .card {
+  height: auto;
+}
+
+.frontpage-reports .reports-list {
+  margin-top: 0;
+}
+
+.frontpage-reports .report-description {
+  font-size: 0.84rem;
+}
+
+.frontpage-reports .report-card:last-child {
+  margin-bottom: 0;
 }
 
 .frontpage-map .map-panel {
-  height: 300px;
+  height: 270px;
 }
 
 .frontpage-map .location-card {
@@ -934,7 +989,7 @@ p {
 }
 
 .ml-prototype-card .history-grid {
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .evidence-card {
@@ -1020,13 +1075,17 @@ p {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .overview-support-grid {
+    grid-template-columns: 1fr;
+  }
+
   .frontpage-grid,
   .section-page {
     grid-template-areas:
       "actions"
-      "river"
-      "factors"
       "rainfall"
+      "river"
+      "reports"
       "map";
     grid-template-columns: 1fr;
   }
@@ -1063,6 +1122,7 @@ p {
   .evidence-grid,
   .architecture-footer,
   .community-summary,
+  .rainfall-summary-grid,
   .relevance-summary-grid,
   .report-form-grid,
   .community-page,
@@ -1130,9 +1190,11 @@ p {
   height: 210px;
   border-radius: 14px;
   background:
-    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.72), transparent 22%),
-    linear-gradient(180deg, #eef7ff, #ddebf8);
+    radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.78), transparent 24%),
+    radial-gradient(circle at 82% 22%, rgba(186, 216, 245, 0.6), transparent 22%),
+    linear-gradient(180deg, #f4faff, #d9e8f6);
   border: 1px solid #d9e7f5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   overflow: hidden;
   margin: 2px 0 14px;
 }
@@ -1150,25 +1212,25 @@ p {
   position: absolute;
   inset: 14% 10% 18% 16%;
   border-radius: 28px;
-  background: rgba(75, 140, 208, 0.08);
-  border: 1px solid rgba(75, 140, 208, 0.12);
+  background: linear-gradient(180deg, rgba(86, 148, 213, 0.12), rgba(86, 148, 213, 0.05));
+  border: 1px solid rgba(75, 140, 208, 0.14);
 }
 
 .map-river {
   position: absolute;
   width: 120%;
-  height: 38px;
-  background: linear-gradient(90deg, rgba(88, 155, 222, 0.3), rgba(61, 134, 209, 0.5));
-  top: 46%;
+  height: 42px;
+  background: linear-gradient(90deg, rgba(122, 177, 235, 0.36), rgba(56, 126, 198, 0.58));
+  top: 44%;
   left: -10%;
   transform: rotate(-12deg);
   border-radius: 999px;
-  box-shadow: 0 0 0 8px rgba(120, 182, 240, 0.08);
+  box-shadow: 0 0 0 9px rgba(120, 182, 240, 0.1);
 }
 
 .map-river-label {
   position: absolute;
-  top: 39%;
+  top: 40%;
   right: 18px;
   color: #255b92;
   font-size: 0.76rem;
@@ -1240,8 +1302,8 @@ p {
 
 .map-pin {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   display: flex;
@@ -1264,14 +1326,17 @@ p {
 
 .map-pin.high {
   background: #d86c6c;
+  box-shadow: 0 8px 18px rgba(216, 108, 108, 0.28);
 }
 
 .map-pin.moderate {
   background: #d8a24d;
+  box-shadow: 0 8px 18px rgba(216, 162, 77, 0.24);
 }
 
 .map-pin.low {
   background: #56a56d;
+  box-shadow: 0 8px 18px rgba(86, 165, 109, 0.24);
 }
 
 .map-event-label,
@@ -1347,9 +1412,10 @@ p {
 }
 
 .map-note {
-  color: #3c8de3;
-  font-size: 0.86rem;
+  color: #3a78d1;
+  font-size: 0.82rem;
   margin-bottom: 0;
+  text-align: center;
 }
 
 /* #river monitoring metric tiles */

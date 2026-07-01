@@ -1,213 +1,161 @@
 # FloodGuard
 
-FloodGuard is a flood-awareness prototype focused on **GWS** related suburbs - **Parramatta, North Parramatta and Toongabbie**. It combines **local weather observations, rainfall gauge data, and river-context signals** into a single explainable dashboard to help users understand changing local flood conditions. 
+FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie.
 
-## Prototype Preview
+It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. The live dashboard is intentionally honest about stale sources, fallback state, and unconnected official-warning feeds.
 
-![FloodGuard dashboard prototype](docs/images/db-12-6.png)
+![FloodGuard dashboard prototype](docs/images/floodguard-dashboard-prototype.png)
 
+## What is implemented
 
-## Why FloodGuard
+- Multi-area dashboard for Parramatta, North Parramatta, and Toongabbie
+- Live or fallback ingestion paths for rainfall, river, and weather context
+- Layered ingestion health with `coreFloodStatus`, `contextStatus`, `warningStatus`, and `overallStatus`
+- Source provenance and freshness reporting
+- Explainable rule-based risk scoring with decision audit output
+- Public community-signal intake with validation, rate limiting, duplicate checks, and review-safe image-link handling
+- Historical snapshot storage and tabular feature export
+- Notification decision logic with suppression and degraded-data safeguards
+- Python ML prototype pipeline for offline training, evaluation, metrics, and model-card reporting
+- Shadow-mode ML comparison surfaced in the backend and dashboard without overriding the live rule engine
 
-Flood-related information is often scattered across multiple public sources. FloodGuard brings key local signals into one place so residents and planners can more easily see:
+## Project structure
 
-- what is happening locally
-- which signals are contributing to risk
-- what actions may matter next
+- [floodguard-frontend](./floodguard-frontend/README.md): React dashboard and Node ingestion/API layer
+- [floodguard-ml](./floodguard-ml/README.md): Python ML experimentation workspace
+- [docs](./docs): submission notes, abstract/poster copy, and screenshots
+- [roadmap](./roadmap): implementation plans and progress tracking
 
-## Community Reports
+## How FloodGuard works
 
-FloodGuard now includes a small resident-report intake path. The dashboard can save area-specific community observations, and the backend stores them locally as unverified signals so they can later support validation, moderation, and image-assisted evidence.
+1. Public source adapters fetch rainfall, river, weather, and warning context when available.
+2. Source metadata records freshness, mode, strength, and fallback/degraded state.
+3. Area mapping and lightweight spatial relevance select the best local context for each pilot suburb.
+4. The rule engine combines rainfall, river, wetness, confidence, and public-signal pressure into an explainable concern score.
+5. The dashboard presents current concern, trust state, why the concern was assigned, and recommended next steps.
+6. Historical snapshots are exported into feature rows for offline Python ML experiments.
+7. ML results are shown in shadow mode only and do not control live alerts.
 
-Report intake includes JSON validation, request size limits, duplicate detection, basic rate limiting, and a quality score so community input is useful without being treated as automatically verified.
+## Why the reliability layer matters
 
-Recent validated reports are also summarised into a bounded public-signal pressure score. This score is attached to each area as supplementary evidence for dashboard explanations, decision audit context, and ML-ready feature rows without overriding official rainfall, river, or weather risk signals.
+FloodGuard is designed to avoid a common prototype failure mode: looking “live” even when sources are stale, missing, or fallback-only.
 
-The first image-assisted validation step is metadata-only for safety. Residents can attach a secure HTTPS image link to a report, but FloodGuard stores it as unreviewed supplementary evidence instead of uploading or automatically trusting the file. Linked evidence is placed into a review queue with priority scoring, and localhost/private-network image hosts are rejected.
+The app checks:
 
-## Current MVP
+- whether rainfall and river gauges are current enough for a live claim
+- whether supporting context is stale or partial
+- whether official warnings are configured or still missing
+- whether recent cache is being reused because a live refresh failed
 
-The current prototype includes:
+This means the dashboard can say “blocked”, “partial”, or “fallback” instead of silently pretending the data is current.
 
-- Parramatta-focused dashboard
-- weather observation integration
-- nearby rainfall trend visualisation
-- river-context integration
-- automatic backend ingestion pipeline
-- unified Parramatta signals API
-- config-based regional pilot for Parramatta, North Parramatta, and Toongabbie
-- explainable signal summary
-- evidence and action-oriented dashboard panels
+## ML status
 
-## Tech Stack
+FloodGuard includes a Python-based prototype ML pipeline that:
 
-- React
-- Vite
-- Recharts
-- Node.js backend using native HTTP
-- Normalised public weather, rainfall, and river data
-- Area-specific station relevance mapping
+- loads exported FloodGuard feature rows
+- runs baseline models such as majority baseline, logistic regression, and random forest
+- produces metrics and model-card reporting
+- compares ML outputs against rule-derived labels in shadow mode
 
-## Data Approach
+Current ML limitations:
 
-FloodGuard uses a **real-data-informed prototype pipeline**:
+- current historical labels are rule-derived rather than independent flood outcomes
+- the real export is severely imbalanced
+- there are no real `High` examples in the current dataset
+- ML is implemented for plumbing, safeguards, and comparison, not validated operational prediction
 
-1. Public source files or configured API URLs are fetched by the backend
-2. Raw weather, rainfall, and river data is normalised into a consistent internal format
-3. Area relevance rules select the weather, rainfall, and river stations that matter for each pilot suburb
-4. The backend stores the latest processed regional signal snapshot
-5. API routes serve clean JSON to the dashboard
-6. The frontend reads from the API first, then falls back to local JSON if the backend is not running
+## Limitations
 
-This makes the prototype easier to explain, maintain, and extend.
+- Official NSW SES / HazardWatch integration is architected and surfaced, but not yet fully connected as a stable live operational feed.
+- Core live-gauge ingestion can degrade to stale cache or fallback depending on source availability.
+- Historical storage is currently JSONL-based prototype storage, not production-grade event storage.
+- Risk thresholds are heuristic and not yet calibrated against validated flood outcomes.
+- The ML layer remains shadow mode until stronger labels and broader validation exist.
 
-## Risk Logic
-
-FloodGuard now uses a more explainable rule-based risk engine. The backend computes:
-
-- rainfall pressure
-- river pressure
-- wetness pressure
-- source confidence
-- rainfall windows for the latest 24h and 72h
-
-These features are combined into a 0-100 risk score and a Low / Moderate / High concern level.
-
-## Historical Storage
-
-Each ingestion run now stores compact area-level history records. These records preserve:
-
-- risk level and score
-- rainfall features
-- river station summary
-- source freshness and confidence
-
-This gives FloodGuard the memory needed for future baselines, rolling comparisons, and ML-ready feature datasets.
-
-## ML-Ready Features
-
-FloodGuard can now convert stored history into tabular feature rows. These rows include:
-
-- rainfall features
-- river tendency features
-- wetness and pressure scores
-- supplementary public-signal pressure from recent community reports
-- image-evidence counts from unreviewed community report links
-- image review queue priority counts
-- source confidence
-- lagged risk score change
-- target label for elevated local concern
-
-This prepares the project for a future baseline classifier without pretending that the current small history is enough for a real model yet.
-
-## Baseline Prediction
-
-FloodGuard now includes a transparent feature baseline that scores the latest stored feature row and compares it with the rule-engine label. It is deliberately simple and inspectable, so it acts as a bridge between rule-based decisions and future trained ML models.
-
-FloodGuard also exposes dataset-quality diagnostics and a baseline model card. These explain whether the feature table is ready for model comparison, which gates are still collecting data, what the baseline is trying to predict, and why it should not be treated as a final trained model yet.
-
-## Regional Pilot
-
-FloodGuard is now multi-area ready without jumping straight to PostGIS. The current pilot uses a simple config mapping to connect each area to relevant public stations:
-
-- Parramatta
-- North Parramatta
-- Toongabbie
-
-This is the practical middle step between a single-location prototype and a broader Western Sydney system. It keeps the logic explainable while making the backend reusable for more suburbs and catchments later.
-
-## Location-Aware Relevance
-
-The backend now scores how well the current weather, rainfall, and river feeds match the selected area configuration. Each area response includes:
-
-- matched versus expected station signals
-- source-level fit for weather, rainfall, and river stations
-- missing configured river or creek stations
-- an area relevance score shown on the dashboard
-- coordinate-based station distances and coverage radius
-
-This gives FloodGuard a clear pre-PostGIS relevance layer: the dashboard can explain why a signal belongs to Parramatta, North Parramatta, or Toongabbie before moving to automatic spatial joins later.
-
-`GET /api/spatial-relevance?area=parramatta` returns the lightweight spatial relevance view for an area. `GET /api/spatial-relevance?lat=-33.8&lon=151` resolves the nearest pilot area and ranks nearby signal stations.
-
-## Source Freshness
-
-FloodGuard now checks the source observation date, not only the time the backend fetched the file. This matters when a fallback feed is available but old. Stale sources are:
-
-- counted in the API freshness summary
-- shown on the dashboard
-- stored in history and feature rows
-- used to reduce risk confidence
-
-## Decision Audit
-
-FloodGuard now returns a decision audit with the weighted risk-score components and a reliability rating. This makes the rule engine easier to inspect because the dashboard can show:
-
-- rainfall, river, wetness, and weather score contributions
-- Low / Medium / High reliability
-- stale, fallback, missing, or failed source warnings
-- the thresholds used for Low, Moderate, and High concern
-
-## Run Locally
+## Run locally
 
 ### Requirements
+
 - Node.js 20.19+ or 22.12+
 - npm
+- Python 3.11+ for the `floodguard-ml` workspace
 
-### Start the app
+### Start the dashboard
+
 ```bash
-git clone https://github.com/HaleyyT/FloodGuard.git
-cd FloodGuard/floodguard-frontend
+cd floodguard-frontend
 npm install
 npm run dev
 ```
 
-### Start the ingestion API
+### Start the API
+
 ```bash
-cd FloodGuard/floodguard-frontend
-npm run ingest
+cd floodguard-frontend
 npm run api
 ```
 
-The API runs at `http://127.0.0.1:5174` by default.
+### Refresh ingestion manually
 
-Useful routes:
+```bash
+cd floodguard-frontend
+npm run ingest
+```
+
+### Check ingestion honesty state
+
+```bash
+cd floodguard-frontend
+npm run check:ingestion
+```
+
+### Run backend tests
+
+```bash
+cd floodguard-frontend
+npm run test
+```
+
+### Build production frontend
+
+```bash
+cd floodguard-frontend
+npm run build
+```
+
+### Run the Python ML pipeline
+
+See [floodguard-ml/README.md](./floodguard-ml/README.md).
+
+## Key API routes
 
 - `GET /api/health`
 - `GET /api/areas`
+- `GET /api/signals?area=parramatta`
+- `GET /api/source-health?area=parramatta`
+- `GET /api/decision-audit?area=parramatta`
 - `GET /api/community-reports?area=parramatta`
 - `POST /api/community-reports`
 - `GET /api/evidence-review?area=parramatta`
-- `GET /api/signals?area=parramatta`
-- `GET /api/signals?area=north-parramatta`
-- `GET /api/signals?area=toongabbie`
-- `GET /api/signals?area=toongabbie&refresh=true`
 - `GET /api/history?area=parramatta`
 - `GET /api/features?area=parramatta`
-- `GET /api/features?area=parramatta&format=csv`
 - `GET /api/dataset-quality?area=parramatta`
 - `GET /api/baseline-prediction?area=parramatta`
+- `GET /api/model-experiment?area=parramatta`
 - `GET /api/model-card?area=parramatta`
-- `GET /api/source-health?area=parramatta`
-- `GET /api/decision-audit?area=parramatta`
+- `GET /api/ml/report`
+- `GET /api/notifications?area=parramatta`
 - `GET /api/spatial-relevance?area=parramatta`
-- `GET /api/spatial-relevance?lat=-33.8&lon=151`
-- `GET /api/signals/parramatta`
-- `GET /api/rainfall/parramatta`
-- `GET /api/river/parramatta`
-- `GET /api/risk/parramatta`
 
-Optional remote source environment variables:
+## Submission notes
 
-- `FLOODGUARD_WEATHER_URL`
-- `FLOODGUARD_RAINFALL_URL`
-- `FLOODGUARD_RIVER_URL`
-- `VITE_FLOODGUARD_API_URL`
-- `VITE_FLOODGUARD_AREAS_API_URL`
-- `VITE_FLOODGUARD_BASELINE_API_URL`
-- `VITE_FLOODGUARD_COMMUNITY_REPORTS_API_URL`
-- `VITE_FLOODGUARD_REFRESH_MS`
+- [docs/submission-readiness.md](./docs/submission-readiness.md): verification status and claim boundaries
+- [docs/abstract.md](./docs/abstract.md): abstract-ready wording
+- [docs/poster-copy.md](./docs/poster-copy.md): poster text blocks
+- [docs/demo-script.md](./docs/demo-script.md): short demo flow
+- [docs/ml-scope.md](./docs/ml-scope.md): honest ML wording and scope guardrails
 
-The dashboard refreshes the selected area automatically. Set `VITE_FLOODGUARD_REFRESH_MS` to control the polling interval; the default is 60 seconds.
+## Honest one-line summary
 
-By default, FloodGuard now fetches live BoM Parramatta weather observations directly from BoM JSON and derives the rainfall graph from BoM rain-trace observations when no WaterNSW rainfall API URL is configured. `FLOODGUARD_RAINFALL_URL` and `FLOODGUARD_RIVER_URL` are still needed for fully live gauge rainfall and river-height feeds.
+FloodGuard is a reliability-aware flood-awareness prototype that turns local public signals into explainable local concern levels, while clearly showing when those signals are current, partial, stale, or only available through fallback data.
