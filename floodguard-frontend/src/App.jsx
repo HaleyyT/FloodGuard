@@ -24,6 +24,7 @@ import {
   fetchFloodguardAreas,
   fetchModelCard,
   fetchModelExperiment,
+  fetchMlReport,
   fetchParramattaSignals,
   localParramattaSignals,
   submitCommunityReport,
@@ -1215,6 +1216,53 @@ function useModelCard(selectedAreaId, lastUpdated) {
   return modelCard;
 }
 
+function useMlReport(lastUpdated) {
+  const [mlReport, setMlReport] = useState({
+    mode: "shadow",
+    liveScoringEnabled: false,
+    operationalUse: "disabled",
+    labelSource: "rule_derived",
+    readyForValidatedML: false,
+    models: [],
+    liveDecisionAuthority: "rule_engine",
+    summary: "ML report API is unavailable.",
+    realExport: {
+      available: false,
+      rows: 0,
+      elevatedRows: 0,
+      hasHighExamples: false,
+      summary: "Real export report is unavailable.",
+      limitation: "Historical ML evaluation is unavailable.",
+      warnings: ["Real export report is unavailable."],
+    },
+    scenarioStressTest: {
+      available: false,
+      summary: "Scenario stress-test report is unavailable.",
+      limitation: "Scenario stress-test report is unavailable.",
+      warnings: ["Scenario stress-test report is unavailable."],
+    },
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchMlReport({ signal: controller.signal })
+      .then(setMlReport)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setMlReport((current) => ({
+            ...current,
+            summary: "ML report API is unavailable.",
+          }));
+        }
+      });
+
+    return () => controller.abort();
+  }, [lastUpdated]);
+
+  return mlReport;
+}
+
 function buildHistorySummary(history = []) {
   const latest = history[0] ?? null;
   const previous = history[1] ?? null;
@@ -2347,6 +2395,71 @@ function ModelCardPanel({ modelCard }) {
   );
 }
 
+function MlPrototypePanel({ report, experiment, riskLevel }) {
+  const logisticCandidate =
+    report.models.includes("logistic_regression")
+      ? experiment.candidates?.find((candidate) => candidate.name.includes("logistic")) ?? null
+      : null;
+  const mlProbability =
+    logisticCandidate?.latestProbability === null || logisticCandidate?.latestProbability === undefined
+      ? null
+      : logisticCandidate.latestProbability;
+  const mlLabel = logisticCandidate?.latestLabel ?? "Waiting";
+  const ruleLabel = riskLevel ?? "Waiting";
+  const ruleIsElevated = ["Moderate", "High", "Elevated concern"].includes(ruleLabel);
+  const mlIsElevated = mlLabel === "Elevated concern";
+  const agreement =
+    logisticCandidate === null ? "Waiting" : mlIsElevated === ruleIsElevated ? "Yes" : "No";
+  const modelsLabel = report.models.length > 0 ? report.models.join(", ") : "Waiting for reports";
+  const limitationLine =
+    report.realExport?.limitation ?? "Historical ML report is unavailable.";
+  const scenarioLine =
+    report.scenarioStressTest?.limitation ?? "Scenario stress-test report is unavailable.";
+
+  return (
+    <section className="card ml-prototype-card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">ML prototype layer</p>
+          <h3>Shadow-mode comparison</h3>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Status" value={report.mode === "shadow" ? "Shadow mode" : report.mode} />
+        <InfoTile
+          label="Live scoring"
+          value={report.liveScoringEnabled ? "Enabled" : "Disabled"}
+        />
+        <InfoTile label="Models" value={String(report.models.length || 0)} />
+        <InfoTile
+          label="Training rows"
+          value={String(report.realExport?.rows ?? 0)}
+        />
+      </div>
+
+      <ul className="factor-list history-list">
+        <li>Models: {modelsLabel}</li>
+        <li>
+          Limitation: {(report.realExport?.elevatedRows ?? 0)} elevated rows,{" "}
+          {report.realExport?.hasHighExamples ? "real High examples present." : "no real High examples."}
+        </li>
+        <li>{limitationLine}</li>
+        <li>{scenarioLine}</li>
+        <li>
+          Rule engine: {ruleLabel}; ML prototype:{" "}
+          {mlProbability === null ? mlLabel : `elevated probability ${mlProbability.toFixed(2)}`}
+          ; agreement: {agreement}; authority: Rule engine
+        </li>
+        <li>
+          FloodGuard&apos;s live concern level still comes from the explainable rule engine. The ML
+          layer is for model comparison and future calibration, not operational alerts.
+        </li>
+      </ul>
+    </section>
+  );
+}
+
 // #system flow card
 function ArchitecturePanel() {
   return (
@@ -2406,6 +2519,7 @@ export default function App() {
   const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
   const modelExperiment = useModelExperiment(selectedAreaId, liveStatus.lastUpdated);
   const modelCard = useModelCard(selectedAreaId, liveStatus.lastUpdated);
+  const mlReport = useMlReport(liveStatus.lastUpdated);
   const notifications = useAreaNotifications(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = hasSelectedAreaSignals
     ? buildDashboardData(signals, sourceStatus, liveStatus)
@@ -2474,6 +2588,11 @@ export default function App() {
 
       {hasSelectedAreaSignals && activeView === "model" && (
         <section className="section-page model-page">
+          <MlPrototypePanel
+            report={mlReport}
+            experiment={modelExperiment}
+            riskLevel={dashboardData.riskLevel}
+          />
           <HistoryPanel history={history} />
           <FeatureReadinessPanel dataset={featureDataset} />
           <DatasetQualityPanel quality={datasetQuality} />

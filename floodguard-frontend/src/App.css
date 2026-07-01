@@ -929,6 +929,14 @@ p {
   font-size: 0.85rem;
 }
 
+.ml-prototype-card {
+  background: linear-gradient(160deg, #f5fbff, #e6f1fb);
+}
+
+.ml-prototype-card .history-grid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
 .evidence-card {
   background: #ebf0f9;
   border: 1px solid #e0eaf7;
