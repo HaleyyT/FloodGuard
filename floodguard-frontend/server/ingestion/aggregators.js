@@ -18,6 +18,7 @@ import {
 } from "./normalisers.js";
 import { assessRisk } from "./riskEngine.js";
 import { buildDatasetQualityReport, buildFeatureRows, buildFeatureSummary } from "./features.js";
+import { buildMlDatasetBundle, buildMlReadinessReport } from "./mlDataset.js";
 import { buildBaselineModelCard, buildBaselinePrediction } from "./baselineModel.js";
 import { buildModelExperiment } from "./modelExperiment.js";
 import { buildNotificationCandidates } from "./notificationRules.js";
@@ -809,6 +810,17 @@ export async function readAreaFeatureDataset(areaId = defaultAreaId, limit = 100
   };
 }
 
+export async function readAreaMlDataset(areaId = defaultAreaId, limit = 100) {
+  const history = await readAreaHistory(historyDir, areaId, limit);
+  const areaName = history[0]?.areaName ?? getAreaConfig(areaId)?.name ?? null;
+
+  return buildMlDatasetBundle(history, {
+    areaId,
+    areaName,
+    areas: areaName ? [areaName] : [],
+  });
+}
+
 export async function readAreaBaselinePrediction(areaId = defaultAreaId, limit = 100) {
   const history = await readAreaHistory(historyDir, areaId, limit);
   const rows = buildFeatureRows(history);
@@ -859,32 +871,13 @@ export async function readAreaMlReadiness(areaId = defaultAreaId, limit = 100) {
   const history = await readAreaHistory(historyDir, areaId, limit);
   const rows = buildFeatureRows(history);
   const quality = buildDatasetQualityReport(rows);
-  const summary = buildFeatureSummary(rows);
-  const classBalance = rows.reduce(
-    (counts, row) => {
-      const level = row.targetRiskLevel ?? "Unknown";
-      counts[level] = (counts[level] ?? 0) + 1;
-      return counts;
-    },
-    {},
-  );
+  const areaName = history[0]?.areaName ?? getAreaConfig(areaId)?.name ?? null;
 
-  return {
+  return buildMlReadinessReport(buildMlDatasetBundle(history, { areaId, areaName }).rows, quality, {
     areaId,
-    rows: rows.length,
-    labelSource: "rule_derived",
-    hasIndependentLabels: false,
-    classBalance,
-    readyForTraining: false,
-    readyForRuleComparison: quality.readyForModelComparison,
-    reason: quality.readyForModelComparison
-      ? "Feature history is sufficient for shadow-model comparison, but labels are still rule-derived."
-      : quality.warnings[0] ?? "Insufficient reliable history for training or comparison.",
-    readiness: summary.readinessNote,
-    datasetQuality: quality,
-    nextStep:
-      "Keep Node as the live product system and use a future floodguard-ml Python workspace for offline training and evaluation.",
-  };
+    areaName,
+    areas: areaName ? [areaName] : [],
+  });
 }
 
 export function readSpatialRelevance({ areaId = null, lat = null, lon = null } = {}) {

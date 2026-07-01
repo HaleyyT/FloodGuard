@@ -3,6 +3,7 @@ import {
   readAreaBaselinePrediction,
   readAreaDatasetQuality,
   readAreaFeatureDataset,
+  readAreaMlDataset,
   readAreaModelExperiment,
   readAreaModelCard,
   readAreaMlReadiness,
@@ -22,6 +23,7 @@ import {
   readCommunityReports,
 } from "./ingestion/communityReports.js";
 import { featureRowsToCsv } from "./ingestion/features.js";
+import { mlDatasetRowsToCsv } from "./ingestion/mlDataset.js";
 import { readGaugeMetadata } from "./ingestion/gaugeMetadata.js";
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
 import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
@@ -67,6 +69,8 @@ function routes() {
     "/api/evidence-review?area=parramatta",
     "/api/features?area=parramatta",
     "/api/features?area=parramatta&format=csv",
+    "/api/ml/dataset?area=parramatta",
+    "/api/ml/dataset?area=parramatta&format=csv",
     "/api/dataset-quality?area=parramatta",
     "/api/baseline-prediction?area=parramatta",
     "/api/model-experiment?area=parramatta",
@@ -156,7 +160,7 @@ function resolveAreaId(url) {
   if (queryArea) return queryArea;
 
   const pathMatch = url.pathname.match(
-    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment|notifications(?:\/preview)?|warnings|ml\/readiness)\/([^/]+)$/,
+    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment|notifications(?:\/preview)?|warnings|ml\/readiness|ml\/dataset)\/([^/]+)$/,
   );
   return pathMatch?.[1] ?? defaultAreaId;
 }
@@ -248,9 +252,11 @@ const defaultDependencies = {
   readAreaBaselinePrediction,
   readAreaDatasetQuality,
   readAreaFeatureDataset,
+  readAreaMlDataset,
   readAreaModelCard,
   readAreaModelExperiment,
   readAreaMlReadiness,
+  mlDatasetRowsToCsv,
   readAreaNotifications,
   readAreaWarningStatus,
   readCommunityReports,
@@ -432,6 +438,30 @@ export async function routeRequest(request, response, deps = defaultDependencies
 
     if (format === "csv") {
       sendText(response, 200, deps.featureRowsToCsv(dataset.rows), "text/csv; charset=utf-8");
+      return;
+    }
+
+    sendJson(response, 200, dataset);
+    return;
+  }
+
+  if (url.pathname === "/api/ml/dataset") {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    const format = url.searchParams.get("format") ?? "json";
+
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    const dataset = await deps.readAreaMlDataset(areaId, limit);
+
+    if (format === "csv") {
+      sendText(response, 200, deps.mlDatasetRowsToCsv(dataset.rows), "text/csv; charset=utf-8");
       return;
     }
 
@@ -669,6 +699,30 @@ export async function routeRequest(request, response, deps = defaultDependencies
     }
 
     sendJson(response, 200, await deps.readAreaMlReadiness(areaId, limit));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/ml/dataset/")) {
+    const areaId = resolveAreaId(url);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    const format = url.searchParams.get("format") ?? "json";
+
+    if (!deps.selectAreaSignals(regionalSignals, areaId)) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    const dataset = await deps.readAreaMlDataset(areaId, limit);
+
+    if (format === "csv") {
+      sendText(response, 200, deps.mlDatasetRowsToCsv(dataset.rows), "text/csv; charset=utf-8");
+      return;
+    }
+
+    sendJson(response, 200, dataset);
     return;
   }
 
