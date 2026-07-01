@@ -24,6 +24,7 @@ import {
 } from "./ingestion/communityReports.js";
 import { featureRowsToCsv } from "./ingestion/features.js";
 import { mlDatasetRowsToCsv } from "./ingestion/mlDataset.js";
+import { readMlReport } from "./ingestion/mlReport.js";
 import { readGaugeMetadata } from "./ingestion/gaugeMetadata.js";
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
 import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
@@ -71,6 +72,7 @@ function routes() {
     "/api/features?area=parramatta&format=csv",
     "/api/ml/dataset?area=parramatta",
     "/api/ml/dataset?area=parramatta&format=csv",
+    "/api/ml/report",
     "/api/dataset-quality?area=parramatta",
     "/api/baseline-prediction?area=parramatta",
     "/api/model-experiment?area=parramatta",
@@ -256,6 +258,7 @@ const defaultDependencies = {
   readAreaModelCard,
   readAreaModelExperiment,
   readAreaMlReadiness,
+  readMlReport,
   mlDatasetRowsToCsv,
   readAreaNotifications,
   readAreaWarningStatus,
@@ -309,6 +312,11 @@ export async function routeRequest(request, response, deps = defaultDependencies
 
   if (url.pathname === "/api/gauge-metadata") {
     sendJson(response, 200, await deps.readGaugeMetadata());
+    return;
+  }
+
+  if (url.pathname === "/api/ml/report") {
+    sendJson(response, 200, await deps.readMlReport());
     return;
   }
 

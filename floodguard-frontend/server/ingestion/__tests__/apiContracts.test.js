@@ -294,6 +294,29 @@ function dependencies() {
         "areaId,areaName,observedAt,rainfall1hMm,riverDelta1hM,targetElevatedConcern,labelSource,warningActive",
         `${rows[0].areaId},${rows[0].areaName},${rows[0].observedAt},${rows[0].rainfall1hMm},${rows[0].riverDelta1hM},${rows[0].targetElevatedConcern},${rows[0].labelSource},${rows[0].warningActive}`,
       ].join("\n"),
+    readMlReport: async () => ({
+      mode: "shadow",
+      liveScoringEnabled: false,
+      operationalUse: "disabled",
+      labelSource: "rule_derived",
+      readyForValidatedML: false,
+      models: ["majority_baseline", "logistic_regression", "random_forest"],
+      liveDecisionAuthority: "rule_engine",
+      summary: "FloodGuard ML is implemented as a prototype shadow-mode comparison layer.",
+      realExport: {
+        available: true,
+        rows: 3000,
+        elevatedRows: 18,
+        hasHighExamples: false,
+        summary: "Real export is useful for pipeline validation but not meaningful predictive claims.",
+        limitation: "Rule-derived labels and severe class imbalance limit interpretation.",
+      },
+      scenarioStressTest: {
+        available: true,
+        summary: "Synthetic scenario dataset validates ML plumbing only.",
+        limitation: "Scenario metrics are not real-world validation.",
+      },
+    }),
   };
 }
 
@@ -370,6 +393,18 @@ test("ml dataset endpoint exports csv rows without crashing", async () => {
   assert.match(headers["content-type"], /text\/csv/i);
   assert.match(body, /areaId,areaName,observedAt/);
   assert.match(body, /rule_derived/);
+});
+
+test("ml report endpoint returns stable shadow-mode contract", async () => {
+  const { statusCode, body } = await requestJson("/api/ml/report", dependencies());
+  assert.equal(statusCode, 200);
+  assert.equal(body.mode, "shadow");
+  assert.equal(body.liveScoringEnabled, false);
+  assert.equal(body.readyForValidatedML, false);
+  assert.equal(body.liveDecisionAuthority, "rule_engine");
+  assert.ok(Array.isArray(body.models));
+  assert.match(body.realExport.limitation, /Rule-derived|imbalance/i);
+  assert.match(body.scenarioStressTest.limitation, /not real-world validation|synthetic/i);
 });
 
 test("signals endpoint returns weather, rainfall, river, and source metadata", async () => {
