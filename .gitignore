@@ -30,3 +30,6 @@ coverage/
 *.tsbuildinfo
 
 roadmap/
+floodguard-ml/.vendor/
+floodguard-ml/.matplotlib-cache/
+floodguard-ml/src/__pycache__/

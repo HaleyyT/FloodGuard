@@ -1,9 +1,9 @@
+numpy
 pandas
+scipy
 scikit-learn
-xgboost
-lightgbm
 joblib
 matplotlib
-seaborn
-jupyter
-requests
+# Optional later model families:
+# xgboost
+# lightgbm
