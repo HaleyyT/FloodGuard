@@ -28,6 +28,7 @@ pnpm-debug.log*
 # misc
 coverage/
 *.tsbuildinfo
+.codex-stage/
 
 roadmap/
 floodguard-ml/.vendor/
