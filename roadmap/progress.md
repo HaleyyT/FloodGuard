@@ -4,7 +4,7 @@ _Last updated: 2026-07-01_
 
 ## Purpose
 
-This document is an honest progress report for FloodGuard based on the current codebase, tests, and implemented API/UI behavior.
+This document is a progress report for FloodGuard based on the current codebase, tests, and implemented API/UI behavior.
 
 It is intentionally careful about the difference between:
 
@@ -315,7 +315,7 @@ Current testing limitation:
 
 ## Strengths
 
-- FloodGuard is now unusually honest for a prototype about live vs cached vs stale vs missing data.
+- FloodGuard is now ready for a prototype about live vs cached vs stale vs missing data.
 - The project has a strong evidence-first architecture.
 - Risk is explainable rather than opaque.
 - Official warnings are kept separate from local gauge-derived concern.
@@ -433,7 +433,7 @@ What was completed:
 - abstract, poster copy, demo script, and submission-readiness notes were added under `docs/`;
 - verification was rerun with `lint`, `test`, `build`, and `check:ingestion`.
 
-Current honest outcome:
+Current outcome:
 
 - frontend quality and project narrative are stronger;
 - test and build status are strong;
