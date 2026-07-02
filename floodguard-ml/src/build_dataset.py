@@ -4,17 +4,145 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from utils import (
+    DEFAULT_DATASET,
+    EVENT_LABEL_AVAILABLE_COLUMN,
+    EVENT_LABEL_NOTES_COLUMN,
+    EVENT_LABEL_SOURCE_COLUMN,
+    EVENT_LABEL_STRENGTH_COLUMN,
+    EVENT_TARGET_COLUMN,
+    FEATURE_EXPORT_DATASET,
+    GROUP_TIMESTAMP_COLUMN,
+    LABELS_DATASET,
+    RULE_LABEL_SOURCE_COLUMN,
+    RULE_TARGET_COLUMN,
+    SCENARIO_DATASET,
+    ensure_runtime_dirs,
+)
+
 import pandas as pd
 
-from utils import DATA_DIR, DEFAULT_DATASET, SCENARIO_DATASET, ensure_runtime_dirs
+
+def normalise_area_id(value: str) -> str:
+    """Reduce area labels into a stable key for label joins."""
+
+    return str(value).strip().lower().replace(" ", "-")
+
+
+def load_feature_export(feature_path: Path = FEATURE_EXPORT_DATASET) -> pd.DataFrame:
+    """Load the Node-exported feature rows and prepare stable join fields."""
+
+    dataframe = pd.read_csv(feature_path)
+    if dataframe.empty:
+        return dataframe
+
+    dataframe[GROUP_TIMESTAMP_COLUMN] = pd.to_datetime(
+        dataframe[GROUP_TIMESTAMP_COLUMN], errors="coerce", utc=True
+    )
+    dataframe["areaJoinKey"] = dataframe["areaId"].map(normalise_area_id)
+    dataframe[RULE_TARGET_COLUMN] = (
+        pd.to_numeric(dataframe["targetElevatedConcern"], errors="coerce").fillna(0).astype(int)
+    )
+    if "labelSource" in dataframe.columns:
+        dataframe[RULE_LABEL_SOURCE_COLUMN] = dataframe["labelSource"].fillna("rule_derived")
+    else:
+        dataframe[RULE_LABEL_SOURCE_COLUMN] = "rule_derived"
+    return dataframe
+
+
+def load_label_windows(labels_path: Path = LABELS_DATASET) -> pd.DataFrame:
+    """Load time-window labels or return an empty frame when none are available yet."""
+
+    if not labels_path.exists():
+        return pd.DataFrame(
+            columns=[
+                "area",
+                "start_time",
+                "end_time",
+                "label",
+                "label_source",
+                "label_strength",
+                "notes",
+            ]
+        )
+
+    labels = pd.read_csv(labels_path)
+    if labels.empty:
+        return labels
+
+    labels["areaJoinKey"] = labels["area"].map(normalise_area_id)
+    labels["start_time"] = pd.to_datetime(labels["start_time"], errors="coerce", utc=True)
+    labels["end_time"] = pd.to_datetime(labels["end_time"], errors="coerce", utc=True)
+    labels["label"] = pd.to_numeric(labels["label"], errors="coerce")
+    return labels
+
+
+def apply_event_labels_to_features(
+    feature_rows: pd.DataFrame, label_rows: pd.DataFrame
+) -> pd.DataFrame:
+    """Join the strongest matching event label onto each feature row."""
+
+    dataframe = feature_rows.copy()
+    dataframe[EVENT_TARGET_COLUMN] = pd.NA
+    dataframe[EVENT_LABEL_SOURCE_COLUMN] = pd.NA
+    dataframe[EVENT_LABEL_STRENGTH_COLUMN] = pd.NA
+    dataframe[EVENT_LABEL_NOTES_COLUMN] = pd.NA
+    dataframe[EVENT_LABEL_AVAILABLE_COLUMN] = 0
+
+    if dataframe.empty or label_rows.empty:
+        return dataframe
+
+    strength_rank = {"strong": 3, "moderate": 2, "weak": 1}
+    ordered_labels = label_rows.copy()
+    ordered_labels["strengthRank"] = ordered_labels["label_strength"].map(strength_rank).fillna(0)
+    ordered_labels = ordered_labels.sort_values(
+        by=["strengthRank", "start_time"], ascending=[False, True]
+    )
+
+    for index, row in dataframe.iterrows():
+        matches = ordered_labels[
+            (ordered_labels["areaJoinKey"] == row["areaJoinKey"])
+            & (ordered_labels["start_time"] <= row[GROUP_TIMESTAMP_COLUMN])
+            & (ordered_labels["end_time"] >= row[GROUP_TIMESTAMP_COLUMN])
+        ]
+        if matches.empty:
+            continue
+
+        best_match = matches.iloc[0]
+        dataframe.at[index, EVENT_TARGET_COLUMN] = int(best_match["label"])
+        dataframe.at[index, EVENT_LABEL_SOURCE_COLUMN] = best_match["label_source"]
+        dataframe.at[index, EVENT_LABEL_STRENGTH_COLUMN] = best_match["label_strength"]
+        dataframe.at[index, EVENT_LABEL_NOTES_COLUMN] = best_match["notes"]
+        dataframe.at[index, EVENT_LABEL_AVAILABLE_COLUMN] = 1
+
+    return dataframe
+
+
+def build_training_dataset(
+    feature_path: Path = FEATURE_EXPORT_DATASET,
+    labels_path: Path = LABELS_DATASET,
+    output_path: Path = DEFAULT_DATASET,
+) -> Path:
+    """Join time-window labels onto the feature export and write the training dataset."""
+
+    ensure_runtime_dirs()
+    feature_rows = load_feature_export(feature_path)
+    labelled_rows = apply_event_labels_to_features(feature_rows, load_label_windows(labels_path))
+
+    if not labelled_rows.empty:
+        labelled_rows["targetElevatedConcern"] = labelled_rows[RULE_TARGET_COLUMN]
+        labelled_rows["labelSource"] = labelled_rows[RULE_LABEL_SOURCE_COLUMN]
+
+    output_path.write_text(labelled_rows.to_csv(index=False), encoding="utf-8")
+    return output_path
 
 
 def build_scenario_dataset(output_path: Path = SCENARIO_DATASET) -> Path:
     """Create a balanced scenario dataset for stress-testing the ML pipeline.
 
     This dataset is synthetic and must never be presented as real-world validation.
-    It exists so the Day 3 pipeline can exercise multi-signal flood patterns and
-    show that the modelling/reporting stack works on a less collapsed class mix.
+    It exists so the pipeline can exercise multi-signal flood patterns and show that
+    the modelling/reporting stack works on a less collapsed class mix.
     """
 
     ensure_runtime_dirs()
@@ -43,7 +171,14 @@ def build_scenario_dataset(output_path: Path = SCENARIO_DATASET) -> Path:
                     "riskScore": base_values["riskScore"] + (index % 3),
                     "ruleConcernLevel": rule_level,
                     "targetElevatedConcern": target,
+                    "targetRuleElevated": target,
+                    "targetEventElevated": target,
                     "labelSource": "scenario_generated",
+                    "ruleLabelSource": "scenario_generated",
+                    "eventLabelSource": "scenario_generated",
+                    "eventLabelStrength": "synthetic",
+                    "eventLabelNotes": "Synthetic scenario row for ML plumbing only.",
+                    "eventLabelAvailable": 1,
                     "rainfallLatestMm": base_values["rainfallLatestMm"] + (index % 2),
                     "rainfall1hMm": base_values["rainfall1hMm"] + (index % 3),
                     "rainfall3hMm": base_values["rainfall3hMm"] + (index % 5),
@@ -194,9 +329,11 @@ def build_scenario_dataset(output_path: Path = SCENARIO_DATASET) -> Path:
 
 def main() -> None:
     ensure_runtime_dirs()
+    training_path = build_training_dataset()
     scenario_path = build_scenario_dataset()
     print("ML dataset builder ready.")
-    print(f"Real export: {DEFAULT_DATASET}")
+    print(f"Feature export: {FEATURE_EXPORT_DATASET}")
+    print(f"Label-joined training dataset: {training_path}")
     print(f"Scenario stress-test export: {scenario_path}")
     print("Next step: run evaluate.py to train the prototype models and generate reports.")
 

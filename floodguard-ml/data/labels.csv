@@ -1,0 +1,4 @@
+area,start_time,end_time,label,label_source,label_strength,notes
+parramatta,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,"Placeholder non-event window for label-join plumbing only; not independent flood validation."
+north-parramatta,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,"Placeholder non-event window for label-join plumbing only; not independent flood validation."
+toongabbie,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,"Placeholder non-event window for label-join plumbing only; not independent flood validation."

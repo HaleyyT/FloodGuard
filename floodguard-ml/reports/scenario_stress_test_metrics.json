@@ -18,6 +18,15 @@
     "labelSourceCounts": {
       "scenario_generated": 84
     },
+    "ruleLabelSourceCounts": {
+      "scenario_generated": 84
+    },
+    "eventLabelSourceCounts": {
+      "scenario_generated": 84
+    },
+    "eventLabelStrengthCounts": {
+      "synthetic": 84
+    },
     "ruleConcernLevelCounts": {
       "Low": 36,
       "Moderate": 24,
@@ -28,6 +37,9 @@
       "0": 36
     },
     "positiveRate": 0.5714285714285714,
+    "eventLabelCoverage": 1.0,
+    "eventLabelRowCount": 84,
+    "eventPositiveCount": 48,
     "missingByColumn": {
       "areaId": 0,
       "areaName": 0,
@@ -35,7 +47,14 @@
       "riskScore": 0,
       "ruleConcernLevel": 0,
       "targetElevatedConcern": 0,
+      "targetRuleElevated": 0,
+      "targetEventElevated": 0,
       "labelSource": 0,
+      "ruleLabelSource": 0,
+      "eventLabelSource": 0,
+      "eventLabelStrength": 0,
+      "eventLabelNotes": 0,
+      "eventLabelAvailable": 0,
       "rainfallLatestMm": 0,
       "rainfall1hMm": 0,
       "rainfall3hMm": 0,

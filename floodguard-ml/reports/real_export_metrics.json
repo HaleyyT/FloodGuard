@@ -1,6 +1,6 @@
 {
   "datasetName": "real_export",
-  "datasetPath": "/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-ml/data/floodguard_features.csv",
+  "datasetPath": "/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-ml/data/floodguard_training_dataset.csv",
   "mode": "shadow",
   "liveScoringEnabled": false,
   "readyForValidatedML": false,
@@ -14,9 +14,18 @@
       "Parramatta, NSW",
       "Toongabbie, NSW"
     ],
-    "uniqueTimestamps": 999,
+    "uniqueTimestamps": 997,
     "labelSourceCounts": {
       "rule_derived": 3000
+    },
+    "ruleLabelSourceCounts": {
+      "rule_derived": 3000
+    },
+    "eventLabelSourceCounts": {
+      "manual_demo": 3000
+    },
+    "eventLabelStrengthCounts": {
+      "weak": 3000
     },
     "ruleConcernLevelCounts": {
       "Low": 2982,
@@ -27,10 +36,13 @@
       "1": 18
     },
     "positiveRate": 0.006,
+    "eventLabelCoverage": 1.0,
+    "eventLabelRowCount": 3000,
+    "eventPositiveCount": 0,
     "missingByColumn": {
       "areaId": 0,
       "areaName": 0,
-      "observedAt": 0,
+      "observedAt": 6,
       "riskScore": 0,
       "ruleConcernLevel": 0,
       "targetElevatedConcern": 0,
@@ -55,6 +67,14 @@
       "warningStatus": 2868,
       "areaRelevanceScore": 0,
       "nearestStationDistanceKm": 0,
+      "areaJoinKey": 0,
+      "targetRuleElevated": 0,
+      "ruleLabelSource": 0,
+      "targetEventElevated": 0,
+      "eventLabelSource": 0,
+      "eventLabelStrength": 0,
+      "eventLabelNotes": 0,
+      "eventLabelAvailable": 0,
       "trainingEligibility": 0
     }
   },
@@ -62,6 +82,8 @@
     "Dataset has severe class imbalance: 18 elevated row(s) out of 3000.",
     "Positive rate is only 0.6%; plain accuracy would be misleading.",
     "Labels are rule-derived, not independent flood outcomes, so metrics are illustrative only.",
+    "Joined event labels currently contain no elevated positives, so they are useful for plumbing but not event validation.",
+    "Current joined event labels are all weak-strength placeholders and must not be treated as validated outcomes.",
     "No High class examples are available in this dataset.",
     "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive."
   ],
@@ -167,7 +189,7 @@
             ]
           ]
         },
-        "rocAuc": 0.8688268156424582,
+        "rocAuc": 0.8688268156424581,
         "prAuc": 0.6056657223796034
       },
       "classWeight": "balanced",
@@ -224,7 +246,7 @@
             ]
           ]
         },
-        "rocAuc": 0.9229050279329609,
+        "rocAuc": 0.9229050279329608,
         "prAuc": 0.6086206896551724
       },
       "classWeight": "balanced",

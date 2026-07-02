@@ -26,6 +26,9 @@ function defaultReport() {
       available: false,
       rows: 0,
       elevatedRows: 0,
+      eventLabelRows: 0,
+      eventPositiveCount: 0,
+      eventLabelCoverage: 0,
       hasHighExamples: false,
       bestPrototypeModel: null,
       summary: "Real export report is unavailable, so ML evidence is limited to live rule-engine outputs.",
@@ -75,11 +78,17 @@ function buildRealExportSummary(report) {
 
   const elevatedRows = report.summary?.targetCounts?.["1"] ?? 0;
   const hasHighExamples = (report.summary?.ruleConcernLevelCounts?.High ?? 0) > 0;
+  const eventLabelRows = report.summary?.eventLabelRowCount ?? 0;
+  const eventPositiveCount = report.summary?.eventPositiveCount ?? 0;
+  const eventLabelCoverage = report.summary?.eventLabelCoverage ?? 0;
 
   return {
     available: true,
     rows: report.summary?.rowCount ?? 0,
     elevatedRows,
+    eventLabelRows,
+    eventPositiveCount,
+    eventLabelCoverage,
     hasHighExamples,
     bestPrototypeModel: report.bestPrototypeModel ?? null,
     summary:

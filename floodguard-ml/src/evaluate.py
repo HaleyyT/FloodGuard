@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from build_dataset import build_scenario_dataset
+from build_dataset import build_scenario_dataset, build_training_dataset
 from model_card import write_model_card
 from train_baseline import train_logistic_regression, train_majority_baseline
 from train_tree_models import train_random_forest
@@ -164,6 +164,7 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
 
 def main() -> None:
     ensure_runtime_dirs()
+    build_training_dataset()
     build_scenario_dataset(SCENARIO_DATASET)
     dataset_results = [
         evaluate_dataset("real_export", DEFAULT_DATASET),

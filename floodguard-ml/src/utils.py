@@ -17,6 +17,11 @@ VENDOR_DIR = PROJECT_ROOT / ".vendor"
 MPL_CONFIG_DIR = PROJECT_ROOT / ".matplotlib-cache"
 
 if VENDOR_DIR.exists():
+    if sys.version_info[:2] != (3, 12):
+        raise RuntimeError(
+            "FloodGuard's vendored ML dependencies currently target Python 3.12. "
+            "Please run the ML pipeline with python3.12."
+        )
     sys.path.insert(0, str(VENDOR_DIR))
 os.environ.setdefault("MPLCONFIGDIR", str(MPL_CONFIG_DIR))
 
@@ -43,13 +48,22 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 LABEL_COLUMN = "targetElevatedConcern"
-DEFAULT_DATASET = DATA_DIR / "floodguard_features.csv"
+FEATURE_EXPORT_DATASET = DATA_DIR / "floodguard_features.csv"
+LABELS_DATASET = DATA_DIR / "labels.csv"
+DEFAULT_DATASET = DATA_DIR / "floodguard_training_dataset.csv"
 SCENARIO_DATASET = DATA_DIR / "floodguard_scenario_features.csv"
 TRAINING_ELIGIBILITY_COLUMN = "trainingEligibility"
 SCENARIO_NAME_COLUMN = "scenarioName"
 GROUP_TIMESTAMP_COLUMN = "observedAt"
 TARGET_LABEL_COLUMN = "ruleConcernLevel"
 LABEL_SOURCE_COLUMN = "labelSource"
+RULE_TARGET_COLUMN = "targetRuleElevated"
+EVENT_TARGET_COLUMN = "targetEventElevated"
+RULE_LABEL_SOURCE_COLUMN = "ruleLabelSource"
+EVENT_LABEL_SOURCE_COLUMN = "eventLabelSource"
+EVENT_LABEL_STRENGTH_COLUMN = "eventLabelStrength"
+EVENT_LABEL_NOTES_COLUMN = "eventLabelNotes"
+EVENT_LABEL_AVAILABLE_COLUMN = "eventLabelAvailable"
 
 # These predictors stay closer to real signals and reliability context rather than
 # directly reusing the rule-engine's own output score as an input feature.
@@ -153,6 +167,34 @@ def build_dataset_summary(dataframe: pd.DataFrame, dataset_name: str) -> dict[st
     rule_counts = usable[TARGET_LABEL_COLUMN].value_counts(dropna=False).to_dict()
     label_counts = usable[LABEL_SOURCE_COLUMN].value_counts(dropna=False).to_dict()
     missing_counts = usable.isna().sum().to_dict()
+    rule_label_counts = (
+        usable[RULE_LABEL_SOURCE_COLUMN].value_counts(dropna=False).to_dict()
+        if RULE_LABEL_SOURCE_COLUMN in usable.columns
+        else {}
+    )
+    event_label_counts = (
+        usable[EVENT_LABEL_SOURCE_COLUMN].fillna("unlabelled").value_counts(dropna=False).to_dict()
+        if EVENT_LABEL_SOURCE_COLUMN in usable.columns
+        else {}
+    )
+    event_label_strength_counts = (
+        usable[EVENT_LABEL_STRENGTH_COLUMN]
+        .fillna("unknown")
+        .value_counts(dropna=False)
+        .to_dict()
+        if EVENT_LABEL_STRENGTH_COLUMN in usable.columns
+        else {}
+    )
+    event_label_available = (
+        int(usable[EVENT_LABEL_AVAILABLE_COLUMN].fillna(0).astype(int).sum())
+        if EVENT_LABEL_AVAILABLE_COLUMN in usable.columns
+        else 0
+    )
+    event_positive_count = (
+        int((usable[EVENT_TARGET_COLUMN].fillna(0) == 1).sum())
+        if EVENT_TARGET_COLUMN in usable.columns
+        else 0
+    )
 
     positive_count = int(target_counts.get(1, 0))
     row_count = int(len(usable))
@@ -168,9 +210,15 @@ def build_dataset_summary(dataframe: pd.DataFrame, dataset_name: str) -> dict[st
         else [],
         "uniqueTimestamps": int(usable[GROUP_TIMESTAMP_COLUMN].dropna().nunique()),
         "labelSourceCounts": label_counts,
+        "ruleLabelSourceCounts": rule_label_counts,
+        "eventLabelSourceCounts": event_label_counts,
+        "eventLabelStrengthCounts": event_label_strength_counts,
         "ruleConcernLevelCounts": rule_counts,
         "targetCounts": {str(key): int(value) for key, value in target_counts.items()},
         "positiveRate": positive_rate,
+        "eventLabelCoverage": event_label_available / row_count if row_count else 0.0,
+        "eventLabelRowCount": event_label_available,
+        "eventPositiveCount": event_positive_count,
         "missingByColumn": {key: int(value) for key, value in missing_counts.items()},
     }
 
@@ -184,6 +232,9 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
     positive_rate = summary["positiveRate"]
     high_count = summary["ruleConcernLevelCounts"].get("High", 0)
     label_sources = summary["labelSourceCounts"]
+    event_label_row_count = summary.get("eventLabelRowCount", 0)
+    event_positive_count = summary.get("eventPositiveCount", 0)
+    event_label_strengths = summary.get("eventLabelStrengthCounts", {})
 
     if row_count < 30:
         warnings.append(
@@ -200,6 +251,18 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
     if label_sources == {"rule_derived": row_count}:
         warnings.append(
             "Labels are rule-derived, not independent flood outcomes, so metrics are illustrative only."
+        )
+    if event_label_row_count == 0:
+        warnings.append(
+            "No independently joined event labels are available yet; targetEventElevated remains unlabelled."
+        )
+    elif event_positive_count == 0:
+        warnings.append(
+            "Joined event labels currently contain no elevated positives, so they are useful for plumbing but not event validation."
+        )
+    if event_label_strengths == {"weak": event_label_row_count} and event_label_row_count > 0:
+        warnings.append(
+            "Current joined event labels are all weak-strength placeholders and must not be treated as validated outcomes."
         )
     if high_count == 0:
         warnings.append("No High class examples are available in this dataset.")

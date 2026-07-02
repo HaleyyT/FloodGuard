@@ -10,15 +10,21 @@ It is not used for live alerting or official warning decisions.
 
 - Real export rows: 3000
 - Real export positives: 18
+- Real export joined event-label rows: 3000
+- Real export joined event positives: 0
 - Scenario stress-test rows: 84
 - Real export label source: rule_derived
+- Real export training target: `targetElevatedConcern` / `targetRuleElevated`
+- Real export independent-label layer: `targetEventElevated` when a curated label window overlaps the row
 - Scenario label source: scenario_generated
 
 ## Target Definition
 
-- `targetElevatedConcern = 1` when the rule concern level is `Moderate` or `High`.
-- `targetElevatedConcern = 0` when the rule concern level is `Low`.
-- Current real-export labels are rule-derived, not independent flood outcomes.
+- `targetRuleElevated = 1` when the rule concern level is `Moderate` or `High`.
+- `targetRuleElevated = 0` when the rule concern level is `Low`.
+- `targetElevatedConcern` is kept as the current alias for the rule-derived training target.
+- `targetEventElevated` is joined from time-window labels when curated event labels are available.
+- Current real-export training still relies on rule-derived labels, not independent flood outcomes.
 
 ## Features Used
 
@@ -80,6 +86,7 @@ It is not used for live alerting or official warning decisions.
 
 - Dataset has severe class imbalance in the real export.
 - Labels are rule-derived, not independent flood outcomes.
+- Joined event labels exist to prepare better supervision, but coverage and strength must be inspected before treating them as validation evidence.
 - No real `High` examples are present in the current historical export.
 - Metrics are illustrative and should not be interpreted as validated flood prediction performance.
 - ML must remain shadow-mode.

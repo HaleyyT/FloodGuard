@@ -9,8 +9,8 @@ Current intent:
 
 Current workflow:
 1. Export structured feature rows from the Node backend with `npm run export:ml-dataset`.
-2. Build a scenario stress-test dataset with `python3 floodguard-ml/src/build_dataset.py`.
-3. Run the full prototype pipeline with `python3 floodguard-ml/src/evaluate.py`.
+2. Build a label-joined training dataset plus scenario stress-test dataset with `python3.12 floodguard-ml/src/build_dataset.py`.
+3. Run the full prototype pipeline with `python3.12 floodguard-ml/src/evaluate.py`.
 4. Review outputs in `floodguard-ml/reports/` and `floodguard-ml/models/`.
 
 Suggested backend endpoint:
@@ -27,6 +27,10 @@ Implemented Python scripts:
 
 Important limitations:
 - the real export is still heavily imbalanced;
-- current labels are `rule_derived`;
+- the live training target is still `rule_derived`;
+- joined event labels are currently a preparation layer, not validated flood outcomes;
 - metrics are illustrative only;
 - ML must remain shadow-mode.
+
+Environment note:
+- the vendored ML dependency bundle in `floodguard-ml/.vendor` currently targets Python 3.12, so use `python3.12` for local ML commands.

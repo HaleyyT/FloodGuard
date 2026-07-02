@@ -34,6 +34,9 @@ test("readMlReport reads available files without crashing on partial reports", a
           targetCounts: { 1: 18 },
           ruleConcernLevelCounts: { Low: 2982, Moderate: 18 },
           labelSourceCounts: { rule_derived: 3000 },
+          eventLabelRowCount: 3000,
+          eventPositiveCount: 0,
+          eventLabelCoverage: 1,
         },
         bestPrototypeModel: "random_forest",
         warnings: ["Real export metrics remain illustrative only."],
@@ -47,6 +50,9 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.realExport.available, true);
     assert.equal(report.realExport.rows, 3000);
     assert.equal(report.realExport.elevatedRows, 18);
+    assert.equal(report.realExport.eventLabelRows, 3000);
+    assert.equal(report.realExport.eventPositiveCount, 0);
+    assert.equal(report.realExport.eventLabelCoverage, 1);
     assert.equal(report.realExport.hasHighExamples, false);
     assert.match(report.realExport.summary, /pipeline validation/i);
   } finally {
