@@ -14,6 +14,8 @@ dist-ssr
 server/storage/*.json
 server/storage/*.jsonl
 server/storage/history/*.jsonl
+server/storage/history/
+server/storage/source-cache/
 
 # Editor directories and files
 .vscode/*

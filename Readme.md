@@ -134,6 +134,7 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 - `GET /api/areas`
 - `GET /api/signals?area=parramatta`
 - `GET /api/source-health?area=parramatta`
+- `GET /api/ingestion-readiness`
 - `GET /api/decision-audit?area=parramatta`
 - `GET /api/community-reports?area=parramatta`
 - `POST /api/community-reports`
@@ -155,6 +156,15 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 - [docs/poster-copy.md](./docs/poster-copy.md): poster text blocks
 - [docs/demo-script.md](./docs/demo-script.md): short demo flow
 - [docs/ml-scope.md](./docs/ml-scope.md): honest ML wording and scope guardrails
+
+## Ingestion-readiness note
+
+FloodGuard now separates:
+
+- submission readiness, where degraded external sources are acceptable if they are labelled honestly
+- strict live-source readiness, where rainfall and river must be genuinely fresh live readings
+
+This is why a stale-source run can still demonstrate a successful trust layer even when strict live operation is not currently available.
 
 ## Honest one-line summary
 

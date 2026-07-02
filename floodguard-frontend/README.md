@@ -41,6 +41,12 @@ Run the ingestion honesty check:
 npm run check:ingestion
 ```
 
+Run the strict live-source check:
+
+```bash
+npm run check:ingestion:live
+```
+
 ## Data flow
 
 ```text
@@ -67,6 +73,10 @@ FloodGuard surfaces reliability explicitly:
 - area-fit and lightweight spatial relevance before a future PostGIS layer
 
 This is one of the key design goals of the prototype.
+
+`npm run check:ingestion` now represents submission readiness rather than strict live availability. It passes when FloodGuard handles stale, cached, fallback, or unavailable external sources honestly without crashing or mislabelling them as live.
+
+`npm run check:ingestion:live` is stricter. It only passes when rainfall and river readings are genuinely fresh live readings.
 
 ## Risk engine
 
@@ -155,6 +165,7 @@ Important:
 - `GET /api/notifications?area=parramatta`
 - `GET /api/notifications/preview?area=parramatta`
 - `GET /api/source-health?area=parramatta`
+- `GET /api/ingestion-readiness`
 - `GET /api/decision-audit?area=parramatta`
 - `GET /api/spatial-relevance?area=parramatta`
 - `GET /api/spatial-relevance?lat=-33.8&lon=151`
