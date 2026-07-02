@@ -1,18 +1,32 @@
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
+import { assessIngestionReadiness } from "./ingestion/readiness.js";
 import { readOrRefreshRegionalSignals, runRegionalIngestion } from "./ingestion/aggregators.js";
 import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
 
 const shouldRefresh = !process.argv.includes("--no-refresh");
+const checkMode = process.argv.includes("--live") ? "live" : "submission";
 const regionalSignals = shouldRefresh
   ? await runRegionalIngestion()
   : await readOrRefreshRegionalSignals();
 const health = regionalSignals.ingestionHealth ?? buildRegionalIngestionHealth(regionalSignals);
+const registry = getSourceRegistry(regionalSignals);
+const readiness = assessIngestionReadiness({
+  health,
+  mode: checkMode,
+  sourceRegistry: registry,
+});
 
+console.log(
+  `FloodGuard ingestion readiness (${checkMode}): ${readiness.result}${
+    readiness.submissionBlocking ? " [submission blocking]" : ""
+  }`,
+);
 console.log(`FloodGuard ingestion health: ${health.overallStatus ?? health.status}`);
 console.log(`Core flood gauges: ${health.coreFloodStatus ?? "unknown"}`);
 console.log(`Supporting context: ${health.contextStatus ?? "unknown"}`);
 console.log(`Official warnings: ${health.warningStatus ?? "unknown"}`);
 if (health.summary) console.log(health.summary);
+console.log(readiness.summary);
 console.log(`Areas checked: ${health.areaCount}`);
 
 for (const area of health.areas) {
@@ -43,8 +57,14 @@ for (const area of health.areas) {
   }
 }
 
-if (!health.ready) {
-  const registry = getSourceRegistry();
+if (readiness.failures.length > 0) {
+  console.log("\nReadiness failures:");
+  for (const failure of readiness.failures) {
+    console.log(`  FAIL: ${failure}`);
+  }
+}
+
+if (!readiness.liveOperationalReady || readiness.result === "fail") {
   console.log("\nLive source policy:");
   console.log(
     `  rainfall: ${registry.activeIngestion.rainfall.sourceStrength}, ${registry.activeIngestion.rainfall.adapter}`,
@@ -52,6 +72,7 @@ if (!health.ready) {
   console.log(
     `  river: ${registry.activeIngestion.river.sourceStrength}, ${registry.activeIngestion.river.adapter}`,
   );
-  console.log("  A blocked result means core live gauges are stale, unreachable, or fallback-only.");
-  process.exitCode = 1;
+  console.log("  A blocked live result means core live gauges are stale, unreachable, or fallback-only.");
 }
+
+process.exitCode = readiness.result === "fail" ? 1 : 0;

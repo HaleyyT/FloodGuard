@@ -8,6 +8,7 @@
     "dev": "vite",
     "ingest": "node server/ingest.js",
     "check:ingestion": "node server/check-ingestion.js",
+    "check:ingestion:live": "node server/check-ingestion.js --live",
     "export:ml-dataset": "node server/export-ml-dataset.js",
     "build": "vite build",
     "lint": "eslint .",

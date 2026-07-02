@@ -222,6 +222,18 @@ function dependencies() {
       areas: [
         {
           areaId: "parramatta",
+          areaName: "Parramatta, NSW",
+          overallStatus: "partial",
+          coreFloodStatus: "warn",
+          contextStatus: "pass",
+          warningStatus: "missing",
+          areaRelevance: {
+            status: "complete",
+            score: 100,
+            matchedSignals: 5,
+            expectedSignals: 5,
+            missingRiverStations: [],
+          },
           sources: regionalSignals.areas.parramatta.sourceMetadata,
         },
       ],
@@ -405,6 +417,21 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.ok(Array.isArray(body.models));
   assert.match(body.realExport.limitation, /Rule-derived|imbalance/i);
   assert.match(body.scenarioStressTest.limitation, /not real-world validation|synthetic/i);
+});
+
+test("ingestion readiness endpoint separates submission readiness from strict live readiness", async () => {
+  const submission = await requestJson("/api/ingestion-readiness", dependencies());
+  const live = await requestJson("/api/ingestion-readiness?mode=live", dependencies());
+
+  assert.equal(submission.statusCode, 200);
+  assert.equal(submission.body.checkName, "ingestion-readiness");
+  assert.equal(submission.body.result, "pass_with_degraded_external_source");
+  assert.equal(submission.body.submissionBlocking, false);
+
+  assert.equal(live.statusCode, 200);
+  assert.equal(live.body.checkName, "ingestion-readiness-live");
+  assert.equal(live.body.result, "fail");
+  assert.equal(live.body.liveOperationalReady, false);
 });
 
 test("signals endpoint returns weather, rainfall, river, and source metadata", async () => {
