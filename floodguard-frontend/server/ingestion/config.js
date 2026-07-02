@@ -1,7 +1,9 @@
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const riskThresholdConfigPath = path.join(rootDir, "server/config/risk-thresholds.json");
 
 export const rawDataDir = path.join(rootDir, "src/data/raw");
 export const storageDir = path.join(rootDir, "server/storage");
@@ -20,6 +22,40 @@ function numberEnv(name, fallback) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
+function readRiskThresholdConfig() {
+  try {
+    const raw = fs.readFileSync(riskThresholdConfigPath, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return {
+      version: "env-fallback",
+      reviewStatus: "not_expert_validated",
+      reviewNeeded: ["hydrologist", "emergency_management_stakeholder"],
+      defaults: {
+        rainfall: {
+          oneHourConcernMm: 10,
+          threeHourConcernMm: 20,
+          twentyFourHourConcernMm: 50,
+          seventyTwoHourWetnessMm: 80,
+        },
+        river: {
+          rapidRiseOneHourM: 0.15,
+          rapidRiseThreeHourM: 0.3,
+          steadyDeltaM: 0.02,
+        },
+        confidence: {
+          minimumCoreCoverage: 0.7,
+        },
+      },
+      areas: {},
+      notes: "Risk-threshold config file was unavailable, so FloodGuard used built-in prototype defaults.",
+    };
+  }
+}
+
+export const riskThresholdConfig = readRiskThresholdConfig();
+const defaultRiskThresholds = riskThresholdConfig.defaults ?? {};
+
 export const ingestionPolicy = {
   allowLocalFallback: booleanEnv("FLOODGUARD_ALLOW_LOCAL_FALLBACK", true),
   maxAgeHours: {
@@ -35,18 +71,44 @@ export const ingestionPolicy = {
 
 export const floodFeatureThresholds = {
   rainfall: {
-    oneHourConcernMm: numberEnv("FLOODGUARD_RAIN_1H_CONCERN_MM", 10),
-    threeHourConcernMm: numberEnv("FLOODGUARD_RAIN_3H_CONCERN_MM", 20),
-    twentyFourHourConcernMm: numberEnv("FLOODGUARD_RAIN_24H_CONCERN_MM", 50),
-    seventyTwoHourWetnessMm: numberEnv("FLOODGUARD_RAIN_72H_WETNESS_MM", 80),
+    oneHourConcernMm: numberEnv(
+      "FLOODGUARD_RAIN_1H_CONCERN_MM",
+      defaultRiskThresholds.rainfall?.oneHourConcernMm ?? 10,
+    ),
+    threeHourConcernMm: numberEnv(
+      "FLOODGUARD_RAIN_3H_CONCERN_MM",
+      defaultRiskThresholds.rainfall?.threeHourConcernMm ?? 20,
+    ),
+    twentyFourHourConcernMm: numberEnv(
+      "FLOODGUARD_RAIN_24H_CONCERN_MM",
+      defaultRiskThresholds.rainfall?.twentyFourHourConcernMm ?? 50,
+    ),
+    seventyTwoHourWetnessMm: numberEnv(
+      "FLOODGUARD_RAIN_72H_WETNESS_MM",
+      defaultRiskThresholds.rainfall?.seventyTwoHourWetnessMm ?? 80,
+    ),
   },
   river: {
-    rapidRiseOneHourM: numberEnv("FLOODGUARD_RIVER_RISE_1H_M", 0.15),
-    rapidRiseThreeHourM: numberEnv("FLOODGUARD_RIVER_RISE_3H_M", 0.3),
-    steadyDeltaM: numberEnv("FLOODGUARD_RIVER_STEADY_DELTA_M", 0.02),
+    rapidRiseOneHourM: numberEnv(
+      "FLOODGUARD_RIVER_RISE_1H_M",
+      defaultRiskThresholds.river?.rapidRiseOneHourM ?? 0.15,
+    ),
+    rapidRiseThreeHourM: numberEnv(
+      "FLOODGUARD_RIVER_RISE_3H_M",
+      defaultRiskThresholds.river?.rapidRiseThreeHourM ?? 0.3,
+    ),
+    steadyDeltaM: numberEnv(
+      "FLOODGUARD_RIVER_STEADY_DELTA_M",
+      defaultRiskThresholds.river?.steadyDeltaM ?? 0.02,
+    ),
   },
   confidence: {
-    minimumCoreCoverage: Number(numberEnv("FLOODGUARD_MIN_CORE_COVERAGE", 70) / 100),
+    minimumCoreCoverage: Number(
+      numberEnv(
+        "FLOODGUARD_MIN_CORE_COVERAGE",
+        Number((defaultRiskThresholds.confidence?.minimumCoreCoverage ?? 0.7) * 100),
+      ) / 100,
+    ),
   },
 };
 

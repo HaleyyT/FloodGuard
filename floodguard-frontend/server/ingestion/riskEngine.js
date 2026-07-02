@@ -1,4 +1,4 @@
-import { floodFeatureThresholds } from "./config.js";
+import { floodFeatureThresholds, riskThresholdConfig } from "./config.js";
 
 function clamp(value, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
@@ -268,6 +268,8 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
     thresholds: {
       moderate: 45,
       high: 70,
+      thresholdConfigVersion: riskThresholdConfig.version ?? "unknown",
+      thresholdReviewStatus: riskThresholdConfig.reviewStatus ?? "unknown",
     },
     components,
     reliability,

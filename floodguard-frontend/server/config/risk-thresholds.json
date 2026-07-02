@@ -1,0 +1,37 @@
+{
+  "version": "prototype-v1",
+  "reviewStatus": "not_expert_validated",
+  "reviewNeeded": [
+    "hydrologist",
+    "local_council_flood_engineer",
+    "emergency_management_stakeholder"
+  ],
+  "defaults": {
+    "rainfall": {
+      "oneHourConcernMm": 10,
+      "threeHourConcernMm": 20,
+      "twentyFourHourConcernMm": 50,
+      "seventyTwoHourWetnessMm": 80
+    },
+    "river": {
+      "rapidRiseOneHourM": 0.15,
+      "rapidRiseThreeHourM": 0.3,
+      "steadyDeltaM": 0.02
+    },
+    "confidence": {
+      "minimumCoreCoverage": 0.7
+    }
+  },
+  "areas": {
+    "parramatta": {
+      "notes": "Prototype thresholds for review against Parramatta catchment behaviour and station cadence."
+    },
+    "north-parramatta": {
+      "notes": "Prototype thresholds currently inherit defaults and require suburb-specific review."
+    },
+    "toongabbie": {
+      "notes": "Prototype thresholds currently inherit defaults and require suburb-specific review."
+    }
+  },
+  "notes": "FloodGuard prototype thresholds require expert calibration before operational use. They are intentionally conservative and should be reviewed alongside historical flood events, local warning practice, and station update behaviour."
+}
