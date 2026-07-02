@@ -1,0 +1,35 @@
+%%{init: {"layout": "elk"}}%%
+flowchart TB
+    subgraph A["Evidence Sources"]
+      direction TB
+      A1["Rainfall gauges"]
+      A2["River gauges"]
+      A3["BoM weather"]
+      A4["SES / HazardWatch"]
+    end
+
+    B["Ingestion adapters"]
+    C["Signal normalisation"]
+    D["Reliability checks"]
+    E["Feature extraction"]
+    F["Explainable risk engine"]
+
+    subgraph G["Outputs"]
+      direction TB
+      G1["Dashboard"]
+      G2["Notifications"]
+    end
+
+    A --> B --> C --> D --> E --> F --> G
+
+    classDef indigo stroke:#818cf8,fill:#eef2ff,color:#111827;
+    classDef teal stroke:#2dd4bf,fill:#f0fdfa,color:#111827;
+    classDef violet stroke:#a78bfa,fill:#f5f3ff,color:#111827;
+    classDef orange stroke:#fb923c,fill:#fff7ed,color:#111827;
+    classDef cyan stroke:#22d3ee,fill:#ecfeff,color:#111827;
+
+    class A,A1,A2,A3,A4 indigo;
+    class B teal;
+    class C,D,E violet;
+    class F orange;
+    class G,G1,G2 cyan;

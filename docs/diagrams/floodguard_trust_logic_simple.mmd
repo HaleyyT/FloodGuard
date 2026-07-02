@@ -1,0 +1,31 @@
+%%{init: {"layout": "elk"}}%%
+flowchart TB
+    A["New reading"]
+    B{"Known source?"}
+    C{"Fresh timestamp?"}
+    D{"Primary gauge?"}
+    E["Use in core flood status"]
+    F["Use as context only"]
+    G["Use cache with warning"]
+    H["Block live claim"]
+
+    A --> B
+    B -- "No" --> H
+    B -- "Yes" --> C
+    C -- "No" --> H
+    C -- "Yes" --> D
+    D -- "Yes" --> E
+    D -- "No" --> I{"Context or cache?"}
+    I -- "Context" --> F
+    I -- "Recent cache" --> G
+    I -- "Fallback / stale" --> H
+
+    classDef indigo stroke:#818cf8,fill:#eef2ff,color:#111827;
+    classDef violet stroke:#a78bfa,fill:#f5f3ff,color:#111827;
+    classDef cyan stroke:#22d3ee,fill:#ecfeff,color:#111827;
+    classDef red stroke:#f87171,fill:#fef2f2,color:#111827;
+
+    class A indigo;
+    class B,C,D,I violet;
+    class E,F,G cyan;
+    class H red;
