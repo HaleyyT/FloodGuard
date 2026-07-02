@@ -3,7 +3,7 @@
 
 FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. The live dashboard is intentionally honest about stale sources, fallback state, and unconnected official-warning feeds. 
 
-FloodGuard was accepted for showcase at Coding Fest 2026, an event opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
+FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
 
 ![FloodGuard dashboard prototype](docs/images/floodguard-dashboard-prototype.png)
 
