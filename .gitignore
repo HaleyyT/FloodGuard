@@ -34,3 +34,4 @@ roadmap/
 floodguard-ml/.vendor/
 floodguard-ml/.matplotlib-cache/
 floodguard-ml/src/__pycache__/
+floodguard-ml/tests/__pycache__/
