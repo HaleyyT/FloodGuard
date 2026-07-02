@@ -57,6 +57,17 @@ Important limitation:
 - Historical storage is still prototype-grade JSONL storage.
 - Risk thresholds remain heuristic and are not yet event-calibrated.
 
+## Safety and expert oversight
+
+FloodGuard is a flood-awareness prototype and does not replace official emergency advice. Future deployment requires hydrologist, council, and emergency-management review to calibrate rainfall and river thresholds, validate next-step guidance, and reduce the risk of unsafe automated recommendations.
+
+Current safeguards:
+
+- official warnings stay separate from FloodGuard-generated concern
+- stale or cached evidence is labelled explicitly
+- strong alerts are suppressed when core evidence is degraded
+- ML remains shadow mode until independent validation is available
+
 ## Takeaway
 
 FloodGuard shows that a flood-awareness prototype becomes much more credible when it explains not only the risk level, but also the strength and reliability of the evidence behind that risk.

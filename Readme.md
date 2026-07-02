@@ -6,6 +6,10 @@ It combines local rainfall, river, weather, public-signal, and source-trust evid
 
 ![FloodGuard dashboard prototype](docs/images/floodguard-dashboard-prototype.png)
 
+## Coding Fest status
+
+FloodGuard was accepted for showcase at Coding Fest 2026. Coding Fest was open to university students broadly, and FloodGuard's poster was selected for final judging and showcase presentation.
+
 ## What is implemented
 
 - Multi-area dashboard for Parramatta, North Parramatta, and Toongabbie
@@ -65,6 +69,24 @@ Current ML limitations:
 - there are no real `High` examples in the current dataset
 - ML is implemented for plumbing, safeguards, and comparison, not validated operational prediction
 
+## Safety and domain expert oversight
+
+FloodGuard does not replace NSW SES, Bureau of Meteorology, council, or emergency-service advice. The project currently provides local flood-awareness support by combining public signals with reliability checks and explainable risk logic.
+
+Because flood-risk guidance is high stakes, future versions require expert review of:
+
+- rainfall thresholds and river-signal calibration
+- next-step wording and notification safety
+- when degraded evidence should suppress stronger guidance
+- ML labels, validation strategy, and operational boundaries
+
+FloodGuard therefore keeps:
+
+- official warnings separate from FloodGuard-generated concern
+- stale and cached data labelled explicitly
+- strong app-generated alerts suppressed when core evidence is degraded
+- ML in shadow mode rather than operational use
+
 ## Limitations
 
 - Official NSW SES / HazardWatch integration is architected and surfaced, but not yet fully connected as a stable live operational feed.
@@ -72,6 +94,7 @@ Current ML limitations:
 - Historical storage is currently JSONL-based prototype storage, not production-grade event storage.
 - Risk thresholds are heuristic and not yet calibrated against validated flood outcomes.
 - The ML layer remains shadow mode until stronger labels and broader validation exist.
+- Future deployment requires hydrologist, council, and emergency-management review before any operational safety use.
 
 ## Run locally
 
@@ -157,6 +180,7 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 - [docs/poster-copy.md](./docs/poster-copy.md): poster text blocks
 - [docs/demo-script.md](./docs/demo-script.md): short demo flow
 - [docs/ml-scope.md](./docs/ml-scope.md): honest ML wording and scope guardrails
+- [docs/expert-review-plan.md](./docs/expert-review-plan.md): domain-review pathway for thresholds, wording, and future validation
 
 ## Ingestion-readiness note
 
