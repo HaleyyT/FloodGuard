@@ -15,7 +15,8 @@ All commands below were run from [floodguard-frontend/package.json](/Users/haley
 | `npm run lint` | pass | ESLint completed with no reported errors. |
 | `npm run test` | pass | `50/50` backend and contract tests passed. |
 | `npm run build` | pass with warning | Production build succeeds; Vite reports a large main-chunk warning. |
-| `npm run check:ingestion` | blocked | Core live gauges are currently stale cached data and official warnings are still not connected. |
+| `npm run check:ingestion` | pass with degraded external source | Submission readiness now passes when stale/cached external sources are labelled honestly and no live claim is made. |
+| `npm run check:ingestion:live` | fail | Strict live readiness still fails because current rainfall and river readings are not fresh live readings. |
 
 ## What is now submission-ready
 
@@ -27,7 +28,7 @@ All commands below were run from [floodguard-frontend/package.json](/Users/haley
 
 ## Current ingestion reality
 
-`npm run check:ingestion` currently reports:
+`npm run check:ingestion:live` currently reports:
 
 - overall ingestion health: `blocked`
 - core flood gauges: `blocked`
@@ -44,6 +45,7 @@ Observed reasons in the latest run:
 What this means:
 
 - the honesty and degraded-source logic are working correctly;
+- the current run is acceptable for submission readiness because degraded-state handling is explicit;
 - the current run is not healthy enough to claim fully live flood-gauge operation;
 - submission/demo wording must continue to describe live ingestion as architecture with degraded-state handling, not guaranteed current operation.
 
