@@ -79,6 +79,7 @@ Avoid claims:
 
 - [Readme.md](/Users/haleytran/Desktop/Projects/FloodGuard/Readme.md:1)
 - [floodguard-frontend/README.md](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/README.md:1)
+- [docs/final-verification.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/final-verification.md:1)
 - [docs/abstract.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/abstract.md:1)
 - [docs/poster-copy.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/poster-copy.md:1)
 - [docs/demo-script.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/demo-script.md:1)

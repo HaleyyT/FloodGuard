@@ -1,0 +1,54 @@
+%%{init: {
+  "theme": "base",
+  "layout": "elk",
+  "themeVariables": {
+    "fontFamily": "Inter, Arial, sans-serif",
+    "fontSize": "22px",
+    "primaryTextColor": "#0f172a",
+    "lineColor": "#475569",
+    "primaryBorderColor": "#334155"
+  },
+  "flowchart": {
+    "curve": "basis",
+    "nodeSpacing": 60,
+    "rankSpacing": 80,
+    "padding": 18
+  }
+}}%%
+flowchart LR
+  A["New reading<br/><span style='font-size:16px'>rainfall / river / warning</span>"]
+  B{"Source<br/>registered?"}
+  C{"Timestamp<br/>fresh?"}
+  D{"Primary flood<br/>source?"}
+  K{"Recent valid<br/>cache?"}
+
+  E["Use in core<br/>flood status"]
+  F["Use as<br/>context signal"]
+  G["Use cache<br/>+ warning"]
+  H["Block live claim<br/><span style='font-size:16px'>show data-quality warning</span>"]
+
+  A --> B
+  B -- "Yes" --> C
+  B -- "No" --> H
+  C -- "Yes" --> D
+  C -- "No" --> K
+  D -- "Yes" --> E
+  D -- "No" --> F
+  K -- "Yes" --> G
+  K -- "No" --> H
+
+  classDef input stroke:#3730a3,fill:#eef2ff,color:#0f172a,stroke-width:2px;
+  classDef gate stroke:#6d28d9,fill:#f5f3ff,color:#0f172a,stroke-width:2px;
+  classDef cacheGate stroke:#c2410c,fill:#fff7ed,color:#0f172a,stroke-width:2px;
+  classDef good stroke:#16a34a,fill:#dcfce7,color:#0f172a,stroke-width:2px;
+  classDef context stroke:#0891b2,fill:#ecfeff,color:#0f172a,stroke-width:2px;
+  classDef warning stroke:#d97706,fill:#fffbeb,color:#0f172a,stroke-width:2px;
+  classDef block stroke:#dc2626,fill:#fef2f2,color:#0f172a,stroke-width:2px;
+
+  class A input;
+  class B,C,D gate;
+  class K cacheGate;
+  class E good;
+  class F context;
+  class G warning;
+  class H block;

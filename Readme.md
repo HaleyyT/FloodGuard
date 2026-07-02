@@ -152,6 +152,7 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 ## Submission notes
 
 - [docs/submission-readiness.md](./docs/submission-readiness.md): verification status and claim boundaries
+- [docs/final-verification.md](./docs/final-verification.md): final command results, manual demo checks, and known caveats
 - [docs/abstract.md](./docs/abstract.md): abstract-ready wording
 - [docs/poster-copy.md](./docs/poster-copy.md): poster text blocks
 - [docs/demo-script.md](./docs/demo-script.md): short demo flow
