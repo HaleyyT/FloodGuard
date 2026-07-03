@@ -1,0 +1,6 @@
+area,event_name,start_time,end_time,label_class,label_source,label_strength,evidence_link,notes
+parramatta,Baseline non-event demo window,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,,Placeholder non-event window carried forward for label plumbing only.
+north-parramatta,Baseline non-event demo window,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,,Placeholder non-event window carried forward for label plumbing only.
+toongabbie,Baseline non-event demo window,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,,Placeholder non-event window carried forward for label plumbing only.
+parramatta,Candidate elevated warning window for review,2026-06-29T00:00:00Z,2026-06-29T12:00:00Z,1,warning_derived,moderate,,Candidate event window reserved for future evidence review; not yet validated for model claims.
+toongabbie,Candidate local impact window for review,2026-06-30T00:00:00Z,2026-06-30T06:00:00Z,2,impact_candidate,weak,,Backlog-only placeholder for future local impact verification; not used as validated supervision yet.
