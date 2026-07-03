@@ -10,6 +10,7 @@
     "check:ingestion": "node server/check-ingestion.js",
     "check:ingestion:live": "node server/check-ingestion.js --live",
     "export:ml-dataset": "node server/export-ml-dataset.js",
+    "replay:history": "python3.12 ../floodguard-ml/src/replay_events.py",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
