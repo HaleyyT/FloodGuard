@@ -30,6 +30,17 @@ test("readMlReport reads available files without crashing on partial reports", a
       path.join(reportsDir, "real_export_metrics.json"),
       `${JSON.stringify({
         bestPrototypeModel: "random_forest",
+        targetSelection: {
+          selectedTargetKind: "rule",
+          selectedTargetColumn: "targetRuleElevated",
+          readyForIndependentSupervision: false,
+          reason: "Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).",
+          eventTargetCandidate: {
+            eligibleRowCount: 3000,
+            positiveCount: 0,
+            strengthCounts: { weak: 3000 },
+          },
+        },
         predictionPreview: {
           predictedLabel: "Elevated concern",
           predictedProbability: 0.78,
@@ -71,6 +82,12 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.realExport.hasHighExamples, false);
     assert.equal(report.predictionPreview.predictedProbability, 0.78);
     assert.equal(report.calibrationSummary.available, true);
+    assert.equal(report.targetSelection.available, true);
+    assert.equal(report.targetSelection.selectedTargetKind, "rule");
+    assert.equal(report.targetSelection.selectedTargetColumn, "targetRuleElevated");
+    assert.equal(report.targetSelection.readyForIndependentSupervision, false);
+    assert.match(report.targetSelection.reason, /Fallback to rule-derived target/i);
+    assert.equal(report.reportAvailability.targetSelectionSummary, false);
     assert.ok(Array.isArray(report.limitations));
     assert.match(report.realExport.summary, /pipeline validation/i);
   } finally {

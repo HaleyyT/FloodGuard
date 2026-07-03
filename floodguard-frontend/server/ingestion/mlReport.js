@@ -28,6 +28,7 @@ function defaultReport() {
       scenarioStressTestMetrics: false,
       modelCard: false,
       calibrationSummary: false,
+      targetSelectionSummary: false,
     },
     realExport: {
       available: false,
@@ -55,6 +56,14 @@ function defaultReport() {
     calibrationSummary: {
       available: false,
       summary: "Calibration summary is unavailable.",
+    },
+    targetSelection: {
+      available: false,
+      selectedTargetKind: "rule",
+      selectedTargetColumn: "targetRuleElevated",
+      readyForIndependentSupervision: false,
+      reason: "Target-selection summary is unavailable.",
+      eventCandidate: null,
     },
   };
 }
@@ -178,15 +187,32 @@ function buildCalibrationSummary(markdown) {
   };
 }
 
+function buildTargetSelectionSummary(report) {
+  if (!report?.targetSelection) {
+    return defaultReport().targetSelection;
+  }
+
+  return {
+    available: true,
+    selectedTargetKind: report.targetSelection.selectedTargetKind ?? "rule",
+    selectedTargetColumn: report.targetSelection.selectedTargetColumn ?? "targetRuleElevated",
+    readyForIndependentSupervision:
+      report.targetSelection.readyForIndependentSupervision ?? false,
+    reason: report.targetSelection.reason ?? "Training target selection was reported.",
+    eventCandidate: report.targetSelection.eventTargetCandidate ?? null,
+  };
+}
+
 export async function readMlReport(reportsDir = defaultReportsDir) {
   try {
-    const [metrics, realExportMetrics, scenarioMetrics, modelCard, calibrationSummary] =
+    const [metrics, realExportMetrics, scenarioMetrics, modelCard, calibrationSummary, targetSelectionSummary] =
       await Promise.all([
       readJsonIfPresent(path.join(reportsDir, "metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "real_export_metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "scenario_stress_test_metrics.json")),
       readTextIfPresent(path.join(reportsDir, "model_card.md")),
       readTextIfPresent(path.join(reportsDir, "calibration_summary.md")),
+      readTextIfPresent(path.join(reportsDir, "target_selection_summary.md")),
     ]);
 
     const fallback = defaultReport();
@@ -210,11 +236,13 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
         scenarioStressTestMetrics: Boolean(scenarioMetrics),
         modelCard: Boolean(modelCard),
         calibrationSummary: Boolean(calibrationSummary),
+        targetSelectionSummary: Boolean(targetSelectionSummary),
       },
       realExport: buildRealExportSummary(realExportMetrics),
       scenarioStressTest: buildScenarioSummary(scenarioMetrics),
       modelCard: buildModelCardSummary(modelCard),
       calibrationSummary: buildCalibrationSummary(calibrationSummary),
+      targetSelection: buildTargetSelectionSummary(realExportMetrics),
       bestPrototypeModel:
         realExportMetrics?.bestPrototypeModel ??
         scenarioMetrics?.bestPrototypeModel ??
@@ -226,7 +254,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
     };
     report.limitations = buildLimitations(report.realExport, report.scenarioStressTest);
 
-    if (!realExportMetrics && !scenarioMetrics && !modelCard && !calibrationSummary) {
+    if (!realExportMetrics && !scenarioMetrics && !modelCard && !calibrationSummary && !targetSelectionSummary) {
       return fallback;
     }
 

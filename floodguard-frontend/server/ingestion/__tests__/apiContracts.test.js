@@ -355,6 +355,18 @@ function dependencies() {
         available: true,
         summary: "Prototype calibration summary is available.",
       },
+      targetSelection: {
+        available: true,
+        selectedTargetKind: "rule",
+        selectedTargetColumn: "targetRuleElevated",
+        readyForIndependentSupervision: false,
+        reason: "Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).",
+        eventCandidate: {
+          eligibleRowCount: 3000,
+          positiveCount: 0,
+          strengthCounts: { weak: 3000 },
+        },
+      },
       limitations: [
         "Rule-derived labels and severe class imbalance limit interpretation.",
         "Scenario metrics are not real-world validation.",
@@ -451,6 +463,10 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.equal(body.labelStrength, "rule_derived_or_weak");
   assert.ok(Array.isArray(body.models));
   assert.equal(body.predictionPreview.predictedLabel, "Elevated concern");
+  assert.equal(body.targetSelection.selectedTargetKind, "rule");
+  assert.equal(body.targetSelection.selectedTargetColumn, "targetRuleElevated");
+  assert.equal(body.targetSelection.readyForIndependentSupervision, false);
+  assert.match(body.targetSelection.reason, /rule-derived target/i);
   assert.ok(Array.isArray(body.limitations));
   assert.match(body.realExport.limitation, /Rule-derived|imbalance/i);
   assert.match(body.scenarioStressTest.limitation, /not real-world validation|synthetic/i);
