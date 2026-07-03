@@ -367,6 +367,51 @@ function dependencies() {
           strengthCounts: { weak: 3000 },
         },
       },
+      eventHoldout: {
+        available: true,
+        viable: false,
+        strategy: "event_holdout_unavailable",
+        reason: "No independent elevated event labels exist yet.",
+        trainRows: 0,
+        testRows: 0,
+        trainPositiveCount: 0,
+        testPositiveCount: 0,
+      },
+      acceptanceGates: {
+        passedAll: false,
+        bestNonBaselineModel: "random_forest",
+        gates: [
+          {
+            name: "beats_majority_balanced_accuracy",
+            passed: true,
+            detail: "random_forest=0.805; majority_baseline=0.500",
+          },
+          {
+            name: "non_zero_recall_on_elevated_events",
+            passed: false,
+            detail: "Event-holdout validation is not yet viable, so non-zero event recall cannot be claimed.",
+          },
+        ],
+      },
+      promotionPolicy: {
+        currentStage: "shadow_mode",
+        nextEligibleStage: null,
+        stages: {
+          shadow_mode: { status: "active", requirements: ["pipeline works", "metrics reported"] },
+          review_mode: {
+            status: "blocked",
+            requirements: ["independent labels exist", "event-holdout tested", "expert review pending"],
+            blockers: ["Event-holdout validation is not yet viable."],
+          },
+          advisory_mode: {
+            status: "blocked",
+            requirements: ["expert review completed", "validation robust", "safety policy approved"],
+            blockers: ["Domain expert review is still pending."],
+          },
+        },
+        never: ["official emergency authority"],
+        summary: "ML remains in shadow_mode because supervision and validation are not yet strong enough for promotion.",
+      },
       limitations: [
         "Rule-derived labels and severe class imbalance limit interpretation.",
         "Scenario metrics are not real-world validation.",
@@ -475,6 +520,14 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.equal(body.targetSelection.selectedTargetColumn, "targetRuleElevated");
   assert.equal(body.targetSelection.readyForIndependentSupervision, false);
   assert.match(body.targetSelection.reason, /rule-derived target/i);
+  assert.equal(body.eventHoldout.available, true);
+  assert.equal(body.eventHoldout.viable, false);
+  assert.match(body.eventHoldout.reason, /event labels|event holdout|independent/i);
+  assert.equal(body.acceptanceGates.passedAll, false);
+  assert.ok(Array.isArray(body.acceptanceGates.gates));
+  assert.equal(body.promotionPolicy.currentStage, "shadow_mode");
+  assert.equal(body.promotionPolicy.nextEligibleStage, null);
+  assert.match(body.promotionPolicy.summary, /shadow/i);
   assert.ok(Array.isArray(body.limitations));
   assert.match(body.realExport.limitation, /Rule-derived|imbalance/i);
   assert.match(body.scenarioStressTest.limitation, /not real-world validation|synthetic/i);

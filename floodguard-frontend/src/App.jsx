@@ -2452,6 +2452,22 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
     targetSelection && targetSelection.eventCandidate
       ? `Event-label candidate: ${targetSelection.eventCandidate.eligibleRowCount} labelled row(s), ${targetSelection.eventCandidate.positiveCount} elevated example(s).`
       : null;
+  const eventHoldout = report.eventHoldout ?? null;
+  const eventHoldoutLine = eventHoldout
+    ? `Event holdout: ${eventHoldout.viable ? "viable" : "not viable yet"}; ${eventHoldout.reason}`
+    : null;
+  const promotionPolicy = report.promotionPolicy ?? null;
+  const promotionLine = promotionPolicy
+    ? `Promotion stage: ${promotionPolicy.currentStage}; next eligible stage: ${promotionPolicy.nextEligibleStage ?? "not eligible yet"}.`
+    : null;
+  const failedGates =
+    report.acceptanceGates?.gates?.filter((gate) => !gate.passed).map((gate) => gate.name) ?? [];
+  const gateLine =
+    report.acceptanceGates
+      ? report.acceptanceGates.passedAll
+        ? "Acceptance gates: all passed for the current stage."
+        : `Acceptance gates still blocked: ${failedGates.join(", ")}.`
+      : null;
 
   return (
     <section className="card ml-prototype-card">
@@ -2493,6 +2509,9 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
         <li>{scenarioLine}</li>
         {targetLine && <li>{targetLine}</li>}
         {targetReadinessLine && <li>{targetReadinessLine}</li>}
+        {eventHoldoutLine && <li>{eventHoldoutLine}</li>}
+        {promotionLine && <li>{promotionLine}</li>}
+        {gateLine && <li>{gateLine}</li>}
         {previewLine && <li>{previewLine}</li>}
         {agreementLine && <li>{agreementLine}</li>}
         <li>

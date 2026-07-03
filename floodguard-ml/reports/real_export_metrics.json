@@ -307,6 +307,16 @@
       ]
     }
   },
+  "eventHoldout": {
+    "available": true,
+    "viable": false,
+    "strategy": "event_holdout_unavailable",
+    "reason": "No independent elevated event labels exist yet.",
+    "trainRows": 0,
+    "testRows": 0,
+    "trainPositiveCount": 0,
+    "testPositiveCount": 0
+  },
   "featureQuality": {
     "datasetName": "real_export",
     "rowCount": 3000,
@@ -893,5 +903,79 @@
     }
   ],
   "bestPrototypeModel": "random_forest",
-  "status": "completed"
+  "status": "completed",
+  "acceptanceGates": {
+    "passedAll": false,
+    "bestNonBaselineModel": "random_forest",
+    "gates": [
+      {
+        "name": "beats_majority_balanced_accuracy",
+        "passed": true,
+        "detail": "random_forest=0.805; majority_baseline=0.500"
+      },
+      {
+        "name": "non_zero_recall_on_elevated_events",
+        "passed": false,
+        "detail": "Event-holdout validation is not yet viable, so non-zero event recall cannot be claimed."
+      },
+      {
+        "name": "no_leakage_prone_features",
+        "passed": true,
+        "detail": "Unsafe selected columns: none"
+      },
+      {
+        "name": "uncertainty_reported",
+        "passed": true,
+        "detail": "Prediction preview and calibration summaries are reported."
+      },
+      {
+        "name": "remains_shadow_mode_until_validated",
+        "passed": true,
+        "detail": "Live scoring stays disabled and the rule engine remains the authority."
+      }
+    ]
+  },
+  "promotionPolicy": {
+    "currentStage": "shadow_mode",
+    "nextEligibleStage": null,
+    "stages": {
+      "shadow_mode": {
+        "status": "active",
+        "requirements": [
+          "pipeline works",
+          "metrics reported"
+        ]
+      },
+      "review_mode": {
+        "status": "blocked",
+        "requirements": [
+          "independent labels exist",
+          "event-holdout tested",
+          "expert review pending"
+        ],
+        "blockers": [
+          "Independent event supervision is not yet strong enough.",
+          "Event-holdout validation is not yet viable.",
+          "Acceptance gates still failing: non_zero_recall_on_elevated_events."
+        ]
+      },
+      "advisory_mode": {
+        "status": "blocked",
+        "requirements": [
+          "expert review completed",
+          "validation robust",
+          "safety policy approved"
+        ],
+        "blockers": [
+          "Domain expert review is still pending.",
+          "Validation remains prototype-grade and not robust enough for advisory use.",
+          "FloodGuard has not approved ML for automated safety advice."
+        ]
+      }
+    },
+    "never": [
+      "official emergency authority"
+    ],
+    "summary": "ML remains in shadow_mode because supervision and validation are not yet strong enough for promotion."
+  }
 }

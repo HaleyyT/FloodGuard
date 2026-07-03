@@ -17,6 +17,32 @@ function defaultReport() {
     predictionPreview: null,
     modelAgreementWithRuleEngine: "unavailable",
     labelStrength: "rule_derived_or_weak",
+    eventHoldout: {
+      available: false,
+      viable: false,
+      strategy: "event_holdout_unavailable",
+      reason: "Event-holdout validation summary is unavailable.",
+      trainRows: 0,
+      testRows: 0,
+      trainPositiveCount: 0,
+      testPositiveCount: 0,
+    },
+    acceptanceGates: {
+      passedAll: false,
+      bestNonBaselineModel: null,
+      gates: [],
+    },
+    promotionPolicy: {
+      currentStage: "shadow_mode",
+      nextEligibleStage: null,
+      stages: {
+        shadow_mode: { status: "active", requirements: ["pipeline works", "metrics reported"] },
+        review_mode: { status: "blocked", requirements: [], blockers: [] },
+        advisory_mode: { status: "blocked", requirements: [], blockers: [] },
+      },
+      never: ["official emergency authority"],
+      summary: "ML promotion policy is unavailable, so FloodGuard stays in shadow mode.",
+    },
     limitations: ["ML reports are unavailable right now."],
     models: [],
     liveDecisionAuthority: "rule_engine",
@@ -203,6 +229,49 @@ function buildTargetSelectionSummary(report) {
   };
 }
 
+function buildEventHoldoutSummary(report) {
+  if (!report?.eventHoldout) {
+    return defaultReport().eventHoldout;
+  }
+
+  return {
+    available: true,
+    viable: report.eventHoldout.viable ?? false,
+    strategy: report.eventHoldout.strategy ?? "event_holdout_unavailable",
+    reason: report.eventHoldout.reason ?? "Event holdout was reviewed.",
+    trainRows: report.eventHoldout.trainRows ?? 0,
+    testRows: report.eventHoldout.testRows ?? 0,
+    trainPositiveCount: report.eventHoldout.trainPositiveCount ?? 0,
+    testPositiveCount: report.eventHoldout.testPositiveCount ?? 0,
+  };
+}
+
+function buildAcceptanceGates(report) {
+  if (!report?.acceptanceGates) {
+    return defaultReport().acceptanceGates;
+  }
+  return {
+    passedAll: report.acceptanceGates.passedAll ?? false,
+    bestNonBaselineModel: report.acceptanceGates.bestNonBaselineModel ?? null,
+    gates: report.acceptanceGates.gates ?? [],
+  };
+}
+
+function buildPromotionPolicy(report) {
+  if (!report?.promotionPolicy) {
+    return defaultReport().promotionPolicy;
+  }
+  return {
+    currentStage: report.promotionPolicy.currentStage ?? "shadow_mode",
+    nextEligibleStage: report.promotionPolicy.nextEligibleStage ?? null,
+    stages: report.promotionPolicy.stages ?? defaultReport().promotionPolicy.stages,
+    never: report.promotionPolicy.never ?? ["official emergency authority"],
+    summary:
+      report.promotionPolicy.summary ??
+      "ML remains in shadow mode because promotion evidence is incomplete.",
+  };
+}
+
 export async function readMlReport(reportsDir = defaultReportsDir) {
   try {
     const [metrics, realExportMetrics, scenarioMetrics, modelCard, calibrationSummary, targetSelectionSummary] =
@@ -243,6 +312,9 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       modelCard: buildModelCardSummary(modelCard),
       calibrationSummary: buildCalibrationSummary(calibrationSummary),
       targetSelection: buildTargetSelectionSummary(realExportMetrics),
+      eventHoldout: buildEventHoldoutSummary(realExportMetrics),
+      acceptanceGates: buildAcceptanceGates(realExportMetrics),
+      promotionPolicy: buildPromotionPolicy(realExportMetrics),
       bestPrototypeModel:
         realExportMetrics?.bestPrototypeModel ??
         scenarioMetrics?.bestPrototypeModel ??

@@ -29,6 +29,181 @@ from utils import (
 )
 
 
+def build_event_holdout_summary(result: dict[str, Any]) -> dict[str, Any]:
+    """Extract the event-holdout status into a stable report-friendly contract."""
+
+    candidate_strategies = result.get("validation", {}).get("candidateStrategies", [])
+    event_candidate = next(
+        (
+            candidate
+            for candidate in candidate_strategies
+            if str(candidate.get("strategy", "")).startswith("event_")
+        ),
+        None,
+    )
+    if event_candidate is None:
+        return {
+            "available": False,
+            "viable": False,
+            "strategy": "event_holdout_unavailable",
+            "reason": "Event holdout was not reported.",
+            "trainRows": 0,
+            "testRows": 0,
+            "trainPositiveCount": 0,
+            "testPositiveCount": 0,
+        }
+
+    return {
+        "available": True,
+        "viable": bool(event_candidate.get("viable")),
+        "strategy": event_candidate.get("strategy", "event_holdout_unavailable"),
+        "reason": event_candidate.get("reason", "Event holdout was reviewed."),
+        "trainRows": event_candidate.get("trainRows", 0),
+        "testRows": event_candidate.get("testRows", 0),
+        "trainPositiveCount": event_candidate.get("trainPositiveCount", 0),
+        "testPositiveCount": event_candidate.get("testPositiveCount", 0),
+    }
+
+
+def build_acceptance_gates(
+    result: dict[str, Any], event_holdout: dict[str, Any]
+) -> dict[str, Any]:
+    """Summarise whether the current ML layer satisfies the roadmap acceptance gates."""
+
+    models = result.get("models", [])
+    majority = next((model for model in models if model.get("modelName") == "majority_baseline"), None)
+    trained_non_baselines = [
+        model
+        for model in models
+        if model.get("modelName") != "majority_baseline" and model.get("status") == "trained"
+    ]
+    best_non_baseline = max(
+        trained_non_baselines,
+        key=lambda model: (
+            model.get("metrics", {}).get("balancedAccuracy", 0),
+            model.get("metrics", {}).get("f1", 0),
+        ),
+        default=None,
+    )
+    leakage_controls = result.get("validation", {}).get("leakageControls", {})
+    leakage_pass = len(leakage_controls.get("unsafeSelectedColumns", [])) == 0
+    uncertainty_pass = bool(result.get("predictionPreview")) and bool(result.get("calibration"))
+    recall_metric = None if best_non_baseline is None else best_non_baseline["metrics"].get("recall")
+    event_target_selected = result.get("targetSelection", {}).get("selectedTargetKind") == "event"
+
+    gates = [
+        {
+            "name": "beats_majority_balanced_accuracy",
+            "passed": bool(
+                best_non_baseline
+                and majority
+                and best_non_baseline["metrics"].get("balancedAccuracy", 0)
+                > majority["metrics"].get("balancedAccuracy", 0)
+            ),
+            "detail": None
+            if best_non_baseline is None or majority is None
+            else (
+                f"{best_non_baseline['modelName']}={best_non_baseline['metrics'].get('balancedAccuracy', 0):.3f}; "
+                f"majority_baseline={majority['metrics'].get('balancedAccuracy', 0):.3f}"
+            ),
+        },
+        {
+            "name": "non_zero_recall_on_elevated_events",
+            "passed": bool(event_target_selected and event_holdout.get("viable") and (recall_metric or 0) > 0),
+            "detail":
+                "Event-holdout validation is not yet viable, so non-zero event recall cannot be claimed."
+                if not event_holdout.get("viable")
+                else f"Best non-baseline recall={0 if recall_metric is None else recall_metric:.3f}",
+        },
+        {
+            "name": "no_leakage_prone_features",
+            "passed": leakage_pass,
+            "detail": "Unsafe selected columns: "
+            + (
+                ", ".join(leakage_controls.get("unsafeSelectedColumns", []))
+                if leakage_controls.get("unsafeSelectedColumns")
+                else "none"
+            ),
+        },
+        {
+            "name": "uncertainty_reported",
+            "passed": uncertainty_pass,
+            "detail": "Prediction preview and calibration summaries are reported."
+            if uncertainty_pass
+            else "Prediction preview or calibration summaries are missing.",
+        },
+        {
+            "name": "remains_shadow_mode_until_validated",
+            "passed": result.get("mode") == "shadow" and result.get("liveScoringEnabled") is False,
+            "detail": "Live scoring stays disabled and the rule engine remains the authority.",
+        },
+    ]
+    return {
+        "passedAll": all(gate["passed"] for gate in gates),
+        "bestNonBaselineModel": None if best_non_baseline is None else best_non_baseline["modelName"],
+        "gates": gates,
+    }
+
+
+def build_promotion_policy(
+    result: dict[str, Any],
+    event_holdout: dict[str, Any],
+    acceptance_gates: dict[str, Any],
+) -> dict[str, Any]:
+    """Record the current promotion stage and what blocks the next one."""
+
+    target_selection = result.get("targetSelection", {})
+    review_blockers = []
+    advisory_blockers = []
+
+    if not target_selection.get("readyForIndependentSupervision"):
+        review_blockers.append("Independent event supervision is not yet strong enough.")
+    if not event_holdout.get("viable"):
+        review_blockers.append("Event-holdout validation is not yet viable.")
+    if not acceptance_gates["passedAll"]:
+        failed = [gate["name"] for gate in acceptance_gates["gates"] if not gate["passed"]]
+        review_blockers.append("Acceptance gates still failing: " + ", ".join(failed) + ".")
+
+    advisory_blockers.extend(
+        [
+            "Domain expert review is still pending.",
+            "Validation remains prototype-grade and not robust enough for advisory use.",
+            "FloodGuard has not approved ML for automated safety advice.",
+        ]
+    )
+
+    return {
+        "currentStage": "shadow_mode",
+        "nextEligibleStage": None if review_blockers else "review_mode",
+        "stages": {
+            "shadow_mode": {
+                "status": "active",
+                "requirements": ["pipeline works", "metrics reported"],
+            },
+            "review_mode": {
+                "status": "blocked" if review_blockers else "eligible",
+                "requirements": [
+                    "independent labels exist",
+                    "event-holdout tested",
+                    "expert review pending",
+                ],
+                "blockers": review_blockers,
+            },
+            "advisory_mode": {
+                "status": "blocked",
+                "requirements": [
+                    "expert review completed",
+                    "validation robust",
+                    "safety policy approved",
+                ],
+                "blockers": advisory_blockers,
+            },
+        },
+        "never": ["official emergency authority"],
+        "summary": "ML remains in shadow_mode because supervision and validation are not yet strong enough for promotion.",
+    }
+
+
 def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
     """Train prototype models on one dataset and record their metrics."""
 
@@ -48,6 +223,13 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
         f"Feature quality: {action}" for action in feature_quality.get("recommendedActions", [])
     )
     warnings.append(f"Training target selection: {target_selection['reason']}")
+    event_holdout = build_event_holdout_summary(
+        {
+            "validation": {
+                "candidateStrategies": split_metadata.get("candidateStrategies", []),
+            }
+        }
+    )
     models_dir = MODELS_DIR / dataset_name
     models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -69,11 +251,16 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
                 "candidateStrategies": split_metadata.get("candidateStrategies", []),
                 "leakageControls": leakage_controls,
             },
+            "eventHoldout": event_holdout,
             "featureQuality": feature_quality,
             "models": [],
             "bestPrototypeModel": None,
             "status": "skipped",
         }
+        payload["acceptanceGates"] = build_acceptance_gates(payload, event_holdout)
+        payload["promotionPolicy"] = build_promotion_policy(
+            payload, event_holdout, payload["acceptanceGates"]
+        )
         write_json(REPORTS_DIR / f"{dataset_name}_metrics.json", payload)
         return payload
 
@@ -119,6 +306,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
             "candidateStrategies": split_metadata.get("candidateStrategies", []),
             "leakageControls": leakage_controls,
         },
+        "eventHoldout": event_holdout,
         "featureQuality": feature_quality,
         "predictionPreview": None if best_model is None else best_model.get("predictionPreview"),
         "calibration": None
@@ -139,6 +327,10 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
         "bestPrototypeModel": None if best_model is None else best_model["modelName"],
         "status": "completed",
     }
+    payload["acceptanceGates"] = build_acceptance_gates(payload, event_holdout)
+    payload["promotionPolicy"] = build_promotion_policy(
+        payload, event_holdout, payload["acceptanceGates"]
+    )
     write_json(REPORTS_DIR / f"{dataset_name}_metrics.json", payload)
     return {
         **payload,
@@ -160,6 +352,9 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
                 "warnings": result["warnings"],
                 "summary": result["summary"],
                 "targetSelection": result["targetSelection"],
+                "eventHoldout": result["eventHoldout"],
+                "acceptanceGates": result["acceptanceGates"],
+                "promotionPolicy": result["promotionPolicy"],
                 "featureQuality": {
                     "highMissingFeatureCount": result["featureQuality"]["highMissingFeatureCount"],
                     "criticalMissingFeatureCount": result["featureQuality"]["criticalMissingFeatureCount"],
@@ -176,6 +371,14 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
             }
             for entry in MODEL_REGISTRY
         ],
+        "promotionPolicy": next(
+            (
+                result["promotionPolicy"]
+                for result in results
+                if result["datasetName"] == "real_export"
+            ),
+            None,
+        ),
         "summary": "Prototype model comparison only. Live app remains rule-based.",
     }
     write_json(REPORTS_DIR / "metrics.json", aggregated)
@@ -206,6 +409,7 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
     write_validation_summary(results)
     write_feature_quality_summary(results)
     write_target_selection_summary(results)
+    write_promotion_policy_summary(results)
     write_model_comparison_report(results)
     write_model_card(results)
 
@@ -407,6 +611,65 @@ def write_target_selection_summary(results: list[dict[str, Any]]) -> None:
     )
 
     (REPORTS_DIR / "target_selection_summary.md").write_text(
+        "\n".join(lines) + "\n", encoding="utf-8"
+    )
+
+
+def write_promotion_policy_summary(results: list[dict[str, Any]]) -> None:
+    """Write a markdown summary of ML acceptance gates and promotion blockers."""
+
+    lines = [
+        "# FloodGuard ML Promotion Policy",
+        "",
+        "FloodGuard keeps ML under explicit promotion control: shadow_mode -> review_mode -> advisory_mode.",
+        "The rule engine remains the live authority regardless of ML status.",
+        "",
+    ]
+
+    for result in results:
+        policy = result["promotionPolicy"]
+        gates = result["acceptanceGates"]
+        event_holdout = result["eventHoldout"]
+        lines.extend(
+            [
+                f"## {result['datasetName'].replace('_', ' ').title()}",
+                "",
+                f"- Current stage: `{policy['currentStage']}`",
+                f"- Next eligible stage: `{policy['nextEligibleStage'] or 'not eligible yet'}`",
+                f"- Event holdout viable: `{event_holdout['viable']}` ({event_holdout['reason']})",
+                f"- Acceptance gates passed: `{gates['passedAll']}`",
+                f"- Best non-baseline model: `{gates['bestNonBaselineModel'] or 'unavailable'}`",
+                "",
+                "Acceptance gate review:",
+            ]
+        )
+        for gate in gates["gates"]:
+            lines.append(
+                f"- `{gate['name']}`: {'pass' if gate['passed'] else 'block'}; {gate['detail']}"
+            )
+        lines.append("")
+
+        review_stage = policy["stages"]["review_mode"]
+        advisory_stage = policy["stages"]["advisory_mode"]
+        lines.append("Promotion blockers:")
+        for blocker in review_stage.get("blockers", []):
+            lines.append(f"- Review mode blocker: {blocker}")
+        for blocker in advisory_stage.get("blockers", []):
+            lines.append(f"- Advisory mode blocker: {blocker}")
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Interpretation",
+            "",
+            "- `shadow_mode` means the pipeline works and reports metrics, but ML cannot influence live alerts.",
+            "- `review_mode` requires stronger independent labels and event-holdout evidence before even supervised review can begin.",
+            "- `advisory_mode` would still not make FloodGuard an official emergency authority.",
+            "",
+        ]
+    )
+
+    (REPORTS_DIR / "promotion_policy_summary.md").write_text(
         "\n".join(lines) + "\n", encoding="utf-8"
     )
 

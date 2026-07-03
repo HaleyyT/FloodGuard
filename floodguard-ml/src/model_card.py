@@ -128,9 +128,27 @@ def write_model_card(results: list[dict]) -> None:
             "- Mode: `shadow`",
             "- Live scoring enabled: `false`",
             "- Rule engine remains the live authority.",
+            f"- Promotion stage: `{real_result.get('promotionPolicy', {}).get('currentStage', 'shadow_mode')}`",
+            f"- Next eligible stage: `{real_result.get('promotionPolicy', {}).get('nextEligibleStage') or 'not eligible yet'}`",
+            "",
+            "## Promotion Policy",
+            "",
+            "- `shadow_mode`: pipeline works and reports metrics, but ML cannot influence live alerts.",
+            "- `review_mode`: requires independent labels, event-holdout testing, and pending expert review.",
+            "- `advisory_mode`: would require completed expert review, robust validation, and approved safety policy.",
+            "- Never: FloodGuard ML must not be framed as an official emergency authority.",
+            "",
+            "## Current Promotion Blockers",
+            "",
             "",
         ]
     )
+
+    for blocker in real_result.get("promotionPolicy", {}).get("stages", {}).get("review_mode", {}).get("blockers", []):
+        lines.append(f"- {blocker}")
+    for blocker in real_result.get("promotionPolicy", {}).get("stages", {}).get("advisory_mode", {}).get("blockers", []):
+        lines.append(f"- {blocker}")
+    lines.append("")
 
     (REPORTS_DIR / "model_card.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 

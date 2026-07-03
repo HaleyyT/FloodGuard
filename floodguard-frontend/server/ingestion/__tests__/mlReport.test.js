@@ -41,6 +41,45 @@ test("readMlReport reads available files without crashing on partial reports", a
             strengthCounts: { weak: 3000 },
           },
         },
+        eventHoldout: {
+          viable: false,
+          strategy: "event_holdout_unavailable",
+          reason: "No independent elevated event labels exist yet.",
+          trainRows: 0,
+          testRows: 0,
+          trainPositiveCount: 0,
+          testPositiveCount: 0,
+        },
+        acceptanceGates: {
+          passedAll: false,
+          bestNonBaselineModel: "random_forest",
+          gates: [
+            {
+              name: "beats_majority_balanced_accuracy",
+              passed: true,
+              detail: "random_forest=0.741; majority_baseline=0.500",
+            },
+          ],
+        },
+        promotionPolicy: {
+          currentStage: "shadow_mode",
+          nextEligibleStage: null,
+          stages: {
+            shadow_mode: { status: "active", requirements: ["pipeline works", "metrics reported"] },
+            review_mode: {
+              status: "blocked",
+              requirements: ["independent labels exist", "event-holdout tested", "expert review pending"],
+              blockers: ["Event-holdout validation is not yet viable."],
+            },
+            advisory_mode: {
+              status: "blocked",
+              requirements: ["expert review completed", "validation robust", "safety policy approved"],
+              blockers: ["Domain expert review is still pending."],
+            },
+          },
+          never: ["official emergency authority"],
+          summary: "ML remains in shadow_mode because supervision and validation are not yet strong enough for promotion.",
+        },
         predictionPreview: {
           predictedLabel: "Elevated concern",
           predictedProbability: 0.78,
@@ -87,6 +126,14 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.targetSelection.selectedTargetColumn, "targetRuleElevated");
     assert.equal(report.targetSelection.readyForIndependentSupervision, false);
     assert.match(report.targetSelection.reason, /Fallback to rule-derived target/i);
+    assert.equal(report.eventHoldout.available, true);
+    assert.equal(report.eventHoldout.viable, false);
+    assert.match(report.eventHoldout.reason, /independent elevated event labels/i);
+    assert.equal(report.acceptanceGates.passedAll, false);
+    assert.equal(report.acceptanceGates.bestNonBaselineModel, "random_forest");
+    assert.equal(report.promotionPolicy.currentStage, "shadow_mode");
+    assert.equal(report.promotionPolicy.nextEligibleStage, null);
+    assert.match(report.promotionPolicy.summary, /shadow_mode/i);
     assert.equal(report.reportAvailability.targetSelectionSummary, false);
     assert.ok(Array.isArray(report.limitations));
     assert.match(report.realExport.summary, /pipeline validation/i);

@@ -25,6 +25,11 @@ It is not used for live alerting or official warning decisions.
 - `targetRuleElevated = 0` when the rule concern level is `Low`.
 - `targetElevatedConcern` is kept as the current alias for the rule-derived training target.
 - `targetEventElevated` is joined from time-window labels when curated event labels are available.
+- `rule_derived` labels reflect FloodGuard's own rule engine and are useful mainly for baseline imitation checks.
+- `warning_derived` labels are broader official-warning style supervision and should be treated as moderate strength only.
+- `event` / curated event-window labels are better than rule-only labels but still need evidence review.
+- `impact` labels should represent verified local consequences such as road closures or observed inundation.
+- `scenario_generated` labels are for ML plumbing and stress testing only, never real-world validation.
 - Real export target selection reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 - Scenario target selection reason: Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.
 
@@ -137,4 +142,23 @@ It is not used for live alerting or official warning decisions.
 - Mode: `shadow`
 - Live scoring enabled: `false`
 - Rule engine remains the live authority.
+- Promotion stage: `shadow_mode`
+- Next eligible stage: `not eligible yet`
+
+## Promotion Policy
+
+- `shadow_mode`: pipeline works and reports metrics, but ML cannot influence live alerts.
+- `review_mode`: requires independent labels, event-holdout testing, and pending expert review.
+- `advisory_mode`: would require completed expert review, robust validation, and approved safety policy.
+- Never: FloodGuard ML must not be framed as an official emergency authority.
+
+## Current Promotion Blockers
+
+
+- Independent event supervision is not yet strong enough.
+- Event-holdout validation is not yet viable.
+- Acceptance gates still failing: non_zero_recall_on_elevated_events.
+- Domain expert review is still pending.
+- Validation remains prototype-grade and not robust enough for advisory use.
+- FloodGuard has not approved ML for automated safety advice.
 
