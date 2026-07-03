@@ -85,7 +85,14 @@ p {
 
 /* #monitored region overview */
 .overview-panel {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.overview-panel.card {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(216, 246, 225, 0.82), transparent 20%),
+    linear-gradient(135deg, rgba(251, 253, 244, 0.96), rgba(198, 230, 242, 0.96));
+  padding: 18px;
 }
 
 /* #regional pilot selector */
@@ -245,43 +252,101 @@ p {
   color: #156f39;
 }
 
-.overview-summary {
-  font-size: 0.9rem;
-  color: #354863;
+.overview-hero-row {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
   margin-bottom: 14px;
-  max-width: 940px;
+}
+
+.overview-summary {
+  font-size: 0.96rem;
+  color: #354863;
+  margin: 6px 0 0;
+  max-width: 900px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.overview-signal-strip {
+  margin-bottom: 14px;
+}
+
+.overview-signal-strip .info-tile {
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(204, 222, 239, 0.95);
+  min-height: 92px;
 }
 
 .resident-overview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
+  grid-template-areas: "next why trust";
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1.05fr) minmax(0, 0.9fr);
+  gap: 12px;
+  margin-bottom: 4px;
 }
 
 .resident-answer-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(232, 242, 252, 0.92));
-  border: 1px solid #d7e4f3;
-  border-radius: 12px;
-  min-height: 136px;
-  padding: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(232, 242, 252, 0.94));
+  border: 1px solid #d5e4f5;
+  border-radius: 14px;
+  min-height: 152px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .resident-answer-card h3 {
   color: #19345a;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   margin-bottom: 8px;
 }
 
 .resident-answer-card p {
   color: #344962;
-  font-size: 0.85rem;
+  font-size: 0.87rem;
   line-height: 1.45;
   margin-bottom: 0;
 }
 
 .resident-answer-list {
   margin-top: 0;
+}
+
+.resident-answer-card.concern-card {
+  grid-area: concern;
+  background: linear-gradient(160deg, #ffffff, #e9f3ff);
+}
+
+.resident-answer-card.concern-card h3 {
+  font-size: 1.6rem;
+  line-height: 1.05;
+}
+
+.resident-answer-card.trust-card {
+  grid-area: trust;
+}
+
+.resident-answer-card.why-card {
+  grid-area: why;
+}
+
+.resident-answer-card.next-card {
+  grid-area: next;
+  background: linear-gradient(160deg, #fffef8, #e3f2e9);
+  border-color: rgba(145, 194, 161, 0.4);
+}
+
+.overview-reliability-row {
+  align-items: flex-start;
+  display: grid;
+  gap: 8px 14px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.6fr);
+  margin-top: 12px;
 }
 
 .why-matters-strip {
@@ -301,12 +366,6 @@ p {
   padding: 7px 10px;
 }
 
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
 /* #data reliability summary */
 .reliability-note {
   color: #31445f;
@@ -319,8 +378,8 @@ p {
   background: #eef3f9;
   border: 1px solid #e0eaf7;
   border-radius: 12px;
-  min-height: 78px;
-  padding: 11px;
+  min-height: 82px;
+  padding: 12px;
 }
 
 .info-tile h3 {
@@ -367,18 +426,17 @@ p {
   display: grid;
   gap: 14px;
   grid-template-areas:
-    "actions rainfall river"
-    "actions map reports";
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr) minmax(300px, 0.9fr);
-  grid-template-rows: minmax(0, auto) minmax(0, auto);
-  margin-bottom: 12px;
+    "actions river rainfall"
+    "reports map signals";
+  grid-template-columns: minmax(280px, 0.94fr) minmax(0, 1.06fr) minmax(0, 1fr);
+  margin-bottom: 14px;
   min-width: 0;
 }
 
 .overview-support-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.95fr) minmax(0, 0.95fr);
   margin-bottom: 12px;
 }
 
@@ -392,7 +450,7 @@ p {
 }
 
 .overview-support-card .history-grid,
-.overview-support-card .ml-prototype-card .history-grid {
+.overview-support-card .ml-snapshot-card .history-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -419,11 +477,16 @@ p {
   grid-area: map;
 }
 
+.frontpage-signals {
+  grid-area: signals;
+}
+
 .frontpage-actions,
 .frontpage-reports,
 .frontpage-map,
 .frontpage-rainfall,
-.frontpage-river {
+.frontpage-river,
+.frontpage-signals {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -433,7 +496,8 @@ p {
 .frontpage-reports .card,
 .frontpage-map .card,
 .frontpage-rainfall .card,
-.frontpage-river .card {
+.frontpage-river .card,
+.frontpage-signals .card {
   height: 100%;
 }
 
@@ -446,12 +510,15 @@ p {
 
 .frontpage-actions .card {
   background: linear-gradient(160deg, #fffdf3, #dff0ea);
+  padding: 16px;
 }
 
 .frontpage-rainfall .card,
 .frontpage-river .card,
-.frontpage-map .card {
+.frontpage-map .card,
+.frontpage-signals .card {
   background: linear-gradient(160deg, #fbfdff, #d9ebf7);
+  padding: 16px;
 }
 
 .frontpage-actions .section-header {
@@ -460,17 +527,17 @@ p {
 
 .frontpage-actions .action-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   list-style: none;
   padding-left: 0;
 }
 
 .frontpage-actions .action-list li,
 .frontpage-reports .report-card {
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(221, 232, 242, 0.9);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 12px 14px;
 }
 
 .frontpage-actions .action-list li {
@@ -483,10 +550,16 @@ p {
 
 .frontpage-river .river-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.frontpage-rainfall .signal-chart-card .chart-box {
+.frontpage-rainfall .signal-chart-card .chart-box,
+.frontpage-signals .signal-chart-card .chart-box {
   height: 235px;
+}
+
+.frontpage-signals .signal-chart-card .chart-box {
+  margin-top: 2px;
 }
 
 .rainfall-summary-grid {
@@ -498,14 +571,6 @@ p {
 
 .rainfall-summary-grid .info-tile {
   background: rgba(255, 255, 255, 0.66);
-}
-
-.frontpage-reports {
-  align-self: start;
-}
-
-.frontpage-reports .card {
-  height: auto;
 }
 
 .frontpage-reports .reports-list {
@@ -521,11 +586,26 @@ p {
 }
 
 .frontpage-map .map-panel {
-  height: 270px;
+  height: 268px;
 }
 
 .frontpage-map .location-card {
-  padding-bottom: 14px;
+  padding-bottom: 16px;
+}
+
+.ml-snapshot-card {
+  background: linear-gradient(160deg, #f5fbff, #e6f1fb);
+}
+
+.ml-snapshot-note {
+  color: #31445f;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  margin: 8px 0 0;
+}
+
+.ml-snapshot-note.secondary {
+  color: #56708f;
 }
 
 /* #contributing factors and recommended actions */
@@ -1118,11 +1198,21 @@ p {
 
 /* #responsive layout */
 @media (max-width: 1020px) {
-  .resident-overview-grid,
   .overview-grid,
   .evidence-grid,
   .relevance-summary-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .resident-overview-grid {
+    grid-template-areas:
+      "next trust"
+      "why why";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-reliability-row {
+    grid-template-columns: 1fr;
   }
 
   .overview-support-grid {
@@ -1133,8 +1223,9 @@ p {
   .section-page {
     grid-template-areas:
       "actions"
-      "rainfall"
       "river"
+      "rainfall"
+      "signals"
       "reports"
       "map";
     grid-template-columns: 1fr;
@@ -1168,7 +1259,6 @@ p {
     align-items: flex-start;
   }
 
-  .resident-overview-grid,
   .overview-grid,
   .evidence-grid,
   .architecture-footer,
@@ -1208,9 +1298,18 @@ p {
     height: 210px;
   }
 
+  .overview-hero-row,
   .section-header {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .resident-overview-grid {
+    grid-template-areas:
+      "next"
+      "why"
+      "trust";
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1471,7 +1570,7 @@ p {
 
 /* #river monitoring metric tiles */
 .river-status-card {
-  padding-bottom: 36px;
+  padding-bottom: 16px;
 }
 
 .river-grid {
