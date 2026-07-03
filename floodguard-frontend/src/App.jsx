@@ -32,7 +32,11 @@ import {
 import {
   buildDataEvidenceRows,
   buildNotificationBannerModel,
+  buildResidentOverviewModel,
   buildRiskSummaryModel,
+  humanizeMlMode,
+  humanizeSourceMode,
+  humanizeTrainingTarget,
 } from "./dashboardPresentation";
 
 const fallbackAreas = [
@@ -1305,17 +1309,7 @@ function buildHistorySummary(history = []) {
 }
 
 function sourceModeLabel(mode) {
-  if (mode === "derived_proxy" || mode === "remote-derived") return "Derived proxy";
-  if (mode === "remote") return "Live";
-  if (mode === "live") return "Live";
-  if (mode === "live_summary_fallback") return "Summary fallback";
-  if (mode === "cached_recent") return "Recent cache";
-  if (mode === "cached_stale") return "Stale cache";
-  if (mode === "local-fallback" || mode === "local_demo_fallback") return "Demo fallback";
-  if (mode === "not-configured") return "Not configured";
-  if (mode === "missing") return "Missing";
-  if (mode === "planned") return "Planned";
-  return mode || "Unknown";
+  return humanizeSourceMode(mode);
 }
 
 function reliabilityLabel(audit) {
@@ -1662,6 +1656,7 @@ function AreaDataGuard({ areaName, liveStatus }) {
 // #monitored region overview
 function OverviewPanel({ data }) {
   const riskSummary = buildRiskSummaryModel(data);
+  const residentOverview = buildResidentOverviewModel(data);
 
   return (
     <section className="overview-panel card">
@@ -1676,6 +1671,35 @@ function OverviewPanel({ data }) {
       </div>
 
       <p className="overview-summary">{riskSummary.summary}</p>
+
+      <div className="resident-overview-grid">
+        <div className="resident-answer-card">
+          <p className="section-label">What is the current local concern?</p>
+          <h3>{residentOverview.currentConcern}</h3>
+          <p>{residentOverview.concernSummary}</p>
+        </div>
+        <div className="resident-answer-card">
+          <p className="section-label">Can I trust the evidence?</p>
+          <h3>{residentOverview.trustLabel}</h3>
+          <p>{residentOverview.trustNote}</p>
+        </div>
+        <div className="resident-answer-card">
+          <p className="section-label">Why was this concern assigned?</p>
+          <ul className="factor-list history-list resident-answer-list">
+            {residentOverview.whyAssigned.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="resident-answer-card">
+          <p className="section-label">What should I check next?</p>
+          <ul className="factor-list history-list resident-answer-list">
+            {residentOverview.whatNext.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
       <div className="overview-grid">
         <InfoTile
@@ -1713,6 +1737,13 @@ function OverviewPanel({ data }) {
       </div>
       <p className="reliability-note">{data.officialSignals.dataReliabilityNote}</p>
       <p className="reliability-note">Confidence: {riskSummary.confidenceLabel}</p>
+      {residentOverview.whyThisMatters.length > 0 ? (
+        <div className="why-matters-strip">
+          {residentOverview.whyThisMatters.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </div>
+      ) : null}
       {riskSummary.warnings.length > 0 ? (
         <ul className="factor-list history-list audit-warning-list">
           {riskSummary.warnings.slice(0, 2).map((warning) => (
@@ -2473,7 +2504,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
       : null;
   const targetSelection = report.targetSelection ?? null;
   const targetLine = targetSelection
-    ? `Training target: ${targetSelection.selectedTargetColumn} (${targetSelection.selectedTargetKind}). ${targetSelection.reason}`
+    ? `Training target: ${humanizeTrainingTarget(targetSelection.selectedTargetKind)}. ${targetSelection.reason}`
     : null;
   const targetReadinessLine =
     targetSelection && targetSelection.eventCandidate
@@ -2506,7 +2537,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
       </div>
 
       <div className="history-grid">
-        <InfoTile label="Status" value={report.mode === "shadow" ? "Shadow mode" : report.mode} />
+        <InfoTile label="Status" value={humanizeMlMode(report.mode)} />
         <InfoTile
           label="Live scoring"
           value={report.liveScoringEnabled ? "Enabled" : "Disabled"}
@@ -2522,7 +2553,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
         />
         <InfoTile
           label="Training target"
-          value={targetSelection?.selectedTargetKind === "event" ? "Event target" : "Rule target"}
+          value={humanizeTrainingTarget(targetSelection?.selectedTargetKind)}
         />
       </div>
 
@@ -2539,6 +2570,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
         {eventHoldoutLine && <li>{eventHoldoutLine}</li>}
         {promotionLine && <li>{promotionLine}</li>}
         {gateLine && <li>{gateLine}</li>}
+        <li>ML is shown for comparison only and does not trigger alerts.</li>
         {previewLine && <li>{previewLine}</li>}
         {agreementLine && <li>{agreementLine}</li>}
         <li>

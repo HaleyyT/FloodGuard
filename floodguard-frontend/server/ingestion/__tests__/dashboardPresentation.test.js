@@ -4,7 +4,11 @@ import test from "node:test";
 import {
   buildDataEvidenceRows,
   buildNotificationBannerModel,
+  buildResidentOverviewModel,
   buildRiskSummaryModel,
+  humanizeMlMode,
+  humanizeSourceMode,
+  humanizeTrainingTarget,
 } from "../../../src/dashboardPresentation.js";
 
 test("data evidence rows label live gauges, stale context, and missing warnings clearly", () => {
@@ -64,6 +68,41 @@ test("risk summary model surfaces confidence and data-quality warnings", () => {
   assert.equal(summary.evidenceConfidence, "partial");
   assert.equal(summary.recommendationType, "monitor_and_check_official_sources");
   assert.match(summary.checkNext[0], /NSW SES|BoM/i);
+});
+
+test("resident overview model explains concern, trust, and next steps in plain language", () => {
+  const model = buildResidentOverviewModel({
+    riskLevel: "Moderate",
+    summary: "Moderate local concern is present.",
+    sourceHealth: [
+      {
+        type: "weather",
+        freshnessStatus: "stale",
+      },
+    ],
+    decisionAudit: {
+      hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
+      evidenceConfidence: "partial",
+      whatIncreasedConcern: ["Short-window rainfall is elevated at 5 mm in the last hour."],
+      whatReducedConcern: ["River trend is stable, which lowers immediate local concern."],
+      checkNext: ["Check official NSW SES and BoM advice."],
+      reliability: { score: 82, level: "High" },
+    },
+  });
+
+  assert.equal(model.currentConcern, "Moderate");
+  assert.match(model.trustLabel, /Partly/i);
+  assert.match(model.trustNote, /82% confidence/i);
+  assert.match(model.whyAssigned[0], /Short-window rainfall/i);
+  assert.match(model.whatNext[0], /NSW SES|BoM/i);
+  assert.ok(model.whyThisMatters.some((item) => /Weather context is stale/i.test(item)));
+});
+
+test("humanised UI labels soften technical terminology", () => {
+  assert.equal(humanizeSourceMode("cached_stale"), "Older cached reading");
+  assert.equal(humanizeSourceMode("not-configured"), "Not connected yet");
+  assert.equal(humanizeMlMode("shadow"), "ML comparison only");
+  assert.equal(humanizeTrainingTarget("rule"), "Rule-derived ML target");
 });
 
 test("notification banner model separates official warnings from app-generated and data-quality notices", () => {
