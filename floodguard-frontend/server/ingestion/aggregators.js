@@ -228,6 +228,8 @@ export function buildAreaSourceFreshness(area, sourceMetadata, signals, ingested
       ageMinutes,
       staleAfterHours: staleLimitHours,
       freshnessStatus,
+      lastSuccessfulLiveFetchAt: metadata.lastSuccessfulLiveFetchAt ?? null,
+      failureCategory: metadata.failureCategory ?? null,
     };
   });
 }

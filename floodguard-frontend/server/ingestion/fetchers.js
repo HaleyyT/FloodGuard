@@ -91,6 +91,17 @@ function cacheMetadata(source, data, fetchedAt) {
   };
 }
 
+function classifyFetchError(error) {
+  const message = String(error?.message ?? "").toLowerCase();
+  if (error?.name === "TimeoutError" || error?.name === "AbortError" || message.includes("timeout")) {
+    return "network_timeout";
+  }
+  if (message.includes("json") || message.includes("parse") || message.includes("unexpected")) {
+    return "parser_error";
+  }
+  return "source_unavailable";
+}
+
 export async function loadSource(source) {
   const configuredUrl = process.env[source.envUrl] || process.env[source.roadmapEnvUrl] || source.defaultUrl;
   const fetchedAt = new Date().toISOString();
@@ -132,6 +143,7 @@ export async function loadSource(source) {
           sourceStrength: source.sourceStrength,
           adapter: source.adapter ?? "json",
           fetchedAt,
+          lastSuccessfulLiveFetchAt: fetchedAt,
           status: "ok",
         },
       };
@@ -159,8 +171,10 @@ export async function loadSource(source) {
             sourceStrength: source.sourceStrength,
             adapter: source.adapter ?? "json",
             fetchedAt,
+            lastSuccessfulLiveFetchAt: cached?.metadata?.fetchedAt ?? null,
             status: cacheAgeMinutes !== null && cacheAgeMinutes <= staleThresholdMinutes ? "ok" : "failed",
             observedAt: cacheObservedAt,
+            failureCategory: classifyFetchError(error),
             note:
               dataMode === "cached_recent"
                 ? `Remote fetch failed; recent cached reading was used instead (${cacheAgeMinutes} minutes old).`
@@ -184,6 +198,7 @@ export async function loadSource(source) {
         sourceStrength: "unavailable",
         fetchedAt,
         status: "failed",
+        failureCategory: "not_configured",
         note: "Local fallback is disabled by FLOODGUARD_ALLOW_LOCAL_FALLBACK.",
       },
     };
@@ -213,6 +228,7 @@ export async function loadSource(source) {
         sourceStrength: "unavailable",
         fetchedAt,
         status: "failed",
+        failureCategory: classifyFetchError(error),
         note: error.message,
       },
     };

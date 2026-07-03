@@ -402,7 +402,11 @@ function buildReliabilitySummary(sources = [], ingestionHealth = null) {
       label: formatHealthLabel(ingestionHealth.overallStatus),
       note: `${ingestionHealth.summary || "Signal source health has been checked."} ${labels.join(
         ". ",
-      )}.`,
+      )}. ${
+        ingestionHealth.overallStatus !== "live"
+          ? "Source status: degraded honestly — cached rainfall/river evidence is blocked from live claims."
+          : ""
+      }`,
     };
   }
 

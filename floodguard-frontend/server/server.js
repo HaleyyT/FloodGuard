@@ -25,6 +25,7 @@ import {
 import { featureRowsToCsv } from "./ingestion/features.js";
 import { mlDatasetRowsToCsv } from "./ingestion/mlDataset.js";
 import { readMlReport } from "./ingestion/mlReport.js";
+import { buildIngestionObservabilityReport } from "./ingestion/ingestionObservability.js";
 import { assessIngestionReadiness } from "./ingestion/readiness.js";
 import { readGaugeMetadata } from "./ingestion/gaugeMetadata.js";
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
@@ -60,6 +61,7 @@ function routes() {
   return [
     "/api/health",
     "/api/ingestion-health",
+    "/api/ingestion-observability",
     "/api/source-registry",
     "/api/gauge-metadata",
     "/api/areas",
@@ -422,6 +424,11 @@ export async function routeRequest(request, response, deps = defaultDependencies
 
   if (url.pathname === "/api/ingestion-health") {
     sendJson(response, 200, deps.buildRegionalIngestionHealth(regionalSignals));
+    return;
+  }
+
+  if (url.pathname === "/api/ingestion-observability") {
+    sendJson(response, 200, buildIngestionObservabilityReport(regionalSignals));
     return;
   }
 

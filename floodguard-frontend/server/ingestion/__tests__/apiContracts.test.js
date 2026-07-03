@@ -382,6 +382,14 @@ test("health endpoint exposes layered statuses and core data modes", async () =>
   assert.equal(body.ingestionHealth.coreDataModes.parramatta[0].dataMode, "live_summary_fallback");
 });
 
+test("ingestion observability endpoint explains degraded source status explicitly", async () => {
+  const { body } = await requestJson("/api/ingestion-observability", dependencies());
+  assert.equal(body.refreshStatus, "refreshed");
+  assert.ok(Array.isArray(body.failureTaxonomy));
+  assert.match(body.debugLine, /degraded honestly|live/i);
+  assert.ok(Array.isArray(body.areas));
+});
+
 test("risk endpoint returns features, pressure scores, and excluded signals contract", async () => {
   const { body } = await requestJson("/api/risk/parramatta", dependencies());
   assert.equal(body.concernLevel, "Moderate");
