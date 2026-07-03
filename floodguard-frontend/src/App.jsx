@@ -2440,6 +2440,14 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
     report.modelAgreementWithRuleEngine && report.modelAgreementWithRuleEngine !== "unavailable"
       ? `Dataset-level agreement snapshot: ${report.modelAgreementWithRuleEngine}. Label strength: ${report.labelStrength ?? "unknown"}.`
       : null;
+  const targetSelection = report.targetSelection ?? null;
+  const targetLine = targetSelection
+    ? `Training target: ${targetSelection.selectedTargetColumn} (${targetSelection.selectedTargetKind}). ${targetSelection.reason}`
+    : null;
+  const targetReadinessLine =
+    targetSelection && targetSelection.eventCandidate
+      ? `Event-label candidate: ${targetSelection.eventCandidate.eligibleRowCount} labelled row(s), ${targetSelection.eventCandidate.positiveCount} elevated example(s).`
+      : null;
 
   return (
     <section className="card ml-prototype-card">
@@ -2465,6 +2473,10 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
           label="Best model"
           value={report.bestPrototypeModel ?? "Waiting"}
         />
+        <InfoTile
+          label="Training target"
+          value={targetSelection?.selectedTargetKind === "event" ? "Event target" : "Rule target"}
+        />
       </div>
 
       <ul className="factor-list history-list">
@@ -2475,6 +2487,8 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
         </li>
         <li>{limitationLine}</li>
         <li>{scenarioLine}</li>
+        {targetLine && <li>{targetLine}</li>}
+        {targetReadinessLine && <li>{targetReadinessLine}</li>}
         {previewLine && <li>{previewLine}</li>}
         {agreementLine && <li>{agreementLine}</li>}
         <li>
