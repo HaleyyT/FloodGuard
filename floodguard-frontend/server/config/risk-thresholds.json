@@ -1,6 +1,12 @@
 {
-  "version": "prototype-v1",
-  "reviewStatus": "not_expert_validated",
+  "version": "0.2-prototype",
+  "reviewStatus": "needs_domain_expert_review",
+  "calibratedOn": "event_label_backlog_v1",
+  "limitations": [
+    "limited independent labels",
+    "no production validation",
+    "current sweep is strongest for replay and expert review, not for automatic promotion"
+  ],
   "reviewNeeded": [
     "hydrologist",
     "local_council_flood_engineer",
