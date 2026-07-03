@@ -479,11 +479,12 @@ function formatObservedAt(value) {
 }
 
 function formatWarningAdapterStatus(status) {
-  if (status === "connected") return "Official warning available";
+  if (status === "live" || status === "connected") return "Official warning available";
   if (status === "not_configured") return "Not connected";
   if (status === "source_unavailable") return "Source unavailable";
   if (status === "stale") return "Stale warning feed";
   if (status === "no_relevant_warning") return "No relevant official warning";
+  if (status === "parser_error") return "Warning parser error";
   return "Warning status unknown";
 }
 
@@ -497,13 +498,15 @@ function buildOfficialWarning(signals) {
   let adapterStatus = "not_configured";
   if (warningSource && warningSource.status !== "not-connected") {
     adapterStatus =
-      warningSource.status === "failed"
-        ? "source_unavailable"
-        : warningSource.freshnessStatus === "stale"
-          ? "stale"
-          : warningCount > 0 && warningSummary.status !== "no_current_warning"
-            ? "connected"
-            : "no_relevant_warning";
+      warningSummary.parseStatus === "parser_error"
+        ? "parser_error"
+        : warningSource.status === "failed"
+          ? "source_unavailable"
+          : warningSource.freshnessStatus === "stale"
+            ? "stale"
+            : warningCount > 0 && warningSummary.status !== "no_current_warning"
+              ? "live"
+              : "no_relevant_warning";
   }
 
   return {
@@ -517,6 +520,8 @@ function buildOfficialWarning(signals) {
     note:
       warningCount > 0
         ? "Official warning wording is preserved separately from FloodGuard's local risk score."
+        : warningSummary.parseStatus === "parser_error"
+          ? "FloodGuard kept the official warning layer separate because the configured payload could not be parsed safely."
         : warningSource?.note ||
           "FloodGuard's sensor-derived local risk remains separate from NSW SES / HazardWatch warning status.",
     headlines: (warningSummary.warnings ?? []).map((warning) => warning.headline),

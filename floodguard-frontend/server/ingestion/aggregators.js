@@ -26,6 +26,7 @@ import { buildRegionalIngestionHealth } from "./health.js";
 import { readCommunityReports, summariseCommunityReports } from "./communityReports.js";
 import { appendRegionalHistory, readAreaHistory, readLatestSignals, writeLatestSignals } from "./store.js";
 import { buildSpatialRelevance, resolveSpatialQuery } from "./spatialRelevance.js";
+import { buildLegacyWarningAdapterStatus, buildWarningAdapterState } from "./warningStatus.js";
 
 function matchesRelevantStation(value, relevantNames = []) {
   return relevantNames.some((name) => value?.toLowerCase() === name.toLowerCase());
@@ -733,20 +734,6 @@ export async function readHistoricalSignals(areaId = defaultAreaId, limit = 24) 
   return readAreaHistory(historyDir, areaId, limit);
 }
 
-function buildWarningAdapterStatus(areaSignals) {
-  const warningSource = (areaSignals.sourceMetadata ?? []).find((source) => source.type === "warnings");
-  const warningSummary = areaSignals.warningSummary ?? {};
-
-  if (!warningSource || warningSource.status === "not-connected") return "not_configured";
-  if (warningSource.status === "failed") return "source_unavailable";
-  if (warningSource.freshnessStatus === "stale") return "stale";
-  if ((warningSummary.warningCount ?? 0) === 0 || warningSummary.status === "no_current_warning") {
-    return "no_relevant_warning";
-  }
-
-  return "connected";
-}
-
 function presentWarningLevel(level) {
   if (level === "advice") return "Advice";
   if (level === "watch_and_act") return "Watch and Act";
@@ -770,8 +757,9 @@ export function readAreaWarningStatus(areaSignals) {
   // Warning status is published separately so the frontend can show official emergency communication alongside FloodGuard risk, not blended into it.
   const warningSource = (areaSignals.sourceMetadata ?? []).find((source) => source.type === "warnings");
   const warningSummary = areaSignals.warningSummary ?? {};
-  const adapterStatus = buildWarningAdapterStatus(areaSignals);
-  const hasWarning = adapterStatus === "connected" && (warningSummary.warningCount ?? 0) > 0;
+  const adapterState = buildWarningAdapterState(areaSignals);
+  const adapterStatus = buildLegacyWarningAdapterStatus(adapterState);
+  const hasWarning = adapterState === "live" && (warningSummary.warningCount ?? 0) > 0;
 
   return {
     area: areaSignals.area.name,
@@ -782,12 +770,25 @@ export function readAreaWarningStatus(areaSignals) {
     updatedAt: warningSummary.observedAt ?? undefined,
     sourceName: "NSW SES HazardWatch",
     sourceUrl: warningSource?.source ?? "https://www.hazardwatch.gov.au/",
+    sourceTarget: warningSummary.targetSource ?? "HazardWatch / NSW SES official warning adapter",
+    adapterState,
     adapterStatus,
     officialText:
       hasWarning && (warningSummary.warnings ?? []).length > 0
         ? warningSummary.warnings.map((warning) => warning.headline).join(" | ")
         : warningSource?.note ?? "Official warning source is not currently connected.",
     warningCount: warningSummary.warningCount ?? 0,
+    availableWarningCount: warningSummary.availableWarningCount ?? 0,
+    parseStatus: warningSummary.parseStatus ?? "parsed",
+    relevance: warningSummary.relevance ?? {
+      areaId: areaSignals.area.id,
+      areaName: areaSignals.area.name,
+      matchedWarningCount: warningSummary.warningCount ?? 0,
+      availableWarningCount: warningSummary.availableWarningCount ?? 0,
+      matchedBy: [],
+      matchedHazardTypes: [],
+      filterMode: "area-name-catchment-and-warning-type",
+    },
     warnings: warningSummary.warnings ?? [],
     sourceFreshness: {
       observedAt: warningSource?.observedAt ?? null,

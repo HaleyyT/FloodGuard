@@ -44,27 +44,85 @@ function warningSeverityScore(level) {
   return 0;
 }
 
-function warningMatchesArea(warning, area) {
-  const areaIds = warning.areaIds ?? warning.area_ids ?? [];
-  const areas = warning.areas ?? warning.locations ?? warning.suburbs ?? [];
-  const text = [
+function buildWarningText(warning) {
+  return [
     warning.area,
     warning.location,
     warning.title,
     warning.headline,
     warning.description,
-    ...areas,
+    ...(warning.areas ?? warning.locations ?? warning.suburbs ?? []),
   ]
     .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    .join(" ");
+}
 
-  return (
-    areaIds.includes(area.id) ||
-    text.includes(area.id.replaceAll("-", " ")) ||
-    text.includes(area.name.toLowerCase().replace(", nsw", "")) ||
-    text.includes(area.catchment.toLowerCase())
-  );
+function normaliseWarningHazardType(warning) {
+  const text = buildWarningText(warning).toLowerCase();
+
+  if (/(flood|flash flood|riverine flood|creek rise|water over road)/.test(text)) return "flood";
+  if (/(storm|severe weather|heavy rain|damaging wind|thunderstorm)/.test(text)) return "storm";
+  if (/(evacuation|emergency)/.test(text)) return "emergency";
+  if (/(fire|bushfire)/.test(text)) return "fire";
+  return "other";
+}
+
+function isRelevantWarningHazardType(hazardType) {
+  return ["flood", "storm", "emergency"].includes(hazardType);
+}
+
+function warningMatchDetails(warning, area) {
+  const areaIds = warning.areaIds ?? warning.area_ids ?? [];
+  const areas = warning.areas ?? warning.locations ?? warning.suburbs ?? [];
+  const text = buildWarningText(warning).toLowerCase();
+  const matchedBy = [];
+
+  if (areaIds.includes(area.id)) matchedBy.push("area_id");
+  if (text.includes(area.id.replaceAll("-", " "))) matchedBy.push("area_slug");
+  if (text.includes(area.name.toLowerCase().replace(", nsw", ""))) matchedBy.push("area_name");
+  if (text.includes(area.catchment.toLowerCase())) matchedBy.push("catchment");
+  if (areas.some((value) => String(value).toLowerCase() === area.name.toLowerCase().replace(", nsw", ""))) {
+    matchedBy.push("area_list");
+  }
+
+  return {
+    matched: matchedBy.length > 0,
+    matchedBy,
+  };
+}
+
+function warningRelevance(warning, area) {
+  const areaMatch = warningMatchDetails(warning, area);
+  const hazardType = normaliseWarningHazardType(warning);
+  const typeRelevant = isRelevantWarningHazardType(hazardType);
+
+  return {
+    matched: areaMatch.matched && typeRelevant,
+    areaMatched: areaMatch.matched,
+    typeRelevant,
+    hazardType,
+    matchedBy: [...areaMatch.matchedBy, ...(typeRelevant ? ["warning_type"] : [])],
+  };
+}
+
+function extractWarningRows(raw) {
+  if (Array.isArray(raw?.warnings)) return { warnings: raw.warnings, recognisable: true };
+  if (Array.isArray(raw?.features)) {
+    return {
+      warnings: raw.features.map((feature) => feature.properties ?? feature),
+      recognisable: true,
+    };
+  }
+  if (
+    raw &&
+    ["status", "level", "warningLevel", "provider", "sourceLabel", "issuedAt", "updatedAt", "observedAt"].some(
+      (key) => key in raw,
+    )
+  ) {
+    return { warnings: [], recognisable: true };
+  }
+
+  return { warnings: [], recognisable: raw == null };
 }
 
 export function normalizeWeather(raw) {
@@ -92,46 +150,78 @@ export function normalizeWeather(raw) {
 }
 
 export function normalizeOfficialWarnings(raw, area) {
-  const warnings = Array.isArray(raw?.warnings)
-    ? raw.warnings
-    : Array.isArray(raw?.features)
-      ? raw.features.map((feature) => feature.properties ?? feature)
-      : [];
-  const matchedWarnings = warnings.filter((warning) => warningMatchesArea(warning, area));
+  const { warnings, recognisable } = extractWarningRows(raw);
+  const warningsWithRelevance = warnings.map((warning) => ({
+    warning,
+    relevance: warningRelevance(warning, area),
+  }));
+  const matchedWarnings = warningsWithRelevance.filter(({ relevance }) => relevance.matched);
   const globalLevel = normaliseWarningLevel(raw?.status ?? raw?.level ?? raw?.warningLevel);
   const matchedLevel = matchedWarnings
-    .map((warning) => normaliseWarningLevel(warning.level ?? warning.status ?? warning.warningLevel))
+    .map(({ warning }) => normaliseWarningLevel(warning.level ?? warning.status ?? warning.warningLevel))
     .sort((a, b) => warningSeverityScore(b) - warningSeverityScore(a))[0];
-  const level = matchedLevel ?? globalLevel;
+  const parseStatus = recognisable ? "parsed" : "parser_error";
+  const level = parseStatus === "parser_error" ? "unknown" : matchedLevel ?? globalLevel;
   const observedAt =
     raw?.observedAt ??
     raw?.issuedAt ??
     raw?.updatedAt ??
-    matchedWarnings[0]?.issuedAt ??
-    matchedWarnings[0]?.updatedAt ??
+    matchedWarnings[0]?.warning?.issuedAt ??
+    matchedWarnings[0]?.warning?.updatedAt ??
     null;
+  const matchedBy = [...new Set(matchedWarnings.flatMap(({ relevance }) => relevance.matchedBy))];
+  const matchedHazardTypes = [...new Set(matchedWarnings.map(({ relevance }) => relevance.hazardType))];
+  const notes = [];
+
+  if (parseStatus === "parser_error") {
+    notes.push("Configured warning payload did not match the expected warning schema.");
+  } else if (matchedWarnings.length === 0) {
+    notes.push("No current official warning matched the area and warning-type relevance rules.");
+  } else {
+    notes.push(`${matchedWarnings.length} relevant official warning(s) matched ${area.name}.`);
+  }
 
   return {
     sourceLabel: raw?.sourceLabel ?? raw?.provider ?? "NSW SES / HazardWatch warning status",
     provider: raw?.provider ?? "NSW SES / HazardWatch",
+    targetSource: "HazardWatch / NSW SES official warning adapter",
     status: level,
     statusLabel:
-      level === "no_current_warning"
+      parseStatus === "parser_error"
+        ? "Parser error"
+        : level === "no_current_warning"
         ? "No current warning"
         : level
             .split("_")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" "),
+    parseStatus,
     observedAt,
     issuedAt: raw?.issuedAt ?? raw?.updatedAt ?? null,
+    availableWarningCount: warnings.length,
+    relevance: {
+      areaId: area.id,
+      areaName: area.name,
+      matchedWarningCount: matchedWarnings.length,
+      availableWarningCount: warnings.length,
+      matchedBy,
+      matchedHazardTypes,
+      filterMode: "area-name-catchment-and-warning-type",
+    },
+    notes,
     warningCount: matchedWarnings.length,
-    warnings: matchedWarnings.map((warning) => ({
+    warnings: matchedWarnings.map(({ warning, relevance }) => ({
       id: warning.id ?? warning.identifier ?? warning.url ?? warning.headline,
       headline: warning.headline ?? warning.title ?? "Official warning",
       level: normaliseWarningLevel(warning.level ?? warning.status ?? warning.warningLevel),
       issuedAt: warning.issuedAt ?? warning.updatedAt ?? null,
       area: warning.area ?? warning.location ?? area.name,
       url: warning.url ?? raw?.sourceUrl ?? null,
+      hazardType: relevance.hazardType,
+      relevance: {
+        matchedBy: relevance.matchedBy,
+        filterMode: "area-name-catchment-and-warning-type",
+      },
     })),
   };
 }

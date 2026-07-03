@@ -36,6 +36,22 @@ function stationKey(station) {
   return station.stationNumber ?? station.name;
 }
 
+function stationDescriptor(station) {
+  return {
+    id: station.id,
+    stationId: station.stationId ?? station.stationNumber ?? station.id,
+    stationNumber: station.stationNumber ?? null,
+    name: station.name,
+    stationName: station.stationName ?? station.name,
+    type: station.type,
+    sourceType: station.sourceType ?? "unknown",
+    provider: station.provider ?? "FloodGuard",
+    areaIds: station.areaIds ?? [],
+    lat: station.lat,
+    lon: station.lon,
+  };
+}
+
 function isConfiguredForArea(station, area) {
   const configured = area.relevantStations?.[station.type] ?? [];
   return configured.some((value) => value.toLowerCase() === stationKey(station).toLowerCase());
@@ -44,7 +60,7 @@ function isConfiguredForArea(station, area) {
 function nearestStationsForLocation(location, limit = 6) {
   return stationCatalog
     .map((station) => ({
-      ...station,
+      ...stationDescriptor(station),
       distanceKm: distanceKm(location, station),
     }))
     .filter((station) => station.distanceKm !== null)
@@ -60,19 +76,29 @@ export function buildSpatialRelevance(area = getAreaConfig(defaultAreaId)) {
   const configuredStations = stationCatalog
     .filter((station) => isConfiguredForArea(station, area))
     .map((station) => ({
-      ...station,
+      ...stationDescriptor(station),
       distanceKm: distanceKm(location, station),
       matchStatus: "configured",
+      selectionReason: "configured-for-area",
     }))
     .sort((a, b) => a.distanceKm - b.distanceKm);
   const nearestStations = nearestStationsForLocation(location).map((station) => ({
     ...station,
     matchStatus: isConfiguredForArea(station, area) ? "configured" : "nearby-context",
+    selectionReason: isConfiguredForArea(station, area) ? "configured-for-area" : "nearest-context",
   }));
   const nearestByType = ["weather", "rainfall", "river"].reduce((byType, type) => {
     byType[type] = nearestStationsForLocation(location, stationCatalog.length).find(
       (station) => station.type === type,
     );
+    return byType;
+  }, {});
+  const selectedStations = ["weather", "rainfall", "river"].reduce((byType, type) => {
+    byType[type] = configuredStations.filter((station) => station.type === type);
+    return byType;
+  }, {});
+  const primaryStationsByType = ["weather", "rainfall", "river"].reduce((byType, type) => {
+    byType[type] = selectedStations[type][0] ?? nearestByType[type] ?? null;
     return byType;
   }, {});
   const coverageRadiusKm =
@@ -83,6 +109,7 @@ export function buildSpatialRelevance(area = getAreaConfig(defaultAreaId)) {
 
   return {
     method: "coordinate-distance-pre-postgis",
+    selectionPolicy: "configured-area-first-then-nearest-context",
     areaId: area.id,
     areaName: area.name,
     catchment: area.catchment,
@@ -98,8 +125,19 @@ export function buildSpatialRelevance(area = getAreaConfig(defaultAreaId)) {
     coverageRadiusKm,
     configuredFitRadiusKm,
     configuredStations,
+    selectedStations,
     nearestStations,
     nearestByType,
+    primaryStationsByType,
+    postgisMigrationPlan: {
+      status: "planned",
+      target: "PostgreSQL + PostGIS",
+      nextMilestones: [
+        "Store gauge and warning geometry in PostGIS tables.",
+        "Replace area-name matching with polygon and catchment intersection.",
+        "Score gauges and warnings by suburb, creek corridor, and flood-prone overlays.",
+      ],
+    },
     notes: [
       configuredStations.length === 0
         ? "No configured station coordinates are available yet."
@@ -107,12 +145,13 @@ export function buildSpatialRelevance(area = getAreaConfig(defaultAreaId)) {
       coverageRadiusKm === null
         ? "Coverage radius cannot be calculated until station coordinates are added."
         : `Configured station coverage radius is ${coverageRadiusKm} km from the area centroid.`,
+      "Spatial selection currently uses configured station mapping first and nearest-station context second.",
     ],
   };
 }
 
 export function resolveSpatialQuery({ areaId, lat, lon }) {
-  const selectedArea = getAreaConfig(areaId);
+  const selectedArea = areaId ? getAreaConfig(areaId) : null;
   const queryLocation =
     typeof lat === "number" && typeof lon === "number"
       ? {
