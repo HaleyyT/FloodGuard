@@ -44,6 +44,10 @@ test("risk summary model surfaces confidence and data-quality warnings", () => {
     riskLevel: "Moderate",
     summary: "Moderate local concern is present.",
     decisionAudit: {
+      hazardPressure: { rainfall: "elevated", river: "stable", wetness: "moderate" },
+      evidenceConfidence: "partial",
+      recommendationType: "monitor_and_check_official_sources",
+      checkNext: ["Check official NSW SES and BoM advice."],
       reliability: {
         score: 82,
         level: "High",
@@ -56,6 +60,10 @@ test("risk summary model surfaces confidence and data-quality warnings", () => {
   assert.equal(summary.riskLevel, "Moderate");
   assert.match(summary.confidenceLabel, /82% High/);
   assert.match(summary.warnings[0], /stale/i);
+  assert.equal(summary.hazardPressure.rainfall, "elevated");
+  assert.equal(summary.evidenceConfidence, "partial");
+  assert.equal(summary.recommendationType, "monitor_and_check_official_sources");
+  assert.match(summary.checkNext[0], /NSW SES|BoM/i);
 });
 
 test("notification banner model separates official warnings from app-generated and data-quality notices", () => {

@@ -63,6 +63,10 @@ export function buildRiskSummaryModel(dashboardData) {
   return {
     riskLevel: dashboardData?.riskLevel ?? "Unknown",
     summary: dashboardData?.summary ?? "No current risk summary is available.",
+    hazardPressure: audit?.hazardPressure ?? null,
+    evidenceConfidence: audit?.evidenceConfidence ?? "unknown",
+    recommendationType: audit?.recommendationType ?? "unknown",
+    checkNext: audit?.checkNext ?? [],
     confidenceLabel:
       reliability?.score !== undefined && reliability?.score !== null
         ? `${reliability.score}% ${reliability.level}`

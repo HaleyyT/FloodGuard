@@ -130,6 +130,13 @@ test("produces moderate risk when short-window rainfall is elevated", () => {
   assert.equal(result.concernLevel, "Moderate");
   assert.ok(result.signals.rainfallPressure > result.signals.riverPressure);
   assert.match(result.reasons.join(" "), /3h window|24h window/i);
+  assert.equal(result.decisionAudit.hazardPressure.rainfall, "watch");
+  assert.equal(result.decisionAudit.hazardPressure.river, "stable");
+  assert.equal(result.decisionAudit.evidenceConfidence, "high");
+  assert.equal(result.decisionAudit.recommendationType, "monitor_and_check_official_sources");
+  assert.ok(result.decisionAudit.whatIncreasedConcern.length > 0);
+  assert.ok(result.decisionAudit.whatReducedConcern.length > 0);
+  assert.ok(result.decisionAudit.checkNext.some((step) => /NSW SES|BoM/i.test(step)));
 });
 
 test("produces high risk when heavy rain, wetness, and rising river combine", () => {
@@ -197,4 +204,6 @@ test("excludes stale or fallback core sources from live scoring", () => {
   assert.equal(result.signals.rainfallPressure, 0);
   assert.ok(result.excludedSignals.length > 0);
   assert.match(result.excludedSignals[0], /excluded from live core scoring/i);
+  assert.equal(result.decisionAudit.evidenceConfidence, "partial");
+  assert.ok(result.decisionAudit.sourceLimitations.some((item) => /fallback|stale/i.test(item)));
 });

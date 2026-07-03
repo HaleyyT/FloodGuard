@@ -1320,7 +1320,9 @@ function sourceModeLabel(mode) {
 
 function reliabilityLabel(audit) {
   if (!audit) return "Waiting";
-  return `${audit.reliability.level} (${audit.reliability.score}/100)`;
+  const level = audit.reliability?.level ?? "Unknown";
+  const score = audit.reliability?.score ?? "n/a";
+  return `${level} (${score}/100)`;
 }
 
 // #signal visualisation rainfall chart
@@ -1484,7 +1486,15 @@ function DecisionAuditPanel({ audit }) {
     );
   }
 
-  const auditWarnings = [...audit.reliability.blockers, ...audit.reliability.warnings];
+  const auditWarnings = [
+    ...(audit.reliability?.blockers ?? []),
+    ...(audit.reliability?.warnings ?? []),
+  ];
+  const concernDrivers = audit.whatIncreasedConcern ?? [];
+  const concernReducers = audit.whatReducedConcern ?? [];
+  const excludedEvidence = audit.excludedEvidence ?? [];
+  const sourceLimitations = audit.sourceLimitations ?? [];
+  const nextSteps = audit.checkNext ?? [];
 
   return (
     <section className="card">
@@ -1493,7 +1503,7 @@ function DecisionAuditPanel({ audit }) {
           <p className="section-label">Decision audit</p>
           <h3>Reliability trace</h3>
         </div>
-        <span className={`source-badge ${audit.reliability.level.toLowerCase()}`}>
+        <span className={`source-badge ${(audit.reliability?.level ?? "unknown").toLowerCase()}`}>
           {reliabilityLabel(audit)}
         </span>
       </div>
@@ -1504,6 +1514,15 @@ function DecisionAuditPanel({ audit }) {
           <h3>{audit.score}/100</h3>
         </div>
         <p className="audit-note">{audit.scoreFormula}</p>
+      </div>
+
+      <div className="history-grid">
+        <InfoTile label="Rainfall pressure" value={audit.hazardPressure?.rainfall ?? "unknown"} />
+        <InfoTile label="River pressure" value={audit.hazardPressure?.river ?? "unknown"} />
+        <InfoTile label="Wetness pressure" value={audit.hazardPressure?.wetness ?? "unknown"} />
+        <InfoTile label="Evidence confidence" value={audit.evidenceConfidence ?? "unknown"} />
+        <InfoTile label="Warning context" value={audit.officialWarningContext ?? "unknown"} />
+        <InfoTile label="Recommendation" value={audit.recommendationType ?? "unknown"} />
       </div>
 
       <div className="audit-component-list">
@@ -1519,6 +1538,14 @@ function DecisionAuditPanel({ audit }) {
           </div>
         ))}
       </div>
+
+      <ul className="factor-list history-list audit-warning-list">
+        {concernDrivers.map((item) => <li key={item}>What increased concern: {item}</li>)}
+        {concernReducers.map((item) => <li key={item}>What reduced concern: {item}</li>)}
+        {excludedEvidence.map((item) => <li key={item}>What was excluded: {item}</li>)}
+        {sourceLimitations.map((item) => <li key={item}>Source limitation: {item}</li>)}
+        {nextSteps.map((item) => <li key={item}>Check next: {item}</li>)}
+      </ul>
 
       <ul className="factor-list history-list audit-warning-list">
         {auditWarnings.length > 0 ? (

@@ -68,6 +68,18 @@ function mockRegionalSignals() {
     riskAssessment: {
       concernLevel: "Moderate",
       score: 52,
+      hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
+      evidenceConfidence: "high",
+      officialWarningContext: "not_configured",
+      recommendationType: "monitor_and_check_official_sources",
+      decisionRecommendation: {
+        recommendationType: "monitor_and_check_official_sources",
+        nextSteps: [
+          "Check official NSW SES and BoM advice.",
+          "Avoid floodwater and low-lying routes if conditions worsen.",
+          "Prepare to act according to official emergency advice.",
+        ],
+      },
       features: {
         rainfall1hMm: 5,
         rainfall3hMm: 8,
@@ -83,6 +95,27 @@ function mockRegionalSignals() {
       },
       excludedSignals: [],
       decisionAudit: {
+        hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
+        evidenceConfidence: "high",
+        officialWarningContext: "not_configured",
+        recommendationType: "monitor_and_check_official_sources",
+        decisionRecommendation: {
+          recommendationType: "monitor_and_check_official_sources",
+          nextSteps: [
+            "Check official NSW SES and BoM advice.",
+            "Avoid floodwater and low-lying routes if conditions worsen.",
+            "Prepare to act according to official emergency advice.",
+          ],
+        },
+        whatIncreasedConcern: ["Short-window rainfall is elevated at 5 mm in the last hour."],
+        whatReducedConcern: ["River trend is stable, which lowers immediate local concern."],
+        excludedEvidence: [],
+        sourceLimitations: ["Official warning feed is not connected yet, so FloodGuard cannot verify warning context automatically."],
+        checkNext: [
+          "Check official NSW SES and BoM advice.",
+          "Avoid floodwater and low-lying routes if conditions worsen.",
+          "Prepare to act according to official emergency advice.",
+        ],
         reliability: { score: 82, level: "High" },
       },
       notificationEligibility: {
@@ -442,6 +475,18 @@ test("risk endpoint returns features, pressure scores, and excluded signals cont
   assert.equal(typeof body.pressureScores.rainfallPressure, "number");
   assert.ok(Array.isArray(body.excludedSignals));
   assert.equal(body.notificationEligibility.notificationType, "awareness_notice");
+  assert.equal(body.hazardPressure.rainfall, "watch");
+  assert.equal(body.evidenceConfidence, "high");
+  assert.equal(body.officialWarningContext, "not_configured");
+  assert.equal(body.recommendationType, "monitor_and_check_official_sources");
+  assert.ok(Array.isArray(body.decisionRecommendation.nextSteps));
+  assert.equal(body.decisionAudit.hazardPressure.rainfall, "watch");
+  assert.equal(body.decisionAudit.evidenceConfidence, "high");
+  assert.equal(body.decisionAudit.officialWarningContext, "not_configured");
+  assert.equal(body.decisionAudit.recommendationType, "monitor_and_check_official_sources");
+  assert.ok(Array.isArray(body.decisionAudit.whatIncreasedConcern));
+  assert.ok(Array.isArray(body.decisionAudit.whatReducedConcern));
+  assert.ok(Array.isArray(body.decisionAudit.checkNext));
 });
 
 test("source registry endpoint exposes source evidence and data modes per area", async () => {

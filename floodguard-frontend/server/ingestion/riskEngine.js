@@ -260,10 +260,127 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
   // The decision audit is the explainer payload for the dashboard and future validation work.
   const components = buildScoreComponents(riskSignals);
   const reliability = buildReliability(signals, riskSignals);
+  const rainfall1h = riskSignals.features.rainfall1hMm ?? 0;
+  const rainfall3h = riskSignals.features.rainfall3hMm ?? 0;
+  const rainfall24h = riskSignals.features.rainfall24hMm ?? 0;
+  const rainfall72h = riskSignals.features.rainfall72hMm ?? 0;
+  const antecedentWetness = riskSignals.features.antecedentWetnessMm ?? 0;
+  const riverTrend = riskSignals.features.riverTrend ?? "unknown";
+  const riverDelta1h = riskSignals.features.riverDelta1hM ?? null;
+  const riverDelta3h = riskSignals.features.riverDelta3hM ?? null;
+  const warningStatus = signals.warningSummary?.status ?? "not_configured";
+  const warningActive = !["no_current_warning", "unknown", "not_configured"].includes(warningStatus);
+  const hazardPressure = {
+    rainfall:
+      rainfall24h >= floodFeatureThresholds.rainfall.twentyFourHourConcernMm ||
+      rainfall3h >= floodFeatureThresholds.rainfall.threeHourConcernMm
+        ? "elevated"
+        : riskSignals.rainfallPressure >= 35 || rainfall1h >= floodFeatureThresholds.rainfall.oneHourConcernMm
+          ? "watch"
+          : "low",
+    river:
+      (typeof riverDelta3h === "number" &&
+        riverDelta3h >= floodFeatureThresholds.river.rapidRiseThreeHourM) ||
+      (typeof riverDelta1h === "number" &&
+        riverDelta1h >= floodFeatureThresholds.river.rapidRiseOneHourM) ||
+      riverTrend === "rising"
+        ? "elevated"
+        : riverTrend === "steady" || ((riskSignals.features.steadyRiverStations ?? 0) > 0 && (riskSignals.features.risingRiverStations ?? 0) === 0)
+          ? "stable"
+          : riverTrend === "falling"
+            ? "easing"
+            : "limited",
+    wetness:
+      rainfall72h >= floodFeatureThresholds.rainfall.seventyTwoHourWetnessMm ||
+      antecedentWetness >= floodFeatureThresholds.rainfall.seventyTwoHourWetnessMm / 2
+        ? "moderate"
+        : "low",
+  };
+  const evidenceConfidence =
+    reliability.level === "High"
+      ? "high"
+      : reliability.level === "Medium"
+        ? "partial"
+        : "limited";
+  const officialWarningContext = warningActive ? warningStatus : warningStatus ?? "not_configured";
+  const increasedConcern = [];
+  const reducedConcern = [];
+  const sourceLimitations = [];
+  const excludedEvidence = riskSignals.features.excludedSignals ?? [];
+
+  if (hazardPressure.rainfall === "elevated") {
+    increasedConcern.push(
+      `Recent rainfall is elevated with ${rainfall3h} mm over 3h and ${rainfall24h} mm over 24h.`,
+    );
+  } else if (hazardPressure.rainfall === "watch") {
+    increasedConcern.push(`Short-window rainfall is elevated at ${rainfall1h} mm in the last hour.`);
+  } else {
+    reducedConcern.push("Rainfall remains below the stronger concern windows.");
+  }
+
+  if (hazardPressure.river === "elevated") {
+    increasedConcern.push(
+      `River trend is rising with ${riverDelta1h ?? "unknown"} m over 1h and ${riverDelta3h ?? "unknown"} m over 3h.`,
+    );
+  } else if (hazardPressure.river === "stable") {
+    reducedConcern.push("River trend is stable, which lowers immediate local concern.");
+  } else if (hazardPressure.river === "easing") {
+    reducedConcern.push("River trend is easing rather than rising.");
+  }
+
+  if (hazardPressure.wetness === "moderate") {
+    increasedConcern.push(
+      `Antecedent wetness remains elevated with ${rainfall72h} mm over 72h.`,
+    );
+  } else {
+    reducedConcern.push("Recent multi-day wetness is not yet at the higher flood-pressure range.");
+  }
+
+  if (warningActive) {
+    increasedConcern.push("An official warning context is present and should be checked separately.");
+  } else if (officialWarningContext === "not_configured") {
+    sourceLimitations.push("Official warning feed is not connected yet, so FloodGuard cannot verify warning context automatically.");
+  } else if (officialWarningContext === "source_unavailable") {
+    sourceLimitations.push("Official warning source is currently unavailable.");
+  } else {
+    reducedConcern.push("No current relevant official warning is attached to this area snapshot.");
+  }
+
+  sourceLimitations.push(...reliability.blockers, ...reliability.warnings);
+
+  const recommendationType =
+    concernLevel === "High"
+      ? "prepare_to_act_and_check_official_sources"
+      : concernLevel === "Moderate"
+        ? "monitor_and_check_official_sources"
+        : evidenceConfidence === "limited"
+          ? "monitor_with_caution_due_to_limited_evidence"
+          : "continue_monitoring";
+  const checkNext = [
+    "Check official NSW SES and BoM advice.",
+    concernLevel !== "Low"
+      ? "Avoid floodwater and low-lying routes if conditions worsen."
+      : "Monitor local rainfall and river trends.",
+    "Prepare to act according to official emergency advice.",
+  ];
 
   return {
     concernLevel,
     score,
+    hazardPressure,
+    evidenceConfidence,
+    officialWarningContext,
+    recommendationType,
+    decisionRecommendation: {
+      recommendationType,
+      nextSteps: checkNext,
+      note:
+        recommendationType === "prepare_to_act_and_check_official_sources"
+          ? "FloodGuard indicates elevated local concern, but official emergency advice remains primary."
+          : recommendationType === "monitor_and_check_official_sources"
+            ? "Conditions warrant monitoring and checking official sources rather than relying on FloodGuard alone."
+            : "FloodGuard remains conservative and keeps official sources primary for any emergency action.",
+    },
     scoreFormula: "rainfall 35% + river 30% + wetness 18% + weather 10% + public signals 7%",
     thresholds: {
       moderate: 45,
@@ -273,6 +390,11 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
     },
     components,
     reliability,
+    whatIncreasedConcern: increasedConcern,
+    whatReducedConcern: reducedConcern,
+    excludedEvidence,
+    sourceLimitations,
+    checkNext,
     sourceSummary: {
       status: signals.freshness?.status ?? "unknown",
       staleSourceCount: signals.freshness?.staleSourceCount ?? 0,
@@ -558,9 +680,16 @@ export function assessRisk(signals) {
     reasons.push(excludedSignal);
   }
 
+  const decisionAudit = buildDecisionAudit(signals, riskSignals, score, concernLevel);
+
   return {
     concernLevel,
     score,
+    hazardPressure: decisionAudit.hazardPressure,
+    evidenceConfidence: decisionAudit.evidenceConfidence,
+    officialWarningContext: decisionAudit.officialWarningContext,
+    recommendationType: decisionAudit.recommendationType,
+    decisionRecommendation: decisionAudit.decisionRecommendation,
     summary:
       concernLevel === "High"
         ? `FloodGuard has identified elevated local flood concern for ${shortAreaName} from combined rainfall and river signals.`
@@ -584,7 +713,7 @@ export function assessRisk(signals) {
       confidence: Number((riskSignals.confidence / 100).toFixed(3)),
     },
     excludedSignals: riskSignals.features.excludedSignals ?? [],
-    decisionAudit: buildDecisionAudit(signals, riskSignals, score, concernLevel),
+    decisionAudit,
     notificationEligibility: buildNotificationEligibility(signals, concernLevel),
   };
 }
