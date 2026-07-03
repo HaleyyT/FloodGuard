@@ -66,6 +66,8 @@ EVENT_LABEL_STRENGTH_COLUMN = "eventLabelStrength"
 EVENT_LABEL_NOTES_COLUMN = "eventLabelNotes"
 EVENT_LABEL_AVAILABLE_COLUMN = "eventLabelAvailable"
 AREA_COLUMN = "areaId"
+TARGET_SELECTION_MIN_ROWS = 30
+TARGET_SELECTION_MIN_POSITIVES = 8
 
 LEAKAGE_PRONE_COLUMNS = [
     "riskScore",
@@ -303,6 +305,121 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
         )
 
     return warnings
+
+
+def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
+    """Choose the strongest viable target layer without pretending weak labels are validated."""
+
+    usable = dataframe[dataframe[TRAINING_ELIGIBILITY_COLUMN] == 1].copy()
+    rule_target_column = RULE_TARGET_COLUMN if RULE_TARGET_COLUMN in usable.columns else LABEL_COLUMN
+    rule_label_source_column = (
+        RULE_LABEL_SOURCE_COLUMN if RULE_LABEL_SOURCE_COLUMN in usable.columns else LABEL_SOURCE_COLUMN
+    )
+    usable = usable.dropna(subset=[rule_target_column]).copy()
+    rule_positive_count = int((usable[rule_target_column].fillna(0).astype(int) == 1).sum())
+
+    base_selection = {
+        "selectedTargetColumn": rule_target_column,
+        "selectedLabelSourceColumn": rule_label_source_column,
+        "selectedLabelAvailabilityColumn": None,
+        "selectedTargetKind": "rule",
+        "readyForIndependentSupervision": False,
+        "reason": "Fallback to rule-derived target because independent event labels are too sparse or weak.",
+        "eligibleRowCount": int(len(usable)),
+        "positiveCount": rule_positive_count,
+        "sourceCounts": usable[rule_label_source_column].fillna("rule_derived").value_counts(dropna=False).to_dict()
+        if rule_label_source_column in usable.columns
+        else {"rule_derived": int(len(usable))},
+    }
+
+    if EVENT_TARGET_COLUMN not in usable.columns or EVENT_LABEL_AVAILABLE_COLUMN not in usable.columns:
+        return base_selection
+
+    labelled = usable[usable[EVENT_LABEL_AVAILABLE_COLUMN].fillna(0).astype(int) == 1].copy()
+    if labelled.empty:
+        return {
+            **base_selection,
+            "reason": "Fallback to rule-derived target because no event-labelled rows are available yet.",
+        }
+
+    event_positive_count = int((labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1).sum())
+    strength_counts = (
+        labelled[EVENT_LABEL_STRENGTH_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict()
+        if EVENT_LABEL_STRENGTH_COLUMN in labelled.columns
+        else {}
+    )
+    all_weak = set(strength_counts.keys()).issubset({"weak", "unknown"})
+
+    if len(labelled) < TARGET_SELECTION_MIN_ROWS:
+        return {
+            **base_selection,
+            "reason": f"Fallback to rule-derived target because only {len(labelled)} event-labelled row(s) are available.",
+            "eventTargetCandidate": {
+                "eligibleRowCount": int(len(labelled)),
+                "positiveCount": event_positive_count,
+                "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+            },
+        }
+
+    if event_positive_count < TARGET_SELECTION_MIN_POSITIVES:
+        return {
+            **base_selection,
+            "reason": f"Fallback to rule-derived target because event-labelled rows contain only {event_positive_count} elevated example(s).",
+            "eventTargetCandidate": {
+                "eligibleRowCount": int(len(labelled)),
+                "positiveCount": event_positive_count,
+                "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+            },
+        }
+
+    if all_weak:
+        return {
+            **base_selection,
+            "reason": "Fallback to rule-derived target because all event-labelled rows are still weak-strength placeholders.",
+            "eventTargetCandidate": {
+                "eligibleRowCount": int(len(labelled)),
+                "positiveCount": event_positive_count,
+                "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+            },
+        }
+
+    return {
+        "selectedTargetColumn": EVENT_TARGET_COLUMN,
+        "selectedLabelSourceColumn": EVENT_LABEL_SOURCE_COLUMN,
+        "selectedLabelAvailabilityColumn": EVENT_LABEL_AVAILABLE_COLUMN,
+        "selectedTargetKind": "event",
+        "readyForIndependentSupervision": True,
+        "reason": "Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.",
+        "eligibleRowCount": int(len(labelled)),
+        "positiveCount": event_positive_count,
+        "sourceCounts": labelled[EVENT_LABEL_SOURCE_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict(),
+        "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+    }
+
+
+def apply_training_target_selection(
+    dataframe: pd.DataFrame, selection: dict[str, Any]
+) -> pd.DataFrame:
+    """Project the selected target into the shared training alias columns used downstream."""
+
+    target_column = selection["selectedTargetColumn"]
+    label_source_column = selection["selectedLabelSourceColumn"]
+    availability_column = selection.get("selectedLabelAvailabilityColumn")
+    projected = dataframe.copy()
+
+    if availability_column:
+        projected = projected[projected[availability_column].fillna(0).astype(int) == 1].copy()
+
+    projected = projected.dropna(subset=[target_column]).copy()
+    projected[LABEL_COLUMN] = pd.to_numeric(projected[target_column], errors="coerce").fillna(0).astype(int)
+    if label_source_column in projected.columns:
+        projected[LABEL_SOURCE_COLUMN] = projected[label_source_column].fillna("unknown")
+    else:
+        projected[LABEL_SOURCE_COLUMN] = "unknown"
+
+    projected["selectedTrainingTarget"] = selection["selectedTargetColumn"]
+    projected["selectedTrainingTargetKind"] = selection["selectedTargetKind"]
+    return projected
 
 
 def describe_missingness_level(rate: float) -> str:

@@ -12,11 +12,16 @@ sys.path.insert(0, str(SRC_DIR))
 
 from utils import (  # noqa: E402
     EVENT_LABEL_AVAILABLE_COLUMN,
+    EVENT_LABEL_SOURCE_COLUMN,
+    EVENT_LABEL_STRENGTH_COLUMN,
     EVENT_TARGET_COLUMN,
     GROUP_TIMESTAMP_COLUMN,
     LABEL_COLUMN,
+    RULE_LABEL_SOURCE_COLUMN,
+    apply_training_target_selection,
     assess_leakage_controls,
     build_probability_bucket_summary,
+    choose_training_target,
     confidence_band_for_probability,
     feature_columns_for_training,
     split_dataset_for_validation,
@@ -40,6 +45,7 @@ def make_row(
         "observedAt": observed_at,
         "targetElevatedConcern": label,
         "labelSource": "rule_derived",
+        RULE_LABEL_SOURCE_COLUMN: "rule_derived",
         "ruleConcernLevel": "Moderate" if label else "Low",
         "rainfallLatestMm": 3 + label,
         "rainfall1hMm": 5 + label,
@@ -61,6 +67,8 @@ def make_row(
         "trainingEligibility": 1,
         EVENT_TARGET_COLUMN: event_label,
         EVENT_LABEL_AVAILABLE_COLUMN: event_available,
+        EVENT_LABEL_SOURCE_COLUMN: "warning_derived" if event_available else None,
+        EVENT_LABEL_STRENGTH_COLUMN: "moderate" if event_available else None,
         "riskScore": 65 if label else 15,
     }
     return row
@@ -148,6 +156,51 @@ class ValidationControlTests(unittest.TestCase):
 
         self.assertGreaterEqual(len(buckets), 3)
         self.assertEqual(buckets[0]["bucket"], "0.0-0.2")
+
+    def test_target_selection_falls_back_to_rule_when_event_labels_are_too_weak(self) -> None:
+        frame = pd.DataFrame(
+            [
+                make_row(
+                    f"2026-06-25T0{index % 6}:00:00Z",
+                    1 if index in {2, 5} else 0,
+                    event_label=0,
+                    event_available=1,
+                )
+                for index in range(12)
+            ]
+        )
+        frame[GROUP_TIMESTAMP_COLUMN] = pd.to_datetime(frame[GROUP_TIMESTAMP_COLUMN], utc=True)
+        frame[EVENT_LABEL_STRENGTH_COLUMN] = "weak"
+
+        selection = choose_training_target(frame)
+
+        self.assertEqual(selection["selectedTargetKind"], "rule")
+        self.assertIn("only 12 event-labelled row(s)", selection["reason"])
+
+    def test_target_selection_uses_event_target_when_labelled_rows_are_viable(self) -> None:
+        rows = []
+        for index in range(40):
+            label = 1 if index in {5, 8, 11, 15, 19, 23, 27, 32, 35, 38} else 0
+            rows.append(
+                make_row(
+                    f"2026-06-{1 + (index // 6):02d}T{index % 6:02d}:00:00Z",
+                    label,
+                    area_id="parramatta" if index % 2 == 0 else "toongabbie",
+                    event_label=label,
+                    event_available=1,
+                )
+            )
+
+        frame = pd.DataFrame(rows)
+        frame[GROUP_TIMESTAMP_COLUMN] = pd.to_datetime(frame[GROUP_TIMESTAMP_COLUMN], utc=True)
+        frame[EVENT_LABEL_STRENGTH_COLUMN] = "moderate"
+
+        selection = choose_training_target(frame)
+        projected = apply_training_target_selection(frame, selection)
+
+        self.assertEqual(selection["selectedTargetKind"], "event")
+        self.assertEqual(selection["selectedTargetColumn"], EVENT_TARGET_COLUMN)
+        self.assertEqual(int(projected[LABEL_COLUMN].sum()), 10)
 
 
 if __name__ == "__main__":

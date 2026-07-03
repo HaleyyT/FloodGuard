@@ -14,10 +14,12 @@ from utils import (
     MODELS_DIR,
     REPORTS_DIR,
     SCENARIO_DATASET,
+    apply_training_target_selection,
     assess_leakage_controls,
     build_feature_quality_report,
     build_dataset_summary,
     build_dataset_warnings,
+    choose_training_target,
     ensure_runtime_dirs,
     feature_columns_for_training,
     load_dataset,
@@ -30,7 +32,9 @@ from utils import (
 def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
     """Train prototype models on one dataset and record their metrics."""
 
-    dataframe = load_dataset(dataset_path)
+    raw_dataframe = load_dataset(dataset_path)
+    target_selection = choose_training_target(raw_dataframe)
+    dataframe = apply_training_target_selection(raw_dataframe, target_selection)
     summary = build_dataset_summary(dataframe, dataset_name)
     warnings = build_dataset_warnings(summary)
     split = split_dataset_for_validation(dataframe)
@@ -43,6 +47,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
     warnings.extend(
         f"Feature quality: {action}" for action in feature_quality.get("recommendedActions", [])
     )
+    warnings.append(f"Training target selection: {target_selection['reason']}")
     models_dir = MODELS_DIR / dataset_name
     models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -57,6 +62,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
             "liveScoringEnabled": False,
             "summary": summary,
             "warnings": warnings,
+            "targetSelection": target_selection,
             "split": split_metadata,
             "validation": {
                 "primaryStrategy": split["strategy"],
@@ -106,6 +112,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
         "readyForValidatedML": False,
         "summary": summary,
         "warnings": warnings,
+        "targetSelection": target_selection,
         "split": split_metadata,
         "validation": {
             "primaryStrategy": split["strategy"],
@@ -152,6 +159,7 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
                 "bestPrototypeModel": result["bestPrototypeModel"],
                 "warnings": result["warnings"],
                 "summary": result["summary"],
+                "targetSelection": result["targetSelection"],
                 "featureQuality": {
                     "highMissingFeatureCount": result["featureQuality"]["highMissingFeatureCount"],
                     "criticalMissingFeatureCount": result["featureQuality"]["criticalMissingFeatureCount"],
@@ -197,6 +205,7 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
     write_calibration_summary(results)
     write_validation_summary(results)
     write_feature_quality_summary(results)
+    write_target_selection_summary(results)
     write_model_comparison_report(results)
     write_model_card(results)
 
@@ -350,6 +359,54 @@ def write_feature_quality_summary(results: list[dict[str, Any]]) -> None:
     )
 
     (REPORTS_DIR / "feature_quality_summary.md").write_text(
+        "\n".join(lines) + "\n", encoding="utf-8"
+    )
+
+
+def write_target_selection_summary(results: list[dict[str, Any]]) -> None:
+    """Write a markdown summary of which supervision target was selected and why."""
+
+    lines = [
+        "# FloodGuard ML Target Selection Summary",
+        "",
+        "FloodGuard now chooses the strongest viable supervision target it can justify for each dataset.",
+        "",
+    ]
+
+    for result in results:
+        selection = result["targetSelection"]
+        lines.extend(
+            [
+                f"## {result['datasetName'].replace('_', ' ').title()}",
+                "",
+                f"- Selected target kind: `{selection['selectedTargetKind']}`",
+                f"- Selected target column: `{selection['selectedTargetColumn']}`",
+                f"- Eligible rows for selected target: {selection['eligibleRowCount']}",
+                f"- Elevated examples in selected target: {selection['positiveCount']}",
+                f"- Ready for independent supervision: `{selection['readyForIndependentSupervision']}`",
+                f"- Reason: {selection['reason']}",
+                "",
+            ]
+        )
+        if selection.get("eventTargetCandidate"):
+            candidate = selection["eventTargetCandidate"]
+            lines.append("Event-target candidate review:")
+            lines.append(f"- Labelled rows: {candidate['eligibleRowCount']}")
+            lines.append(f"- Elevated examples: {candidate['positiveCount']}")
+            lines.append(f"- Strength counts: {candidate.get('strengthCounts', {})}")
+            lines.append("")
+
+    lines.extend(
+        [
+            "## Interpretation",
+            "",
+            "- FloodGuard should prefer event-style targets only when coverage, class balance, and label strength are strong enough.",
+            "- Falling back to rule-derived targets is honest when independent labels exist only as scaffolding.",
+            "",
+        ]
+    )
+
+    (REPORTS_DIR / "target_selection_summary.md").write_text(
         "\n".join(lines) + "\n", encoding="utf-8"
     )
 

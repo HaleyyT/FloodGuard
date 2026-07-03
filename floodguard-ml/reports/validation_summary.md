@@ -24,6 +24,7 @@ Warnings:
 - Feature quality: Add stronger independent event labels because the current target still teaches ML to imitate the rule engine.
 - Feature quality: Collect more elevated examples before trusting ranking or probability behaviour on real exports.
 - Feature quality: Review constant features because they add no information and may reflect export or pilot-area limits.
+- Training target selection: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 
 ## Scenario Stress Test
 
@@ -37,6 +38,7 @@ Warnings:
 - Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.
 - Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.
 - Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable.
+- Training target selection: Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.
 
 ## Interpretation
 

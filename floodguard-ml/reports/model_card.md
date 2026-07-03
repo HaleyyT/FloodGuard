@@ -14,9 +14,10 @@ It is not used for live alerting or official warning decisions.
 - Real export joined event positives: 0
 - Scenario stress-test rows: 84
 - Real export label source: rule_derived
-- Real export training target: `targetElevatedConcern` / `targetRuleElevated`
+- Real export selected training target: `targetRuleElevated` (rule)
 - Real export independent-label layer: `targetEventElevated` when a curated label window overlaps the row
 - Scenario label source: scenario_generated
+- Scenario selected training target: `targetEventElevated` (event)
 
 ## Target Definition
 
@@ -24,7 +25,8 @@ It is not used for live alerting or official warning decisions.
 - `targetRuleElevated = 0` when the rule concern level is `Low`.
 - `targetElevatedConcern` is kept as the current alias for the rule-derived training target.
 - `targetEventElevated` is joined from time-window labels when curated event labels are available.
-- Current real-export training still relies on rule-derived labels, not independent flood outcomes.
+- Real export target selection reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
+- Scenario target selection reason: Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.
 
 ## Features Used
 
@@ -112,7 +114,8 @@ It is not used for live alerting or official warning decisions.
 ## Key Warnings
 
 - Dataset has severe class imbalance in the real export.
-- Labels are rule-derived, not independent flood outcomes.
+- Independent event supervision is selected only when coverage and class strength are sufficient.
+- Real-export training still falls back to rule-derived supervision when event labels remain weak or sparse.
 - Joined event labels exist to prepare better supervision, but coverage and strength must be inspected before treating them as validation evidence.
 - No real `High` examples are present in the current historical export.
 - Metrics are illustrative and should not be interpreted as validated flood prediction performance.

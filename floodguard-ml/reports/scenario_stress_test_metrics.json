@@ -76,15 +76,34 @@
       "areaRelevanceScore": 0,
       "nearestStationDistanceKm": 0,
       "scenarioName": 0,
-      "trainingEligibility": 0
+      "trainingEligibility": 0,
+      "selectedTrainingTarget": 0,
+      "selectedTrainingTargetKind": 0
     }
   },
   "warnings": [
     "12 row(s) were excluded from training due to eligibility gates.",
     "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
     "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
-    "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
+    "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable.",
+    "Training target selection: Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision."
   ],
+  "targetSelection": {
+    "selectedTargetColumn": "targetEventElevated",
+    "selectedLabelSourceColumn": "eventLabelSource",
+    "selectedLabelAvailabilityColumn": "eventLabelAvailable",
+    "selectedTargetKind": "event",
+    "readyForIndependentSupervision": true,
+    "reason": "Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.",
+    "eligibleRowCount": 84,
+    "positiveCount": 48,
+    "sourceCounts": {
+      "scenario_generated": 84
+    },
+    "strengthCounts": {
+      "synthetic": 84
+    }
+  },
   "split": {
     "strategy": "area_holdout_north-parramatta",
     "trainRows": 56,
