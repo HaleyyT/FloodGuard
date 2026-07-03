@@ -75,6 +75,12 @@ It is not used for live alerting or official warning decisions.
   Recall: 1.000
   F1: 0.040
   PR-AUC: 0.265
+- `extra_trees`
+  Balanced accuracy: 0.625
+  Precision: 1.000
+  Recall: 0.250
+  F1: 0.400
+  PR-AUC: 0.265
 
 ### Scenario Stress Test
 
@@ -91,6 +97,12 @@ It is not used for live alerting or official warning decisions.
   F1: 1.000
   PR-AUC: 1.000
 - `random_forest`
+  Balanced accuracy: 1.000
+  Precision: 1.000
+  Recall: 1.000
+  F1: 1.000
+  PR-AUC: 1.000
+- `extra_trees`
   Balanced accuracy: 1.000
   Precision: 1.000
   Recall: 1.000

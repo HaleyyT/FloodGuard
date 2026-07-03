@@ -6,9 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from build_dataset import build_scenario_dataset, build_training_dataset
+from model_registry import MODEL_REGISTRY
 from model_card import write_model_card
-from train_baseline import train_logistic_regression, train_majority_baseline
-from train_tree_models import train_random_forest
 from utils import (
     DATA_DIR,
     DEFAULT_DATASET,
@@ -16,6 +15,7 @@ from utils import (
     REPORTS_DIR,
     SCENARIO_DATASET,
     assess_leakage_controls,
+    build_feature_quality_report,
     build_dataset_summary,
     build_dataset_warnings,
     ensure_runtime_dirs,
@@ -37,8 +37,12 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
     split_metadata = {key: value for key, value in split.items() if key not in {"train", "test"}}
     trainable_features, _, _ = feature_columns_for_training(split["train"])
     leakage_controls = assess_leakage_controls(dataframe, trainable_features)
+    feature_quality = build_feature_quality_report(dataframe, dataset_name)
     warnings.extend(split_metadata.pop("validationWarnings", []))
     warnings.extend(leakage_controls["warnings"])
+    warnings.extend(
+        f"Feature quality: {action}" for action in feature_quality.get("recommendedActions", [])
+    )
     models_dir = MODELS_DIR / dataset_name
     models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,6 +63,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
                 "candidateStrategies": split_metadata.get("candidateStrategies", []),
                 "leakageControls": leakage_controls,
             },
+            "featureQuality": feature_quality,
             "models": [],
             "bestPrototypeModel": None,
             "status": "skipped",
@@ -67,24 +72,13 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
         return payload
 
     model_results = [
-        train_majority_baseline(
+        entry["trainer"](
             split["train"],
             split["test"],
-            models_dir / "majority_baseline.joblib",
+            models_dir / f"{entry['modelName']}.joblib",
             summary,
-        ),
-        train_logistic_regression(
-            split["train"],
-            split["test"],
-            models_dir / "logistic_regression.joblib",
-            summary,
-        ),
-        train_random_forest(
-            split["train"],
-            split["test"],
-            models_dir / "random_forest.joblib",
-            summary,
-        ),
+        )
+        for entry in MODEL_REGISTRY
     ]
 
     ranked_models = sorted(
@@ -118,6 +112,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
             "candidateStrategies": split_metadata.get("candidateStrategies", []),
             "leakageControls": leakage_controls,
         },
+        "featureQuality": feature_quality,
         "predictionPreview": None if best_model is None else best_model.get("predictionPreview"),
         "calibration": None
         if best_model is None
@@ -157,9 +152,22 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
                 "bestPrototypeModel": result["bestPrototypeModel"],
                 "warnings": result["warnings"],
                 "summary": result["summary"],
+                "featureQuality": {
+                    "highMissingFeatureCount": result["featureQuality"]["highMissingFeatureCount"],
+                    "criticalMissingFeatureCount": result["featureQuality"]["criticalMissingFeatureCount"],
+                    "recommendedActions": result["featureQuality"]["recommendedActions"],
+                },
             }
             for result in results
         },
+        "modelRegistry": [
+            {
+                "modelName": entry["modelName"],
+                "family": entry["family"],
+                "description": entry["description"],
+            }
+            for entry in MODEL_REGISTRY
+        ],
         "summary": "Prototype model comparison only. Live app remains rule-based.",
     }
     write_json(REPORTS_DIR / "metrics.json", aggregated)
@@ -188,6 +196,8 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
 
     write_calibration_summary(results)
     write_validation_summary(results)
+    write_feature_quality_summary(results)
+    write_model_comparison_report(results)
     write_model_card(results)
 
 
@@ -297,6 +307,96 @@ def write_validation_summary(results: list[dict[str, Any]]) -> None:
     )
 
     (REPORTS_DIR / "validation_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_feature_quality_summary(results: list[dict[str, Any]]) -> None:
+    """Write a markdown report describing feature coverage and label readiness."""
+
+    lines = [
+        "# FloodGuard ML Feature Quality Summary",
+        "",
+        "This report checks whether the exported predictors are usable enough for shadow-mode modelling.",
+        "",
+    ]
+
+    for result in results:
+        quality = result["featureQuality"]
+        lines.extend(
+            [
+                f"## {result['datasetName'].replace('_', ' ').title()}",
+                "",
+                f"- Time range: {quality['timeRange']['start'] or 'n/a'} to {quality['timeRange']['end'] or 'n/a'}",
+                f"- Selected training features: {quality['selectedFeatureCount']}",
+                f"- High-missing features: {quality['highMissingFeatureCount']}",
+                f"- Critical-missing features: {quality['criticalMissingFeatureCount']}",
+                f"- Constant features: {quality['constantFeatureCount']}",
+                "",
+            ]
+        )
+        if quality["recommendedActions"]:
+            lines.append("Recommended actions:")
+            for action in quality["recommendedActions"]:
+                lines.append(f"- {action}")
+            lines.append("")
+
+    lines.extend(
+        [
+            "## Interpretation",
+            "",
+            "- Feature quality is part of ML readiness, not just data plumbing.",
+            "- High missingness, weak labels, and low positive coverage should reduce confidence in model comparisons.",
+            "",
+        ]
+    )
+
+    (REPORTS_DIR / "feature_quality_summary.md").write_text(
+        "\n".join(lines) + "\n", encoding="utf-8"
+    )
+
+
+def write_model_comparison_report(results: list[dict[str, Any]]) -> None:
+    """Write a compact comparison report across the registered prototype models."""
+
+    lines = [
+        "# FloodGuard ML Model Comparison",
+        "",
+        "FloodGuard compares a small registry of shadow-mode tabular models. The rule engine remains the live authority.",
+        "",
+    ]
+
+    for result in results:
+        lines.extend([f"## {result['datasetName'].replace('_', ' ').title()}", ""])
+        if not result["models"]:
+            lines.extend(
+                [
+                    "- Model comparisons were skipped because the validation split could not preserve both classes.",
+                    "",
+                ]
+            )
+            continue
+
+        lines.append("| Model | Family | Balanced accuracy | F1 | PR-AUC | Notes |")
+        lines.append("| --- | --- | --- | --- | --- | --- |")
+        families = {entry["modelName"]: entry["family"] for entry in MODEL_REGISTRY}
+        for model in result["models"]:
+            lines.append(
+                f"| `{model['modelName']}` | {families.get(model['modelName'], 'unknown')} | "
+                f"{model['metrics'].get('balancedAccuracy', 'n/a')} | {model['metrics'].get('f1', 'n/a')} | "
+                f"{model['metrics'].get('prAuc', 'n/a')} | {model['warnings'][0] if model.get('warnings') else 'n/a'} |"
+            )
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Interpretation",
+            "",
+            "- The registry widens the comparison set, but stronger labels still matter more than adding more algorithms.",
+            "- Better model scores on rule-derived labels do not equal validated flood prediction quality.",
+            "",
+        ]
+    )
+
+    (REPORTS_DIR / "model_comparison.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main() -> None:

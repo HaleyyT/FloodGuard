@@ -275,6 +275,210 @@
       ]
     }
   },
+  "featureQuality": {
+    "datasetName": "scenario_stress_test",
+    "rowCount": 84,
+    "timeRange": {
+      "start": "2026-07-01T00:00:00+00:00",
+      "end": "2026-07-06T11:00:00+00:00",
+      "spanHours": 131.0
+    },
+    "selectedFeatureCount": 18,
+    "droppedFeatureCount": 0,
+    "blockedFeatureCount": 0,
+    "highMissingFeatureCount": 0,
+    "criticalMissingFeatureCount": 0,
+    "constantFeatureCount": 0,
+    "labelSourceCounts": {
+      "scenario_generated": 84
+    },
+    "eventLabelSourceCounts": {
+      "scenario_generated": 84
+    },
+    "features": [
+      {
+        "feature": "areaId",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfallLatestMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 6,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall1hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 9,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall3hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 15,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall24hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 21,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall72hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 33,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "antecedentWetnessMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 27,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "antecedentRainfallIndex",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "riverLatestM",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 12,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "riverDelta1hM",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "riverDelta3hM",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "riverTrendCode",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 2,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rateOfRiseMPerHour",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "dataFreshnessScore",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "sourceCoverage",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "warningActive",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 2,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "areaRelevanceScore",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "nearestStationDistanceKm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      }
+    ],
+    "recommendedActions": []
+  },
   "predictionPreview": {
     "areaId": "north-parramatta",
     "areaName": "North Parramatta, NSW",
@@ -522,6 +726,88 @@
       "classWeight": "balanced",
       "warnings": [
         "Random-forest importance is useful for prototype interpretation, not production flood causality claims."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverDelta3hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    },
+    {
+      "modelName": "extra_trees",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 1.0,
+        "balancedAccuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": {
+          "negative": 12,
+          "positive": 16
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              12,
+              0
+            ],
+            [
+              0,
+              16
+            ]
+          ]
+        },
+        "rocAuc": 1.0,
+        "prAuc": 1.0,
+        "brierScore": 0.0
+      },
+      "predictionPreview": {
+        "areaId": "north-parramatta",
+        "areaName": "North Parramatta, NSW",
+        "observedAt": "2026-07-06T10:00:00+00:00",
+        "predictedLabel": "Low concern",
+        "predictedProbability": 0.0,
+        "confidenceBand": "higher",
+        "confidenceReason": "Probability is far from the decision boundary, but still shadow-mode only.",
+        "actualLabel": "Low concern"
+      },
+      "probabilityBuckets": [
+        {
+          "bucket": "0.0-0.2",
+          "rowCount": 12,
+          "meanPredictedProbability": 0.0,
+          "observedPositiveRate": 0.0
+        },
+        {
+          "bucket": "0.8-1.0",
+          "rowCount": 16,
+          "meanPredictedProbability": 1.0,
+          "observedPositiveRate": 1.0
+        }
+      ],
+      "classWeight": "balanced",
+      "warnings": [
+        "Extra-trees importance is useful for prototype comparison, not causal flood interpretation."
       ],
       "featureColumns": [
         "areaId",

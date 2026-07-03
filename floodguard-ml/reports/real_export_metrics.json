@@ -88,7 +88,11 @@
     "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive.",
     "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
     "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
-    "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
+    "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable.",
+    "Feature quality: Prioritise source or feature fixes for heavily missing rainfall/river/reliability predictors before treating ML metrics as stable.",
+    "Feature quality: Add stronger independent event labels because the current target still teaches ML to imitate the rule engine.",
+    "Feature quality: Collect more elevated examples before trusting ranking or probability behaviour on real exports.",
+    "Feature quality: Review constant features because they add no information and may reflect export or pilot-area limits."
   ],
   "split": {
     "strategy": "area_holdout_north-parramatta",
@@ -279,6 +283,215 @@
         "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
       ]
     }
+  },
+  "featureQuality": {
+    "datasetName": "real_export",
+    "rowCount": 3000,
+    "timeRange": {
+      "start": "2026-06-24T16:28:13.485000+00:00",
+      "end": "2026-06-30T06:56:47.412000+00:00",
+      "spanHours": 134.48
+    },
+    "selectedFeatureCount": 17,
+    "droppedFeatureCount": 1,
+    "blockedFeatureCount": 0,
+    "highMissingFeatureCount": 0,
+    "criticalMissingFeatureCount": 6,
+    "constantFeatureCount": 4,
+    "labelSourceCounts": {
+      "rule_derived": 3000
+    },
+    "eventLabelSourceCounts": {
+      "manual_demo": 3000
+    },
+    "features": [
+      {
+        "feature": "areaId",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfallLatestMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall1hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 2,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall3hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 2,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall24hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "rainfall72hMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "antecedentWetnessMm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 1,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": "Feature is constant across the current dataset."
+      },
+      {
+        "feature": "antecedentRainfallIndex",
+        "present": true,
+        "missingRate": 0.956,
+        "missingnessLevel": "critical",
+        "uniqueValueCount": 1,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": "Feature is constant across the current dataset."
+      },
+      {
+        "feature": "riverLatestM",
+        "present": true,
+        "missingRate": 0.001,
+        "missingnessLevel": "low",
+        "uniqueValueCount": 18,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "riverDelta1hM",
+        "present": true,
+        "missingRate": 0.956,
+        "missingnessLevel": "critical",
+        "uniqueValueCount": 2,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": "Feature is heavily missing and will lean on imputation."
+      },
+      {
+        "feature": "riverDelta3hM",
+        "present": true,
+        "missingRate": 1.0,
+        "missingnessLevel": "critical",
+        "uniqueValueCount": 0,
+        "selectedForTraining": false,
+        "blockedFromTraining": false,
+        "warning": "Feature is heavily missing and will lean on imputation."
+      },
+      {
+        "feature": "riverTrendCode",
+        "present": true,
+        "missingRate": 0.956,
+        "missingnessLevel": "critical",
+        "uniqueValueCount": 1,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": "Feature is constant across the current dataset."
+      },
+      {
+        "feature": "rateOfRiseMPerHour",
+        "present": true,
+        "missingRate": 0.956,
+        "missingnessLevel": "critical",
+        "uniqueValueCount": 2,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": "Feature is heavily missing and will lean on imputation."
+      },
+      {
+        "feature": "dataFreshnessScore",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 8,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "sourceCoverage",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "warningActive",
+        "present": true,
+        "missingRate": 0.956,
+        "missingnessLevel": "critical",
+        "uniqueValueCount": 1,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": "Feature is constant across the current dataset."
+      },
+      {
+        "feature": "areaRelevanceScore",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 5,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      },
+      {
+        "feature": "nearestStationDistanceKm",
+        "present": true,
+        "missingRate": 0.0,
+        "missingnessLevel": "none",
+        "uniqueValueCount": 3,
+        "selectedForTraining": true,
+        "blockedFromTraining": false,
+        "warning": null
+      }
+    ],
+    "recommendedActions": [
+      "Prioritise source or feature fixes for heavily missing rainfall/river/reliability predictors before treating ML metrics as stable.",
+      "Add stronger independent event labels because the current target still teaches ML to imitate the rule engine.",
+      "Collect more elevated examples before trusting ranking or probability behaviour on real exports.",
+      "Review constant features because they add no information and may reflect export or pilot-area limits."
+    ]
   },
   "predictionPreview": {
     "areaId": "north-parramatta",
@@ -539,6 +752,100 @@
       "classWeight": "balanced",
       "warnings": [
         "Random-forest importance is useful for prototype interpretation, not production flood causality claims.",
+        "Skipped always-missing feature columns: riverDelta3hM."
+      ],
+      "featureColumns": [
+        "areaId",
+        "rainfallLatestMm",
+        "rainfall1hMm",
+        "rainfall3hMm",
+        "rainfall24hMm",
+        "rainfall72hMm",
+        "antecedentWetnessMm",
+        "antecedentRainfallIndex",
+        "riverLatestM",
+        "riverDelta1hM",
+        "riverTrendCode",
+        "rateOfRiseMPerHour",
+        "dataFreshnessScore",
+        "sourceCoverage",
+        "warningActive",
+        "areaRelevanceScore",
+        "nearestStationDistanceKm"
+      ]
+    },
+    {
+      "modelName": "extra_trees",
+      "status": "trained",
+      "metrics": {
+        "accuracy": 0.994,
+        "balancedAccuracy": 0.625,
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4,
+        "support": {
+          "negative": 992,
+          "positive": 8
+        },
+        "confusionMatrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "values": [
+            [
+              992,
+              0
+            ],
+            [
+              6,
+              2
+            ]
+          ]
+        },
+        "rocAuc": 0.8537046370967742,
+        "prAuc": 0.26518987341772154,
+        "brierScore": 0.078691540684561
+      },
+      "predictionPreview": {
+        "areaId": "north-parramatta",
+        "areaName": "North Parramatta, NSW",
+        "observedAt": "2026-06-30T06:56:47.412000+00:00",
+        "predictedLabel": "Low concern",
+        "predictedProbability": 0.0226,
+        "confidenceBand": "limited",
+        "confidenceReason": "Training data has very few elevated examples, so probability should be treated cautiously.",
+        "actualLabel": "Low concern"
+      },
+      "probabilityBuckets": [
+        {
+          "bucket": "0.0-0.2",
+          "rowCount": 410,
+          "meanPredictedProbability": 0.036308178195121416,
+          "observedPositiveRate": 0.0
+        },
+        {
+          "bucket": "0.2-0.4",
+          "rowCount": 195,
+          "meanPredictedProbability": 0.22995235782121132,
+          "observedPositiveRate": 0.0
+        },
+        {
+          "bucket": "0.4-0.6",
+          "rowCount": 393,
+          "meanPredictedProbability": 0.4102286035872628,
+          "observedPositiveRate": 0.015267175572519083
+        },
+        {
+          "bucket": "0.8-1.0",
+          "rowCount": 2,
+          "meanPredictedProbability": 0.9621307314864795,
+          "observedPositiveRate": 1.0
+        }
+      ],
+      "classWeight": "balanced",
+      "warnings": [
+        "Extra-trees importance is useful for prototype comparison, not causal flood interpretation.",
         "Skipped always-missing feature columns: riverDelta3hM."
       ],
       "featureColumns": [

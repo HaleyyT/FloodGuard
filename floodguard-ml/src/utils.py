@@ -305,6 +305,135 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def describe_missingness_level(rate: float) -> str:
+    """Turn a missingness rate into a compact review label."""
+
+    if rate >= 0.95:
+        return "critical"
+    if rate >= 0.5:
+        return "high"
+    if rate >= 0.2:
+        return "moderate"
+    if rate > 0:
+        return "low"
+    return "none"
+
+
+def build_feature_quality_report(dataframe: pd.DataFrame, dataset_name: str) -> dict[str, Any]:
+    """Summarise feature quality, coverage, and label readiness for ML review."""
+
+    usable = dataframe[dataframe[TRAINING_ELIGIBILITY_COLUMN] == 1].copy()
+    time_values = usable[GROUP_TIMESTAMP_COLUMN].dropna().sort_values()
+    feature_columns, dropped_features, blocked_features = feature_columns_for_training(usable)
+    feature_rows: list[dict[str, Any]] = []
+    high_missing_features: list[str] = []
+    critical_missing_features: list[str] = []
+    constant_features: list[str] = []
+
+    for column in FEATURE_COLUMNS:
+        if column not in usable.columns:
+            feature_rows.append(
+                {
+                    "feature": column,
+                    "present": False,
+                    "missingRate": 1.0,
+                    "missingnessLevel": "critical",
+                    "uniqueValueCount": 0,
+                    "selectedForTraining": False,
+                    "blockedFromTraining": column in blocked_features,
+                    "warning": "Feature column is missing from the dataset export.",
+                }
+            )
+            critical_missing_features.append(column)
+            continue
+
+        series = usable[column]
+        missing_rate = float(series.isna().mean()) if len(usable) else 0.0
+        unique_count = int(series.nunique(dropna=True))
+        missingness_level = describe_missingness_level(missing_rate)
+        feature_warning = None
+        if unique_count <= 1 and not series.isna().all():
+            feature_warning = "Feature is constant across the current dataset."
+            constant_features.append(column)
+        elif missing_rate >= 0.5:
+            feature_warning = "Feature is heavily missing and will lean on imputation."
+        elif missing_rate >= 0.2:
+            feature_warning = "Feature has moderate missingness and should be monitored."
+
+        if missing_rate >= 0.95:
+            critical_missing_features.append(column)
+        elif missing_rate >= 0.5:
+            high_missing_features.append(column)
+
+        feature_rows.append(
+            {
+                "feature": column,
+                "present": True,
+                "missingRate": missing_rate,
+                "missingnessLevel": missingness_level,
+                "uniqueValueCount": unique_count,
+                "selectedForTraining": column in feature_columns,
+                "blockedFromTraining": column in blocked_features,
+                "warning": feature_warning,
+            }
+        )
+
+    label_source_counts = (
+        usable[LABEL_SOURCE_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict()
+        if LABEL_SOURCE_COLUMN in usable.columns
+        else {}
+    )
+    event_sources = (
+        usable[EVENT_LABEL_SOURCE_COLUMN].fillna("unlabelled").value_counts(dropna=False).to_dict()
+        if EVENT_LABEL_SOURCE_COLUMN in usable.columns
+        else {}
+    )
+
+    recommended_actions: list[str] = []
+    if high_missing_features or critical_missing_features:
+        recommended_actions.append(
+            "Prioritise source or feature fixes for heavily missing rainfall/river/reliability predictors before treating ML metrics as stable."
+        )
+    if label_source_counts == {"rule_derived": int(len(usable))} and len(usable) > 0:
+        recommended_actions.append(
+            "Add stronger independent event labels because the current target still teaches ML to imitate the rule engine."
+        )
+    if usable[LABEL_COLUMN].sum() < 25:
+        recommended_actions.append(
+            "Collect more elevated examples before trusting ranking or probability behaviour on real exports."
+        )
+    if constant_features:
+        recommended_actions.append(
+            "Review constant features because they add no information and may reflect export or pilot-area limits."
+        )
+
+    return {
+        "datasetName": dataset_name,
+        "rowCount": int(len(usable)),
+        "timeRange": {
+            "start": None if time_values.empty else time_values.iloc[0].isoformat(),
+            "end": None if time_values.empty else time_values.iloc[-1].isoformat(),
+            "spanHours": None
+            if len(time_values) < 2
+            else round(
+                (time_values.iloc[-1].to_pydatetime() - time_values.iloc[0].to_pydatetime()).total_seconds()
+                / 3600,
+                2,
+            ),
+        },
+        "selectedFeatureCount": len(feature_columns),
+        "droppedFeatureCount": len(dropped_features),
+        "blockedFeatureCount": len(blocked_features),
+        "highMissingFeatureCount": len(high_missing_features),
+        "criticalMissingFeatureCount": len(critical_missing_features),
+        "constantFeatureCount": len(constant_features),
+        "labelSourceCounts": {str(key): int(value) for key, value in label_source_counts.items()},
+        "eventLabelSourceCounts": {str(key): int(value) for key, value in event_sources.items()},
+        "features": feature_rows,
+        "recommendedActions": recommended_actions,
+    }
+
+
 def feature_columns_for_training(dataframe: pd.DataFrame) -> tuple[list[str], list[str], list[str]]:
     """Choose trainable features and record missing or blocked columns."""
 
