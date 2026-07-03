@@ -134,8 +134,8 @@ export function buildResidentOverviewModel(dashboardData) {
     whyAssigned: [
       ...(audit?.whatIncreasedConcern ?? []).slice(0, 2),
       ...(audit?.whatReducedConcern ?? []).slice(0, 1),
-    ],
-    whatNext: (audit?.checkNext ?? []).slice(0, 3),
+    ].filter(Boolean),
+    whatNext: (audit?.checkNext ?? []).slice(0, 3).filter(Boolean),
     whyThisMatters,
   };
 }
