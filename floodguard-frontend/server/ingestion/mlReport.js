@@ -15,6 +15,9 @@ function defaultReport() {
     bestPrototypeModel: null,
     validationLevel: "prototype",
     predictionPreview: null,
+    modelAgreementWithRuleEngine: "unavailable",
+    labelStrength: "rule_derived_or_weak",
+    limitations: ["ML reports are unavailable right now."],
     models: [],
     liveDecisionAuthority: "rule_engine",
     summary:
@@ -122,6 +125,27 @@ function buildScenarioSummary(report) {
   };
 }
 
+function deriveLabelStrength(report) {
+  const strengths = report?.summary?.eventLabelStrengthCounts ?? {};
+  if (strengths.strong || strengths.moderate) return "mixed_or_stronger";
+  return "rule_derived_or_weak";
+}
+
+function deriveModelAgreement(report) {
+  const preview = report?.predictionPreview;
+  if (!preview?.predictedLabel || !preview?.actualLabel) return "unavailable";
+  return preview.predictedLabel === preview.actualLabel ? "agreeing" : "disagreeing";
+}
+
+function buildLimitations(realExport, scenario) {
+  const limitations = [
+    realExport?.limitation,
+    scenario?.limitation,
+    ...(realExport?.warnings ?? []),
+  ].filter(Boolean);
+  return [...new Set(limitations)];
+}
+
 function buildModelCardSummary(markdown) {
   if (!markdown) {
     return defaultReport().modelCard;
@@ -197,7 +221,10 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
         null,
       validationLevel: "prototype",
       predictionPreview: realExportMetrics?.predictionPreview ?? null,
+      modelAgreementWithRuleEngine: deriveModelAgreement(realExportMetrics),
+      labelStrength: deriveLabelStrength(realExportMetrics),
     };
+    report.limitations = buildLimitations(report.realExport, report.scenarioStressTest);
 
     if (!realExportMetrics && !scenarioMetrics && !modelCard && !calibrationSummary) {
       return fallback;

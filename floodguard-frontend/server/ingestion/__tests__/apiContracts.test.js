@@ -301,6 +301,18 @@ function dependencies() {
         labelSource: "rule_derived",
       },
     }),
+    readAreaModelExperiment: async () => ({
+      areaId: "parramatta",
+      modelFamily: "tabular flood-signal baseline",
+      status: "comparison-ready",
+      candidates: [
+        {
+          name: "logistic tabular baseline",
+          latestProbability: 0.72,
+          latestLabel: "Elevated concern",
+        },
+      ],
+    }),
     mlDatasetRowsToCsv: (rows) =>
       [
         "areaId,areaName,observedAt,rainfall1hMm,riverDelta1hM,targetElevatedConcern,labelSource,warningActive",
@@ -319,7 +331,10 @@ function dependencies() {
         predictedProbability: 0.72,
         confidenceBand: "limited",
         confidenceReason: "Prototype labels remain sparse.",
+        actualLabel: "Elevated concern",
       },
+      modelAgreementWithRuleEngine: "agreeing",
+      labelStrength: "rule_derived_or_weak",
       models: ["majority_baseline", "logistic_regression", "random_forest"],
       liveDecisionAuthority: "rule_engine",
       summary: "FloodGuard ML is implemented as a prototype shadow-mode comparison layer.",
@@ -340,6 +355,10 @@ function dependencies() {
         available: true,
         summary: "Prototype calibration summary is available.",
       },
+      limitations: [
+        "Rule-derived labels and severe class imbalance limit interpretation.",
+        "Scenario metrics are not real-world validation.",
+      ],
     }),
   };
 }
@@ -428,10 +447,26 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.equal(body.liveDecisionAuthority, "rule_engine");
   assert.equal(body.bestPrototypeModel, "random_forest");
   assert.equal(body.validationLevel, "prototype");
+  assert.equal(body.modelAgreementWithRuleEngine, "agreeing");
+  assert.equal(body.labelStrength, "rule_derived_or_weak");
   assert.ok(Array.isArray(body.models));
   assert.equal(body.predictionPreview.predictedLabel, "Elevated concern");
+  assert.ok(Array.isArray(body.limitations));
   assert.match(body.realExport.limitation, /Rule-derived|imbalance/i);
   assert.match(body.scenarioStressTest.limitation, /not real-world validation|synthetic/i);
+});
+
+test("ml prediction preview endpoint returns safe shadow-mode comparison for an area", async () => {
+  const { statusCode, body } = await requestJson("/api/ml/prediction-preview/parramatta", dependencies());
+  assert.equal(statusCode, 200);
+  assert.equal(body.areaId, "parramatta");
+  assert.equal(body.ruleConcern, "Moderate");
+  assert.equal(body.mlPrediction, "Elevated concern");
+  assert.equal(body.mlProbability, 0.72);
+  assert.equal(body.agreement, true);
+  assert.equal(body.authority, "rule_engine");
+  assert.equal(body.mode, "shadow");
+  assert.equal(body.previewSource, "local_shadow_baseline");
 });
 
 test("ingestion readiness endpoint separates submission readiness from strict live readiness", async () => {

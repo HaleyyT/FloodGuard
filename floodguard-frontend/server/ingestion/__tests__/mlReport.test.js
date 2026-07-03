@@ -60,6 +60,8 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.liveDecisionAuthority, "rule_engine");
     assert.equal(report.bestPrototypeModel, "random_forest");
     assert.equal(report.validationLevel, "prototype");
+    assert.equal(report.modelAgreementWithRuleEngine, "unavailable");
+    assert.equal(report.labelStrength, "rule_derived_or_weak");
     assert.equal(report.realExport.available, true);
     assert.equal(report.realExport.rows, 3000);
     assert.equal(report.realExport.elevatedRows, 18);
@@ -69,6 +71,7 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.realExport.hasHighExamples, false);
     assert.equal(report.predictionPreview.predictedProbability, 0.78);
     assert.equal(report.calibrationSummary.available, true);
+    assert.ok(Array.isArray(report.limitations));
     assert.match(report.realExport.summary, /pipeline validation/i);
   } finally {
     await rm(reportsDir, { recursive: true, force: true });

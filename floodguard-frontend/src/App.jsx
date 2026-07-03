@@ -2431,6 +2431,10 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
   const previewLine = preview
     ? `Python best model: ${report.bestPrototypeModel ?? "unknown"}; preview ${preview.predictedLabel.toLowerCase()} at ${preview.predictedProbability?.toFixed?.(2) ?? "n/a"}; confidence ${preview.confidenceBand}.`
     : null;
+  const agreementLine =
+    report.modelAgreementWithRuleEngine && report.modelAgreementWithRuleEngine !== "unavailable"
+      ? `Dataset-level agreement snapshot: ${report.modelAgreementWithRuleEngine}. Label strength: ${report.labelStrength ?? "unknown"}.`
+      : null;
 
   return (
     <section className="card ml-prototype-card">
@@ -2467,6 +2471,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
         <li>{limitationLine}</li>
         <li>{scenarioLine}</li>
         {previewLine && <li>{previewLine}</li>}
+        {agreementLine && <li>{agreementLine}</li>}
         <li>
           Rule engine: {ruleLabel}; ML prototype:{" "}
           {mlProbability === null ? mlLabel : `elevated probability ${mlProbability.toFixed(2)}`}

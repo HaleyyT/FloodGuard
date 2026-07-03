@@ -74,6 +74,7 @@ function routes() {
     "/api/ml/dataset?area=parramatta",
     "/api/ml/dataset?area=parramatta&format=csv",
     "/api/ml/report",
+    "/api/ml/prediction-preview?area=parramatta",
     "/api/dataset-quality?area=parramatta",
     "/api/baseline-prediction?area=parramatta",
     "/api/model-experiment?area=parramatta",
@@ -163,9 +164,40 @@ function resolveAreaId(url) {
   if (queryArea) return queryArea;
 
   const pathMatch = url.pathname.match(
-    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment|notifications(?:\/preview)?|warnings|ml\/readiness|ml\/dataset)\/([^/]+)$/,
+    /^\/api\/(?:signals|rainfall|river|risk|source-health|decision-audit|baseline-prediction|model-experiment|notifications(?:\/preview)?|warnings|ml\/readiness|ml\/dataset|ml\/prediction-preview)\/([^/]+)$/,
   );
   return pathMatch?.[1] ?? defaultAreaId;
+}
+
+function buildMlPredictionPreview(areaSignals, report, experiment, areaId) {
+  const logisticCandidate =
+    experiment?.candidates?.find((candidate) => candidate.name.includes("logistic")) ?? null;
+  const mlProbability =
+    logisticCandidate?.latestProbability === null || logisticCandidate?.latestProbability === undefined
+      ? null
+      : logisticCandidate.latestProbability;
+  const mlPrediction = logisticCandidate?.latestLabel ?? "Waiting";
+  const ruleConcern = areaSignals?.riskAssessment?.concernLevel ?? "Unknown";
+  const ruleIsElevated = ["Moderate", "High", "Elevated concern"].includes(ruleConcern);
+  const mlIsElevated = mlPrediction === "Elevated concern";
+  const agreement =
+    logisticCandidate === null ? null : mlIsElevated === ruleIsElevated;
+
+  return {
+    areaId,
+    area: areaSignals?.area?.name ?? areaId,
+    ruleConcern,
+    mlPrediction,
+    mlProbability,
+    agreement,
+    authority: "rule_engine",
+    mode: report.mode ?? "shadow",
+    bestPrototypeModel: report.bestPrototypeModel ?? null,
+    validationLevel: report.validationLevel ?? "prototype",
+    labelStrength: report.labelStrength ?? "rule_derived_or_weak",
+    previewSource: "local_shadow_baseline",
+    limitations: report.limitations ?? [],
+  };
 }
 
 function parseCoordinate(value) {
@@ -330,6 +362,26 @@ export async function routeRequest(request, response, deps = defaultDependencies
 
   if (url.pathname === "/api/source-registry") {
     sendJson(response, 200, deps.getSourceRegistry(regionalSignals));
+    return;
+  }
+
+  if (url.pathname === "/api/ml/prediction-preview" || url.pathname.startsWith("/api/ml/prediction-preview/")) {
+    const areaId = resolveAreaId(url);
+    const areaSignals = deps.selectAreaSignals(regionalSignals, areaId);
+
+    if (!areaSignals) {
+      sendJson(response, 404, {
+        error: `Unknown area: ${areaId}`,
+        availableAreas: regionalSignals.areaList,
+      });
+      return;
+    }
+
+    const [report, experiment] = await Promise.all([
+      deps.readMlReport(),
+      deps.readAreaModelExperiment(areaId),
+    ]);
+    sendJson(response, 200, buildMlPredictionPreview(areaSignals, report, experiment, areaId));
     return;
   }
 
