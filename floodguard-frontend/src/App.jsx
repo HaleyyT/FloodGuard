@@ -571,42 +571,6 @@ function DataEvidencePanel({ sources, maxItems = null }) {
   );
 }
 
-function MlSnapshotPanel({ report, experiment, riskLevel }) {
-  const modelCount = report.models?.length ?? 0;
-  const rows = report.realExport?.rows ?? experiment?.rowCount ?? 0;
-  const bestModel = report.bestPrototypeModel ?? "Collecting";
-  const preview = report.predictionPreview ?? null;
-  const previewProbability = Number(preview?.predictedProbability);
-  const previewText = preview
-    ? `${preview.predictedLabel} · ${Number.isFinite(previewProbability) ? previewProbability.toFixed(2) : "n/a"} probability`
-    : "Waiting for enough validated examples";
-
-  return (
-    <section className="card ml-snapshot-card">
-      <div className="section-header compact">
-        <div>
-          <p className="section-label">ML prototype layer</p>
-          <h3>Shadow-mode snapshot</h3>
-        </div>
-        <span className="source-badge current-context">Rule engine leads</span>
-      </div>
-
-      <div className="history-grid">
-        <InfoTile label="Status" value={humanizeMlMode(report.mode)} />
-        <InfoTile label="Live alerts" value={report.liveScoringEnabled ? "Enabled" : "Disabled"} />
-        <InfoTile label="Models" value={String(modelCount)} />
-        <InfoTile label="Training rows" value={String(rows)} />
-      </div>
-
-      <p className="ml-snapshot-note">
-        Best prototype: <strong>{bestModel}</strong>. Current app decision: <strong>{riskLevel}</strong>.
-        ML is visible for comparison and calibration only, not operational alerting.
-      </p>
-      <p className="ml-snapshot-note secondary">{previewText}</p>
-    </section>
-  );
-}
-
 function OverviewSupportGrid({ data, report, experiment, riskLevel }) {
   return (
     <section className="overview-support-grid">
@@ -617,12 +581,82 @@ function OverviewSupportGrid({ data, report, experiment, riskLevel }) {
         <WarningStatusPanel warning={data.officialWarning} />
       </div>
       <div className="overview-support-card">
-        <MlSnapshotPanel
+        <MlPrototypePanel
           report={report}
           experiment={experiment}
           riskLevel={riskLevel}
         />
       </div>
+    </section>
+  );
+}
+
+function CompactMlSnapshotPanel({ report, experiment, riskLevel }) {
+  const comparisonReady = experiment?.readiness?.readyForComparison ?? false;
+  const trainingRows = report?.realExport?.rows ?? experiment?.rowCount ?? 0;
+  const elevatedRows = report?.realExport?.elevatedRows ?? experiment?.classBalance?.elevatedCount ?? 0;
+  const bestModel = report?.bestPrototypeModel ?? "Waiting";
+  const modeLabel = humanizeMlMode(report?.mode);
+  const liveAuthority = report?.liveDecisionAuthority === "rule_engine" ? "Rule engine" : "FloodGuard rules";
+
+  return (
+    <section className="card compact-ml-card">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">ML prototype layer</p>
+          <h3>Shadow-mode snapshot</h3>
+        </div>
+        <span className="source-badge not-connected">Comparison only</span>
+      </div>
+
+      <div className="compact-metric-grid">
+        <InfoTile label="Status" value={modeLabel} />
+        <InfoTile label="Best model" value={bestModel} />
+        <InfoTile label="Training rows" value={String(trainingRows)} />
+        <InfoTile label="Elevated rows" value={String(elevatedRows)} />
+      </div>
+
+      <p className="reliability-note">
+        Live alert authority remains with the {liveAuthority.toLowerCase()}; ML is displayed for calibration and reviewer transparency only.
+      </p>
+      <p className="report-form-message">
+        Current rule signal: {riskLevel}. {comparisonReady ? "Model comparison is ready for inspection." : "More labelled flood examples are needed before operational promotion."}
+      </p>
+    </section>
+  );
+}
+
+function OverviewDashboard({ data, report, experiment }) {
+  return (
+    <section className="dashboard-grid overview-workspace" aria-label="FloodGuard operational overview">
+      <div className="primary-ops-column">
+        <OverviewPanel data={data} />
+
+        <div className="data-subgrid-2col decision-row">
+          <ActionsPanel actions={data.recommendedActions} />
+          <RiverStatusPanel
+            areaName={data.areaName}
+            riverSummary={data.riverSummary}
+          />
+        </div>
+
+        <div className="data-subgrid-2col analytics-row">
+          <RainfallChart rainfallTrend={data.rainfallTrend} />
+          <SignalBreakdownChart riskSignals={data.riskSignals} />
+        </div>
+      </div>
+
+      <aside className="context-sidebar-column" aria-label="Local context and evidence">
+        <WarningStatusPanel warning={data.officialWarning} />
+        <MapPanel areaName={data.areaName} />
+        <ReportsPanel reports={data.reports.slice(0, 3)} />
+        <CompactMlSnapshotPanel
+          experiment={experiment}
+          report={report}
+          riskLevel={data.riskLevel}
+        />
+        <DataEvidencePanel maxItems={3} sources={data.sourceHealth} />
+      </aside>
     </section>
   );
 }
@@ -1694,68 +1728,79 @@ function AreaDataGuard({ areaName, liveStatus }) {
 function OverviewPanel({ data }) {
   const riskSummary = buildRiskSummaryModel(data);
   const residentOverview = buildResidentOverviewModel(data);
-
-  const topSignals = [
-    { label: "Official warning", value: data.officialSignals.warningLevel },
-    { label: "Rainfall (24h)", value: data.officialSignals.rainfall24h },
-    { label: "Water trend", value: data.officialSignals.waterTrend },
-    { label: "Latest feed update", value: data.officialSignals.forecastOutlook },
-  ];
+  const riskTone = riskSummary.riskLevel.toLowerCase();
 
   return (
-    <section className="overview-panel card">
-      <div className="overview-hero-row">
+    <section className={`overview-panel card hero-signal-card risk-${riskTone}`}>
+      <div className="section-header hero-signal-header">
         <div>
           <p className="section-label">Monitored region</p>
-          <h2>{data.location}</h2>
-          <p className="overview-summary">{riskSummary.summary}</p>
+          <h2 className="hero-signal-title">{data.location}</h2>
         </div>
         <span className={`risk-pill ${riskSummary.riskLevel.toLowerCase()}`}>
           {riskSummary.riskLevel} Risk
         </span>
       </div>
 
-      <div className="overview-grid overview-signal-strip">
-        {topSignals.map((signal) => (
-          <InfoTile key={signal.label} label={signal.label} value={signal.value} />
-        ))}
-      </div>
+      <p className="overview-summary">{riskSummary.summary}</p>
 
       <div className="resident-overview-grid">
-        <div className="resident-answer-card next-card">
-          <p className="section-label">What should I check next?</p>
-          <h3>Resident decision guide</h3>
-          <ul className="factor-list history-list resident-answer-list">
-            {residentOverview.whatNext.length > 0 ? (
-              residentOverview.whatNext.map((item) => <li key={item}>{item}</li>)
-            ) : (
-              <li>Continue monitoring official warnings, rainfall, and nearby water levels.</li>
-            )}
-          </ul>
-        </div>
-        <div className="resident-answer-card why-card">
-          <p className="section-label">Why was this concern assigned?</p>
-          <h3>Decision reasons</h3>
-          <ul className="factor-list history-list resident-answer-list">
-            {residentOverview.whyAssigned.length > 0 ? (
-              residentOverview.whyAssigned.map((item) => <li key={item}>{item}</li>)
-            ) : (
-              <li>No elevated rainfall or river trend has been detected in the current core evidence.</li>
-            )}
-          </ul>
+        <div className="resident-answer-card concern-card">
+          <p className="section-label">What is the current local concern?</p>
+          <h3>{residentOverview.currentConcern}</h3>
+          <p>{residentOverview.concernSummary}</p>
         </div>
         <div className="resident-answer-card trust-card">
           <p className="section-label">Can I trust the evidence?</p>
           <h3>{residentOverview.trustLabel}</h3>
           <p>{residentOverview.trustNote}</p>
         </div>
+        <div className="resident-answer-card why-card">
+          <p className="section-label">Why was this concern assigned?</p>
+          <ul className="factor-list history-list resident-answer-list">
+            {residentOverview.whyAssigned.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="resident-answer-card next-card">
+          <p className="section-label">What should I check next?</p>
+          <ul className="factor-list history-list resident-answer-list">
+            {residentOverview.whatNext.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
       </div>
 
-      <div className="overview-reliability-row">
-        <p className="reliability-note">{data.officialSignals.dataReliabilityNote}</p>
-        <p className="reliability-note">Confidence: {riskSummary.confidenceLabel}</p>
+      <div className="overview-grid signal-kpi-grid">
+        <InfoTile
+          label="Official warnings"
+          value={data.officialSignals.warningLevel}
+        />
+        <InfoTile
+          label="Source Freshness"
+          value={data.officialSignals.sourceFreshness}
+        />
+        <InfoTile
+          label="Rainfall (24h)"
+          value={data.officialSignals.rainfall24h}
+        />
+        <InfoTile
+          label="Water Trend"
+          value={data.officialSignals.waterTrend}
+        />
+        <InfoTile
+          label="Nearest Station"
+          value={data.officialSignals.nearestStation}
+        />
+        <InfoTile
+          label="Area Signal Fit"
+          value={data.officialSignals.areaSignalFit}
+        />
       </div>
-
+      <p className="reliability-note">{data.officialSignals.dataReliabilityNote}</p>
+      <p className="reliability-note">Confidence: {riskSummary.confidenceLabel}</p>
       {residentOverview.whyThisMatters.length > 0 ? (
         <div className="why-matters-strip">
           {residentOverview.whyThisMatters.map((item) => (
@@ -1793,16 +1838,12 @@ function FrontPageSummary({ data }) {
         <RainfallChart rainfallTrend={data.rainfallTrend} />
       </div>
 
-      <div className="frontpage-reports">
-        <ReportsPanel reports={data.reports.slice(0, 3)} />
-      </div>
-
       <div className="frontpage-map">
         <MapPanel areaName={data.areaName} />
       </div>
 
-      <div className="frontpage-signals">
-        <SignalBreakdownChart riskSignals={data.riskSignals} />
+      <div className="frontpage-reports">
+        <ReportsPanel reports={data.reports.slice(0, 3)} />
       </div>
     </section>
   );
@@ -2694,13 +2735,10 @@ export default function App() {
       {hasSelectedAreaSignals && activeView === "overview" && (
         <>
           <NotificationBanner notifications={notifications} />
-          <OverviewPanel data={dashboardData} />
-          <FrontPageSummary data={dashboardData} />
-          <OverviewSupportGrid
+          <OverviewDashboard
             data={dashboardData}
             experiment={modelExperiment}
             report={mlReport}
-            riskLevel={dashboardData.riskLevel}
           />
         </>
       )}
