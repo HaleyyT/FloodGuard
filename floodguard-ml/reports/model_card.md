@@ -35,8 +35,16 @@ It is not used for live alerting or official warning decisions.
 
 ## Split Strategy
 
-- Real export: stratified_random_fallback_from_time_order
-- Scenario stress test: stratified_random_fallback_from_time_order
+- Real export: area_holdout_north-parramatta
+- Scenario stress test: area_holdout_north-parramatta
+- Time-aware validation is preferred when chronological class coverage survives the split.
+- Stratified random split is treated as a fallback reference only, not the ideal flood-validation design.
+
+## Leakage Controls
+
+- Real export blocked leakage-prone fields: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable
+- Scenario blocked leakage-prone fields: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable
+- Columns such as `riskScore`, `ruleConcernLevel`, and label/provenance fields are treated as reference-only and excluded from training.
 
 ## Evaluated Models
 
@@ -47,28 +55,28 @@ It is not used for live alerting or official warning decisions.
   Precision: 0.000
   Recall: 0.000
   F1: 0.000
-  PR-AUC: 0.006
+  PR-AUC: 0.008
 - `logistic_regression`
-  Balanced accuracy: 0.793
-  Precision: 0.013
-  Recall: 1.000
-  F1: 0.026
-  PR-AUC: 0.606
+  Balanced accuracy: 0.625
+  Precision: 1.000
+  Recall: 0.250
+  F1: 0.400
+  PR-AUC: 0.261
 - `random_forest`
-  Balanced accuracy: 0.873
-  Precision: 0.021
+  Balanced accuracy: 0.805
+  Precision: 0.020
   Recall: 1.000
-  F1: 0.042
-  PR-AUC: 0.609
+  F1: 0.040
+  PR-AUC: 0.265
 
 ### Scenario Stress Test
 
 - `majority_baseline`
   Balanced accuracy: 0.500
-  Precision: 0.577
+  Precision: 0.571
   Recall: 1.000
-  F1: 0.732
-  PR-AUC: 0.577
+  F1: 0.727
+  PR-AUC: 0.571
 - `logistic_regression`
   Balanced accuracy: 1.000
   Precision: 1.000
@@ -89,6 +97,7 @@ It is not used for live alerting or official warning decisions.
 - Joined event labels exist to prepare better supervision, but coverage and strength must be inspected before treating them as validation evidence.
 - No real `High` examples are present in the current historical export.
 - Metrics are illustrative and should not be interpreted as validated flood prediction performance.
+- Time-based validation is implemented, but real independent event holdout is still weak because joined event labels are placeholders rather than verified flood outcomes.
 - ML must remain shadow-mode.
 
 ## Real Export Interpretation

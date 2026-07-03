@@ -22,7 +22,7 @@ from sklearn.pipeline import Pipeline
 def train_majority_baseline(train_df, test_df, model_path: Path) -> dict[str, Any]:
     """Train and evaluate the always-majority baseline."""
 
-    feature_columns, dropped_features = feature_columns_for_training(train_df)
+    feature_columns, dropped_features, blocked_features = feature_columns_for_training(train_df)
     x_train, y_train = prepare_xy(train_df, feature_columns)
     x_test, y_test = prepare_xy(test_df, feature_columns)
     pipeline = Pipeline(
@@ -53,6 +53,11 @@ def train_majority_baseline(train_df, test_df, model_path: Path) -> dict[str, An
             "This baseline is expected to look strong on plain accuracy because elevated cases are rare."
         ]
         + (
+            [f"Blocked leakage-prone feature columns: {', '.join(blocked_features)}."]
+            if blocked_features
+            else []
+        )
+        + (
             [f"Skipped always-missing feature columns: {', '.join(dropped_features)}."]
             if dropped_features
             else []
@@ -65,7 +70,7 @@ def train_majority_baseline(train_df, test_df, model_path: Path) -> dict[str, An
 def train_logistic_regression(train_df, test_df, model_path: Path) -> dict[str, Any]:
     """Train and evaluate the balanced logistic-regression baseline."""
 
-    feature_columns, dropped_features = feature_columns_for_training(train_df)
+    feature_columns, dropped_features, blocked_features = feature_columns_for_training(train_df)
     x_train, y_train = prepare_xy(train_df, feature_columns)
     x_test, y_test = prepare_xy(test_df, feature_columns)
 
@@ -105,6 +110,11 @@ def train_logistic_regression(train_df, test_df, model_path: Path) -> dict[str, 
         "warnings": [
             "Logistic regression is still trained on rule-derived labels and should remain shadow-only."
         ]
+        + (
+            [f"Blocked leakage-prone feature columns: {', '.join(blocked_features)}."]
+            if blocked_features
+            else []
+        )
         + (
             [f"Skipped always-missing feature columns: {', '.join(dropped_features)}."]
             if dropped_features

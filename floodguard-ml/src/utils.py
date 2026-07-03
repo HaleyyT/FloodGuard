@@ -64,6 +64,23 @@ EVENT_LABEL_SOURCE_COLUMN = "eventLabelSource"
 EVENT_LABEL_STRENGTH_COLUMN = "eventLabelStrength"
 EVENT_LABEL_NOTES_COLUMN = "eventLabelNotes"
 EVENT_LABEL_AVAILABLE_COLUMN = "eventLabelAvailable"
+AREA_COLUMN = "areaId"
+
+LEAKAGE_PRONE_COLUMNS = [
+    "riskScore",
+    "ruleConcernLevel",
+    "targetElevatedConcern",
+    "targetRuleElevated",
+    "targetEventElevated",
+    "labelSource",
+    "ruleLabelSource",
+    "eventLabelSource",
+    "eventLabelStrength",
+    "eventLabelNotes",
+    "eventLabelAvailable",
+    "notificationType",
+    "decisionAuditReason",
+]
 
 # These predictors stay closer to real signals and reliability context rather than
 # directly reusing the rule-engine's own output score as an input feature.
@@ -287,12 +304,55 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
     return warnings
 
 
-def feature_columns_for_training(dataframe: pd.DataFrame) -> tuple[list[str], list[str]]:
-    """Choose trainable features and record any columns that are entirely missing."""
+def feature_columns_for_training(dataframe: pd.DataFrame) -> tuple[list[str], list[str], list[str]]:
+    """Choose trainable features and record missing or blocked columns."""
 
-    selected = [column for column in FEATURE_COLUMNS if column in dataframe.columns and not dataframe[column].isna().all()]
-    dropped = [column for column in FEATURE_COLUMNS if column not in selected]
-    return selected, dropped
+    blocked = [column for column in FEATURE_COLUMNS if column in LEAKAGE_PRONE_COLUMNS]
+    selected = [
+        column
+        for column in FEATURE_COLUMNS
+        if column in dataframe.columns
+        and column not in blocked
+        and not dataframe[column].isna().all()
+    ]
+    dropped = [column for column in FEATURE_COLUMNS if column not in selected and column not in blocked]
+    return selected, dropped, blocked
+
+
+def assess_leakage_controls(
+    dataframe: pd.DataFrame,
+    feature_columns: list[str],
+) -> dict[str, Any]:
+    """Report which leakage-prone fields exist and whether any were blocked."""
+
+    present_reference_only = [
+        column for column in LEAKAGE_PRONE_COLUMNS if column in dataframe.columns
+    ]
+    blocked_from_training = [
+        column for column in present_reference_only if column not in feature_columns
+    ]
+    unsafe_selected = [column for column in feature_columns if column in LEAKAGE_PRONE_COLUMNS]
+
+    warnings: list[str] = []
+    if blocked_from_training:
+        warnings.append(
+            "Leakage-prone columns are present in the dataset but excluded from training: "
+            + ", ".join(blocked_from_training)
+            + "."
+        )
+    if unsafe_selected:
+        warnings.append(
+            "Unsafe leakage-prone columns were selected for training and should be removed: "
+            + ", ".join(unsafe_selected)
+            + "."
+        )
+
+    return {
+        "presentReferenceOnlyColumns": present_reference_only,
+        "blockedFromTraining": blocked_from_training,
+        "unsafeSelectedColumns": unsafe_selected,
+        "warnings": warnings,
+    }
 
 
 def build_preprocessor(feature_columns: list[str]) -> ColumnTransformer:
@@ -329,40 +389,262 @@ def build_preprocessor(feature_columns: list[str]) -> ColumnTransformer:
     )
 
 
-def split_dataset_for_time_order(dataframe: pd.DataFrame) -> dict[str, Any]:
-    """Split by timestamp groups first, with a safer fallback if time order is unusable."""
+def summarise_split_candidate(
+    strategy: str,
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    reason: str | None = None,
+    viable_override: bool | None = None,
+) -> dict[str, Any]:
+    """Describe a candidate validation split in a report-friendly format."""
+
+    viable = viable_override
+    if viable is None:
+        viable = bool(
+            not train_df.empty
+            and not test_df.empty
+            and train_df[LABEL_COLUMN].nunique() >= 2
+            and test_df[LABEL_COLUMN].nunique() >= 2
+        )
+
+    return {
+        "strategy": strategy,
+        "viable": viable,
+        "reason": reason,
+        "trainRows": int(len(train_df)),
+        "testRows": int(len(test_df)),
+        "trainPositiveCount": int((train_df[LABEL_COLUMN] == 1).sum()) if not train_df.empty else 0,
+        "testPositiveCount": int((test_df[LABEL_COLUMN] == 1).sum()) if not test_df.empty else 0,
+        "trainTimeRange": describe_time_range(train_df),
+        "testTimeRange": describe_time_range(test_df),
+    }
+
+
+def split_dataset_for_validation(dataframe: pd.DataFrame) -> dict[str, Any]:
+    """Build a preferred validation split and record alternative strategies."""
 
     usable = dataframe[dataframe[TRAINING_ELIGIBILITY_COLUMN] == 1].copy()
     usable = usable.dropna(subset=[LABEL_COLUMN]).copy()
 
+    candidate_summaries: list[dict[str, Any]] = []
     unique_timestamps = sorted(usable[GROUP_TIMESTAMP_COLUMN].dropna().unique().tolist())
     if len(unique_timestamps) >= 10:
         cutoff_index = max(1, math.floor(len(unique_timestamps) * 0.7))
         train_timestamps = set(unique_timestamps[:cutoff_index])
         train_df = usable[usable[GROUP_TIMESTAMP_COLUMN].isin(train_timestamps)].copy()
         test_df = usable[~usable[GROUP_TIMESTAMP_COLUMN].isin(train_timestamps)].copy()
-        strategy = "time_order_70_30"
+        time_candidate = summarise_split_candidate(
+            "time_order_70_30",
+            train_df,
+            test_df,
+            reason="Primary strategy for temporal realism.",
+        )
     else:
-        train_df, test_df = stratified_split(usable)
-        strategy = "stratified_random_70_30"
+        train_df = usable.iloc[0:0].copy()
+        test_df = usable.iloc[0:0].copy()
+        time_candidate = summarise_split_candidate(
+            "time_order_70_30",
+            train_df,
+            test_df,
+            reason="Not enough distinct timestamps for a meaningful chronological split.",
+            viable_override=False,
+        )
+    candidate_summaries.append(time_candidate)
 
-    if (
-        usable[LABEL_COLUMN].nunique() > 1
-        and (train_df[LABEL_COLUMN].nunique() < 2 or test_df[LABEL_COLUMN].nunique() < 2)
-    ):
-        train_df, test_df = stratified_split(usable)
-        strategy = "stratified_random_fallback_from_time_order"
+    random_train_df, random_test_df = stratified_split(usable)
+    random_candidate = summarise_split_candidate(
+        "stratified_random_70_30",
+        random_train_df,
+        random_test_df,
+        reason="Secondary comparison only; can overestimate performance because nearby timestamps stay correlated.",
+    )
+    candidate_summaries.append(random_candidate)
+
+    area_candidate = build_area_holdout_candidate(usable)
+    candidate_summaries.append(area_candidate)
+
+    event_candidate = build_event_holdout_candidate(usable)
+    candidate_summaries.append(event_candidate)
+
+    primary_candidate = next(
+        (
+            candidate
+            for candidate in candidate_summaries
+            if candidate["strategy"] == "time_order_70_30" and candidate["viable"]
+        ),
+        None,
+    )
+    selected_train_df = train_df
+    selected_test_df = test_df
+
+    if primary_candidate is None:
+        primary_candidate = next(
+            (
+                candidate
+                for candidate in candidate_summaries
+                if candidate["strategy"].startswith("area_holdout_") and candidate["viable"]
+            ),
+            None,
+        )
+        if primary_candidate is not None:
+            holdout_area = primary_candidate["strategy"].removeprefix("area_holdout_")
+            selected_train_df = usable[usable[AREA_COLUMN] != holdout_area].copy()
+            selected_test_df = usable[usable[AREA_COLUMN] == holdout_area].copy()
+
+    if primary_candidate is None and event_candidate["viable"]:
+        primary_candidate = event_candidate
+        bounds = event_positive_window_bounds(usable)
+        selected_train_df = usable[
+            (usable[GROUP_TIMESTAMP_COLUMN] < bounds["start"])
+            | (usable[GROUP_TIMESTAMP_COLUMN] > bounds["end"])
+        ].copy()
+        selected_test_df = usable[
+            (usable[GROUP_TIMESTAMP_COLUMN] >= bounds["start"])
+            & (usable[GROUP_TIMESTAMP_COLUMN] <= bounds["end"])
+        ].copy()
+
+    if primary_candidate is None:
+        primary_candidate = next(
+            (
+                candidate
+                for candidate in candidate_summaries
+                if candidate["strategy"] == "stratified_random_70_30" and candidate["viable"]
+            ),
+            None,
+        )
+        selected_train_df = random_train_df
+        selected_test_df = random_test_df
+
+    validation_warnings: list[str] = []
+    if primary_candidate is None:
+        primary_candidate = summarise_split_candidate(
+            "no_viable_split",
+            selected_train_df,
+            selected_test_df,
+            reason="No candidate split preserved both classes in train and test.",
+            viable_override=False,
+        )
+        validation_warnings.append(
+            "No validation split preserved both classes in train and test, so model comparison is unreliable."
+        )
+
+    if primary_candidate["strategy"] != "time_order_70_30":
+        validation_warnings.append(
+            f"Primary evaluation fell back from time-based validation to `{primary_candidate['strategy']}`."
+        )
+        if primary_candidate["strategy"] == "stratified_random_70_30":
+            validation_warnings.append(
+                "Random split remains only a prototype reference and may overestimate performance."
+            )
+
+    if not event_candidate["viable"]:
+        validation_warnings.append(
+            "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse."
+        )
 
     return {
-        "strategy": strategy,
-        "train": train_df,
-        "test": test_df,
-        "trainRows": int(len(train_df)),
-        "testRows": int(len(test_df)),
-        "trainPositiveCount": int((train_df[LABEL_COLUMN] == 1).sum()),
-        "testPositiveCount": int((test_df[LABEL_COLUMN] == 1).sum()),
-        "trainTimeRange": describe_time_range(train_df),
-        "testTimeRange": describe_time_range(test_df),
+        "strategy": primary_candidate["strategy"],
+        "train": selected_train_df,
+        "test": selected_test_df,
+        "trainRows": primary_candidate["trainRows"],
+        "testRows": primary_candidate["testRows"],
+        "trainPositiveCount": primary_candidate["trainPositiveCount"],
+        "testPositiveCount": primary_candidate["testPositiveCount"],
+        "trainTimeRange": primary_candidate["trainTimeRange"],
+        "testTimeRange": primary_candidate["testTimeRange"],
+        "candidateStrategies": candidate_summaries,
+        "validationWarnings": validation_warnings,
+    }
+
+
+def build_area_holdout_candidate(usable: pd.DataFrame) -> dict[str, Any]:
+    """Try to hold out one area entirely, if class coverage makes that meaningful."""
+
+    areas = [area for area in sorted(usable[AREA_COLUMN].dropna().unique().tolist()) if area]
+    best_candidate: dict[str, Any] | None = None
+
+    for holdout_area in areas:
+        test_df = usable[usable[AREA_COLUMN] == holdout_area].copy()
+        train_df = usable[usable[AREA_COLUMN] != holdout_area].copy()
+        candidate = summarise_split_candidate(
+            f"area_holdout_{holdout_area}",
+            train_df,
+            test_df,
+            reason=f"Holds out {holdout_area} entirely to test geographic generalisation.",
+        )
+        if candidate["viable"]:
+            return candidate
+        if best_candidate is None or candidate["testPositiveCount"] > best_candidate["testPositiveCount"]:
+            best_candidate = candidate
+
+    if best_candidate is not None:
+        best_candidate["reason"] = (
+            "Area holdout was checked, but no suburb holdout preserved both classes in train and test."
+        )
+        return best_candidate
+
+    empty = usable.iloc[0:0].copy()
+    return summarise_split_candidate(
+        "area_holdout_unavailable",
+        empty,
+        empty,
+        reason="Area holdout is unavailable because no stable area groups were found.",
+        viable_override=False,
+    )
+
+
+def build_event_holdout_candidate(usable: pd.DataFrame) -> dict[str, Any]:
+    """Try to build an event-style holdout when independent event labels exist."""
+
+    if EVENT_TARGET_COLUMN not in usable.columns or EVENT_LABEL_AVAILABLE_COLUMN not in usable.columns:
+        empty = usable.iloc[0:0].copy()
+        return summarise_split_candidate(
+            "event_holdout_unavailable",
+            empty,
+            empty,
+            reason="Event holdout is unavailable because event-label columns are missing.",
+            viable_override=False,
+        )
+
+    labelled = usable[usable[EVENT_LABEL_AVAILABLE_COLUMN].fillna(0).astype(int) == 1].copy()
+    event_positive = labelled[labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1].copy()
+    if event_positive.empty:
+        empty = usable.iloc[0:0].copy()
+        return summarise_split_candidate(
+            "event_holdout_unavailable",
+            empty,
+            empty,
+            reason="No independent elevated event labels exist yet.",
+            viable_override=False,
+        )
+
+    bounds = event_positive_window_bounds(usable)
+    holdout_start = bounds["start"]
+    holdout_end = bounds["end"]
+    test_df = usable[
+        (usable[GROUP_TIMESTAMP_COLUMN] >= holdout_start)
+        & (usable[GROUP_TIMESTAMP_COLUMN] <= holdout_end)
+    ].copy()
+    train_df = usable[
+        (usable[GROUP_TIMESTAMP_COLUMN] < holdout_start)
+        | (usable[GROUP_TIMESTAMP_COLUMN] > holdout_end)
+    ].copy()
+    return summarise_split_candidate(
+        "event_window_holdout",
+        train_df,
+        test_df,
+        reason="Holds out the labelled elevated event window to test event generalisation.",
+    )
+
+
+def event_positive_window_bounds(usable: pd.DataFrame) -> dict[str, pd.Timestamp]:
+    """Return the earliest and latest timestamps among elevated labelled-event rows."""
+
+    labelled = usable[usable[EVENT_LABEL_AVAILABLE_COLUMN].fillna(0).astype(int) == 1].copy()
+    event_positive = labelled[labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1].copy()
+    return {
+        "start": event_positive[GROUP_TIMESTAMP_COLUMN].min(),
+        "end": event_positive[GROUP_TIMESTAMP_COLUMN].max(),
     }
 
 

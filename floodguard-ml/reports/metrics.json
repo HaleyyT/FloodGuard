@@ -13,7 +13,10 @@
         "Joined event labels currently contain no elevated positives, so they are useful for plumbing but not event validation.",
         "Current joined event labels are all weak-strength placeholders and must not be treated as validated outcomes.",
         "No High class examples are available in this dataset.",
-        "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive."
+        "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive.",
+        "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
+        "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
+        "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
       ],
       "summary": {
         "datasetName": "real_export",
@@ -94,7 +97,10 @@
       "status": "completed",
       "bestPrototypeModel": "logistic_regression",
       "warnings": [
-        "12 row(s) were excluded from training due to eligibility gates."
+        "12 row(s) were excluded from training due to eligibility gates.",
+        "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
+        "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
+        "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
       ],
       "summary": {
         "datasetName": "scenario_stress_test",

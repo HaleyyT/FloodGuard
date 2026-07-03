@@ -15,12 +15,14 @@ from utils import (
     MODELS_DIR,
     REPORTS_DIR,
     SCENARIO_DATASET,
+    assess_leakage_controls,
     build_dataset_summary,
     build_dataset_warnings,
     ensure_runtime_dirs,
+    feature_columns_for_training,
     load_dataset,
     save_feature_importance_artifacts,
-    split_dataset_for_time_order,
+    split_dataset_for_validation,
     write_json,
 )
 
@@ -31,8 +33,12 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
     dataframe = load_dataset(dataset_path)
     summary = build_dataset_summary(dataframe, dataset_name)
     warnings = build_dataset_warnings(summary)
-    split = split_dataset_for_time_order(dataframe)
+    split = split_dataset_for_validation(dataframe)
     split_metadata = {key: value for key, value in split.items() if key not in {"train", "test"}}
+    trainable_features, _, _ = feature_columns_for_training(split["train"])
+    leakage_controls = assess_leakage_controls(dataframe, trainable_features)
+    warnings.extend(split_metadata.pop("validationWarnings", []))
+    warnings.extend(leakage_controls["warnings"])
     models_dir = MODELS_DIR / dataset_name
     models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -48,6 +54,11 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
             "summary": summary,
             "warnings": warnings,
             "split": split_metadata,
+            "validation": {
+                "primaryStrategy": split["strategy"],
+                "candidateStrategies": split_metadata.get("candidateStrategies", []),
+                "leakageControls": leakage_controls,
+            },
             "models": [],
             "bestPrototypeModel": None,
             "status": "skipped",
@@ -99,6 +110,11 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
         "summary": summary,
         "warnings": warnings,
         "split": split_metadata,
+        "validation": {
+            "primaryStrategy": split["strategy"],
+            "candidateStrategies": split_metadata.get("candidateStrategies", []),
+            "leakageControls": leakage_controls,
+        },
         "models": [
             {
                 key: value
@@ -159,7 +175,53 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
             REPORTS_DIR / "feature_importance.png",
         )
 
+    write_validation_summary(results)
     write_model_card(results)
+
+
+def write_validation_summary(results: list[dict[str, Any]]) -> None:
+    """Write a compact markdown summary of current validation strength and limits."""
+
+    lines = [
+        "# FloodGuard ML Validation Summary",
+        "",
+        "FloodGuard uses shadow-mode validation only. The rule engine remains the live authority.",
+        "",
+    ]
+
+    for result in results:
+        validation = result.get("validation", {})
+        leakage = validation.get("leakageControls", {})
+        lines.extend(
+            [
+                f"## {result['datasetName'].replace('_', ' ').title()}",
+                "",
+                f"- Primary strategy: `{validation.get('primaryStrategy', result.get('split', {}).get('strategy', 'unknown'))}`",
+                f"- Candidate strategies reviewed: {len(validation.get('candidateStrategies', []))}",
+                f"- Leakage-prone fields present: {', '.join(leakage.get('presentReferenceOnlyColumns', [])) or 'none'}",
+                f"- Leakage-prone fields blocked from training: {', '.join(leakage.get('blockedFromTraining', [])) or 'none'}",
+                "",
+            ]
+        )
+        if result.get("warnings"):
+            lines.append("Warnings:")
+            for warning in result["warnings"]:
+                lines.append(f"- {warning}")
+            lines.append("")
+
+    lines.extend(
+        [
+            "## Interpretation",
+            "",
+            "- Time-aware validation is implemented and preferred when the dataset preserves both classes chronologically.",
+            "- Random stratified split remains a secondary fallback and can overestimate performance.",
+            "- Area holdout and event holdout are checked, but may be unviable when class coverage or independent event labels are too weak.",
+            "- FloodGuard still requires stronger independent labels before ML results can be treated as real flood prediction validation.",
+            "",
+        ]
+    )
+
+    (REPORTS_DIR / "validation_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main() -> None:

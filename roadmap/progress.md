@@ -1,6 +1,6 @@
 # FloodGuard Progress Report
 
-_Last updated: 2026-07-01_
+_Last updated: 2026-07-03_
 
 ## Purpose
 
@@ -17,7 +17,7 @@ It is intentionally careful about the difference between:
 
 ## Overall Status
 
-FloodGuard is now a credible live-data-informed flood-awareness prototype with a strong reliability and evidence backbone.
+FloodGuard is now a credible live-data-informed flood-awareness prototype with a strong reliability, evidence, and safety-boundary backbone.
 
 It is strongest in:
 
@@ -26,7 +26,8 @@ It is strongest in:
 - cache and fallback handling;
 - explainable risk features and decision audit output;
 - notification decision logic and regression tests;
-- ML-readiness and baseline-experiment scaffolding without overclaiming real ML;
+- explicit expert-oversight framing and visible prototype thresholds;
+- ML dataset export, label-join plumbing, and time-aware validation safeguards without overclaiming real ML;
 - dashboard evidence, history, and front-page summary coverage that make the prototype easier to inspect and demo.
 
 It is not yet a production emergency-warning system, and it is not yet a validated ML flood-prediction system.
@@ -45,11 +46,16 @@ Newer work completed since the earlier progress snapshot includes:
 - mapping evidence and dashboard smoke-test coverage;
 - clearer framework comments across important FloodGuard logic;
 - front-page dashboard refactoring to emphasize rainfall, river, map, actions, and public signals more clearly.
+- expert-review documentation and explicit safety-boundary wording across README, poster copy, and demo script;
+- visible prototype threshold configuration with review metadata instead of hidden-only threshold code;
+- label-strategy documentation, `labels.csv`, and a joined ML training dataset contract;
+- time-aware ML validation reporting, leakage-control checks, and validation-summary generation.
 
 What matters about this:
 
 - the backend is now much closer to a coherent decision-support system than a simple live-data mockup;
 - the frontend is much stronger at exposing evidence, trends, trust, and next-step guidance;
+- the project now has a clearer professional story around safety, expert review, and what ML can honestly claim today;
 - the project still remains rule-based and prototype-grade in the places where it should be described carefully.
 
 ---
@@ -276,7 +282,7 @@ What has been covered strongly:
 
 What remains weaker or incomplete:
 
-- deeper calibration and validation;
+- stronger real-event calibration and independent validation;
 - stronger real-world official warning ingestion;
 - independent labels and real ML training;
 - stronger long-term data storage strategy.
@@ -323,6 +329,7 @@ Current testing limitation:
 - The codebase now has much better commentary and test coverage around the core framework logic.
 - ML is framed carefully and professionally instead of being exaggerated.
 - The frontend now gives a more coherent front-page summary of what matters first: conditions, trends, trust, and actions.
+- The safety boundary is now much clearer and more credible for judges, reviewers, and future domain experts.
 
 ---
 
@@ -331,6 +338,7 @@ Current testing limitation:
 - Official warning ingestion is architecturally prepared but not yet fully mature as a live connected production-quality pipeline.
 - Historical storage is still lightweight and prototype-oriented.
 - Thresholds and scoring formulas are still heuristic rather than validated through systematic calibration.
+- ML validation is stronger than before, but independent elevated event labels are still missing.
 - The frontend is stronger than before, but some panels are still more engineering-facing than resident-facing.
 - There is still no true production notification delivery stack.
 - Community reports and evidence review are useful prototype features, but verification remains limited.
@@ -342,20 +350,22 @@ Current testing limitation:
 
 This section is intentionally candid.
 
-### 1. Validated ML is not implemented yet
+### 1. Validated ML is still not implemented yet
 
 The project has:
 
 - a real Python ML prototype pipeline;
 - dataset readiness checks;
 - feature tables;
+- label-strategy and label-join infrastructure;
+- time-aware validation and leakage-control reporting;
 - metrics and model-card style reporting;
 - shadow-mode dashboard/API integration.
 
 It does not yet have:
 
 - independent ground-truth labels;
-- time-based validation against real events;
+- strong event-holdout validation against real events;
 - a trained and validated production-quality model.
 
 If described carelessly, this would be easy to overclaim. That would be a serious credibility risk.
@@ -405,17 +415,17 @@ It should not be described as:
 If continuing from here, the highest-value next steps are:
 
 1. Strengthen real official warning ingestion and validation.
-2. Improve historical data quality and storage depth.
-3. Calibrate thresholds against historical flood/event periods.
-4. Collect or link independent outcome labels.
-5. Keep real ML in Python later, once reliable labelled history exists.
+2. Collect or link stronger independent outcome labels and real event periods.
+3. Calibrate thresholds against historical flood/event periods with expert review.
+4. Improve historical data quality and storage depth.
+5. Extend ML validation from rule-derived comparison into real event holdout once labels exist.
 6. Add more end-to-end UI verification and deployment-level checks.
 
 ---
 
 ## Honest One-Paragraph Summary
 
-FloodGuard has progressed from a basic live-data prototype into a much stronger reliability-aware flood-awareness system with layered health checks, source provenance, cache resilience, historical snapshot storage, explainable rule-based risk features, notification decision logic, official-warning separation, dashboard evidence panels, and ML-readiness scaffolding. Its biggest strengths are honesty, evidence visibility, test-backed backend structure, and a much clearer front-page story for users. Its biggest weaknesses are that real official warning ingestion is still not fully mature, calibration is still heuristic, historical storage is still prototype-grade, and no validated production ML model exists yet.
+FloodGuard has progressed from a basic live-data prototype into a much stronger reliability-aware flood-awareness system with layered health checks, source provenance, cache resilience, historical snapshot storage, explainable rule-based risk features, notification decision logic, official-warning separation, visible safety/expert-oversight framing, dashboard evidence panels, and a Python ML shadow pipeline with label-join and time-aware validation guardrails. Its biggest strengths are honesty, evidence visibility, safety framing, test-backed backend structure, and a much clearer front-page story for users. Its biggest weaknesses are that real official warning ingestion is still not fully mature, calibration is still heuristic, historical storage is still prototype-grade, and no validated production ML model exists yet.
 
 ---
 

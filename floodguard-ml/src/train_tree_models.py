@@ -21,7 +21,7 @@ from sklearn.pipeline import Pipeline
 def train_random_forest(train_df, test_df, model_path: Path) -> dict[str, Any]:
     """Train and evaluate the balanced random-forest baseline."""
 
-    feature_columns, dropped_features = feature_columns_for_training(train_df)
+    feature_columns, dropped_features, blocked_features = feature_columns_for_training(train_df)
     x_train, y_train = prepare_xy(train_df, feature_columns)
     x_test, y_test = prepare_xy(test_df, feature_columns)
 
@@ -63,6 +63,11 @@ def train_random_forest(train_df, test_df, model_path: Path) -> dict[str, Any]:
         "warnings": [
             "Random-forest importance is useful for prototype interpretation, not production flood causality claims."
         ]
+        + (
+            [f"Blocked leakage-prone feature columns: {', '.join(blocked_features)}."]
+            if blocked_features
+            else []
+        )
         + (
             [f"Skipped always-missing feature columns: {', '.join(dropped_features)}."]
             if dropped_features

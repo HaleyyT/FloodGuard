@@ -80,21 +80,199 @@
     }
   },
   "warnings": [
-    "12 row(s) were excluded from training due to eligibility gates."
+    "12 row(s) were excluded from training due to eligibility gates.",
+    "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
+    "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
+    "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
   ],
   "split": {
-    "strategy": "stratified_random_fallback_from_time_order",
-    "trainRows": 58,
-    "testRows": 26,
-    "trainPositiveCount": 33,
-    "testPositiveCount": 15,
+    "strategy": "area_holdout_north-parramatta",
+    "trainRows": 56,
+    "testRows": 28,
+    "trainPositiveCount": 32,
+    "testPositiveCount": 16,
     "trainTimeRange": {
       "start": "2026-07-01T00:00:00+00:00",
       "end": "2026-07-06T11:00:00+00:00"
     },
     "testTimeRange": {
-      "start": "2026-07-01T00:00:00+00:00",
-      "end": "2026-07-05T04:00:00+00:00"
+      "start": "2026-07-01T01:00:00+00:00",
+      "end": "2026-07-06T10:00:00+00:00"
+    },
+    "candidateStrategies": [
+      {
+        "strategy": "time_order_70_30",
+        "viable": false,
+        "reason": "Primary strategy for temporal realism.",
+        "trainRows": 73,
+        "testRows": 11,
+        "trainPositiveCount": 48,
+        "testPositiveCount": 0,
+        "trainTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-05T00:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-05T01:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        }
+      },
+      {
+        "strategy": "stratified_random_70_30",
+        "viable": true,
+        "reason": "Secondary comparison only; can overestimate performance because nearby timestamps stay correlated.",
+        "trainRows": 58,
+        "testRows": 26,
+        "trainPositiveCount": 33,
+        "testPositiveCount": 15,
+        "trainTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-05T04:00:00+00:00"
+        }
+      },
+      {
+        "strategy": "area_holdout_north-parramatta",
+        "viable": true,
+        "reason": "Holds out north-parramatta entirely to test geographic generalisation.",
+        "trainRows": 56,
+        "testRows": 28,
+        "trainPositiveCount": 32,
+        "testPositiveCount": 16,
+        "trainTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-01T01:00:00+00:00",
+          "end": "2026-07-06T10:00:00+00:00"
+        }
+      },
+      {
+        "strategy": "event_window_holdout",
+        "viable": false,
+        "reason": "Holds out the labelled elevated event window to test event generalisation.",
+        "trainRows": 12,
+        "testRows": 72,
+        "trainPositiveCount": 0,
+        "testPositiveCount": 48,
+        "trainTimeRange": {
+          "start": "2026-07-05T00:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-04T23:00:00+00:00"
+        }
+      }
+    ]
+  },
+  "validation": {
+    "primaryStrategy": "area_holdout_north-parramatta",
+    "candidateStrategies": [
+      {
+        "strategy": "time_order_70_30",
+        "viable": false,
+        "reason": "Primary strategy for temporal realism.",
+        "trainRows": 73,
+        "testRows": 11,
+        "trainPositiveCount": 48,
+        "testPositiveCount": 0,
+        "trainTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-05T00:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-05T01:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        }
+      },
+      {
+        "strategy": "stratified_random_70_30",
+        "viable": true,
+        "reason": "Secondary comparison only; can overestimate performance because nearby timestamps stay correlated.",
+        "trainRows": 58,
+        "testRows": 26,
+        "trainPositiveCount": 33,
+        "testPositiveCount": 15,
+        "trainTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-05T04:00:00+00:00"
+        }
+      },
+      {
+        "strategy": "area_holdout_north-parramatta",
+        "viable": true,
+        "reason": "Holds out north-parramatta entirely to test geographic generalisation.",
+        "trainRows": 56,
+        "testRows": 28,
+        "trainPositiveCount": 32,
+        "testPositiveCount": 16,
+        "trainTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-01T01:00:00+00:00",
+          "end": "2026-07-06T10:00:00+00:00"
+        }
+      },
+      {
+        "strategy": "event_window_holdout",
+        "viable": false,
+        "reason": "Holds out the labelled elevated event window to test event generalisation.",
+        "trainRows": 12,
+        "testRows": 72,
+        "trainPositiveCount": 0,
+        "testPositiveCount": 48,
+        "trainTimeRange": {
+          "start": "2026-07-05T00:00:00+00:00",
+          "end": "2026-07-06T11:00:00+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-07-01T00:00:00+00:00",
+          "end": "2026-07-04T23:00:00+00:00"
+        }
+      }
+    ],
+    "leakageControls": {
+      "presentReferenceOnlyColumns": [
+        "riskScore",
+        "ruleConcernLevel",
+        "targetElevatedConcern",
+        "targetRuleElevated",
+        "targetEventElevated",
+        "labelSource",
+        "ruleLabelSource",
+        "eventLabelSource",
+        "eventLabelStrength",
+        "eventLabelNotes",
+        "eventLabelAvailable"
+      ],
+      "blockedFromTraining": [
+        "riskScore",
+        "ruleConcernLevel",
+        "targetElevatedConcern",
+        "targetRuleElevated",
+        "targetEventElevated",
+        "labelSource",
+        "ruleLabelSource",
+        "eventLabelSource",
+        "eventLabelStrength",
+        "eventLabelNotes",
+        "eventLabelAvailable"
+      ],
+      "unsafeSelectedColumns": [],
+      "warnings": [
+        "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
+      ]
     }
   },
   "models": [
@@ -102,14 +280,14 @@
       "modelName": "majority_baseline",
       "status": "trained",
       "metrics": {
-        "accuracy": 0.5769230769230769,
+        "accuracy": 0.5714285714285714,
         "balancedAccuracy": 0.5,
-        "precision": 0.5769230769230769,
+        "precision": 0.5714285714285714,
         "recall": 1.0,
-        "f1": 0.7317073170731707,
+        "f1": 0.7272727272727273,
         "support": {
-          "negative": 11,
-          "positive": 15
+          "negative": 12,
+          "positive": 16
         },
         "confusionMatrix": {
           "labels": [
@@ -119,16 +297,16 @@
           "values": [
             [
               0,
-              11
+              12
             ],
             [
               0,
-              15
+              16
             ]
           ]
         },
         "rocAuc": 0.5,
-        "prAuc": 0.5769230769230769
+        "prAuc": 0.5714285714285714
       },
       "classWeight": null,
       "warnings": [
@@ -165,8 +343,8 @@
         "recall": 1.0,
         "f1": 1.0,
         "support": {
-          "negative": 11,
-          "positive": 15
+          "negative": 12,
+          "positive": 16
         },
         "confusionMatrix": {
           "labels": [
@@ -175,12 +353,12 @@
           ],
           "values": [
             [
-              11,
+              12,
               0
             ],
             [
               0,
-              15
+              16
             ]
           ]
         },
@@ -222,8 +400,8 @@
         "recall": 1.0,
         "f1": 1.0,
         "support": {
-          "negative": 11,
-          "positive": 15
+          "negative": 12,
+          "positive": 16
         },
         "confusionMatrix": {
           "labels": [
@@ -232,12 +410,12 @@
           ],
           "values": [
             [
-              11,
+              12,
               0
             ],
             [
               0,
-              15
+              16
             ]
           ]
         },

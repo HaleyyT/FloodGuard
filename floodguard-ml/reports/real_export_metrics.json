@@ -85,21 +85,199 @@
     "Joined event labels currently contain no elevated positives, so they are useful for plumbing but not event validation.",
     "Current joined event labels are all weak-strength placeholders and must not be treated as validated outcomes.",
     "No High class examples are available in this dataset.",
-    "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive."
+    "Some predictors are heavily missing and will rely on imputation: antecedentRainfallIndex, rateOfRiseMPerHour, riverDelta1hM, riverDelta3hM, riverTrendCode, warningActive.",
+    "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
+    "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
+    "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
   ],
   "split": {
-    "strategy": "stratified_random_fallback_from_time_order",
-    "trainRows": 2100,
-    "testRows": 900,
-    "trainPositiveCount": 13,
-    "testPositiveCount": 5,
+    "strategy": "area_holdout_north-parramatta",
+    "trainRows": 2000,
+    "testRows": 1000,
+    "trainPositiveCount": 10,
+    "testPositiveCount": 8,
     "trainTimeRange": {
       "start": "2026-06-24T16:28:13.485000+00:00",
       "end": "2026-06-30T06:56:47.412000+00:00"
     },
     "testTimeRange": {
       "start": "2026-06-24T16:28:13.485000+00:00",
-      "end": "2026-06-30T06:55:47.413000+00:00"
+      "end": "2026-06-30T06:56:47.412000+00:00"
+    },
+    "candidateStrategies": [
+      {
+        "strategy": "time_order_70_30",
+        "viable": false,
+        "reason": "Primary strategy for temporal realism.",
+        "trainRows": 2091,
+        "testRows": 909,
+        "trainPositiveCount": 18,
+        "testPositiveCount": 0,
+        "trainTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-27T15:35:43.890000+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-06-27T15:36:16.994000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        }
+      },
+      {
+        "strategy": "stratified_random_70_30",
+        "viable": true,
+        "reason": "Secondary comparison only; can overestimate performance because nearby timestamps stay correlated.",
+        "trainRows": 2100,
+        "testRows": 900,
+        "trainPositiveCount": 13,
+        "testPositiveCount": 5,
+        "trainTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:55:47.413000+00:00"
+        }
+      },
+      {
+        "strategy": "area_holdout_north-parramatta",
+        "viable": true,
+        "reason": "Holds out north-parramatta entirely to test geographic generalisation.",
+        "trainRows": 2000,
+        "testRows": 1000,
+        "trainPositiveCount": 10,
+        "testPositiveCount": 8,
+        "trainTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        }
+      },
+      {
+        "strategy": "event_holdout_unavailable",
+        "viable": false,
+        "reason": "No independent elevated event labels exist yet.",
+        "trainRows": 0,
+        "testRows": 0,
+        "trainPositiveCount": 0,
+        "testPositiveCount": 0,
+        "trainTimeRange": {
+          "start": null,
+          "end": null
+        },
+        "testTimeRange": {
+          "start": null,
+          "end": null
+        }
+      }
+    ]
+  },
+  "validation": {
+    "primaryStrategy": "area_holdout_north-parramatta",
+    "candidateStrategies": [
+      {
+        "strategy": "time_order_70_30",
+        "viable": false,
+        "reason": "Primary strategy for temporal realism.",
+        "trainRows": 2091,
+        "testRows": 909,
+        "trainPositiveCount": 18,
+        "testPositiveCount": 0,
+        "trainTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-27T15:35:43.890000+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-06-27T15:36:16.994000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        }
+      },
+      {
+        "strategy": "stratified_random_70_30",
+        "viable": true,
+        "reason": "Secondary comparison only; can overestimate performance because nearby timestamps stay correlated.",
+        "trainRows": 2100,
+        "testRows": 900,
+        "trainPositiveCount": 13,
+        "testPositiveCount": 5,
+        "trainTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:55:47.413000+00:00"
+        }
+      },
+      {
+        "strategy": "area_holdout_north-parramatta",
+        "viable": true,
+        "reason": "Holds out north-parramatta entirely to test geographic generalisation.",
+        "trainRows": 2000,
+        "testRows": 1000,
+        "trainPositiveCount": 10,
+        "testPositiveCount": 8,
+        "trainTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        },
+        "testTimeRange": {
+          "start": "2026-06-24T16:28:13.485000+00:00",
+          "end": "2026-06-30T06:56:47.412000+00:00"
+        }
+      },
+      {
+        "strategy": "event_holdout_unavailable",
+        "viable": false,
+        "reason": "No independent elevated event labels exist yet.",
+        "trainRows": 0,
+        "testRows": 0,
+        "trainPositiveCount": 0,
+        "testPositiveCount": 0,
+        "trainTimeRange": {
+          "start": null,
+          "end": null
+        },
+        "testTimeRange": {
+          "start": null,
+          "end": null
+        }
+      }
+    ],
+    "leakageControls": {
+      "presentReferenceOnlyColumns": [
+        "riskScore",
+        "ruleConcernLevel",
+        "targetElevatedConcern",
+        "targetRuleElevated",
+        "targetEventElevated",
+        "labelSource",
+        "ruleLabelSource",
+        "eventLabelSource",
+        "eventLabelStrength",
+        "eventLabelNotes",
+        "eventLabelAvailable"
+      ],
+      "blockedFromTraining": [
+        "riskScore",
+        "ruleConcernLevel",
+        "targetElevatedConcern",
+        "targetRuleElevated",
+        "targetEventElevated",
+        "labelSource",
+        "ruleLabelSource",
+        "eventLabelSource",
+        "eventLabelStrength",
+        "eventLabelNotes",
+        "eventLabelAvailable"
+      ],
+      "unsafeSelectedColumns": [],
+      "warnings": [
+        "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable."
+      ]
     }
   },
   "models": [
@@ -107,14 +285,14 @@
       "modelName": "majority_baseline",
       "status": "trained",
       "metrics": {
-        "accuracy": 0.9944444444444445,
+        "accuracy": 0.992,
         "balancedAccuracy": 0.5,
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
         "support": {
-          "negative": 895,
-          "positive": 5
+          "negative": 992,
+          "positive": 8
         },
         "confusionMatrix": {
           "labels": [
@@ -123,17 +301,17 @@
           ],
           "values": [
             [
-              895,
+              992,
               0
             ],
             [
-              5,
+              8,
               0
             ]
           ]
         },
         "rocAuc": 0.5,
-        "prAuc": 0.005555555555555556
+        "prAuc": 0.008
       },
       "classWeight": null,
       "warnings": [
@@ -164,14 +342,14 @@
       "modelName": "logistic_regression",
       "status": "trained",
       "metrics": {
-        "accuracy": 0.5888888888888889,
-        "balancedAccuracy": 0.7932960893854748,
-        "precision": 0.013333333333333334,
-        "recall": 1.0,
-        "f1": 0.02631578947368421,
+        "accuracy": 0.994,
+        "balancedAccuracy": 0.625,
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4,
         "support": {
-          "negative": 895,
-          "positive": 5
+          "negative": 992,
+          "positive": 8
         },
         "confusionMatrix": {
           "labels": [
@@ -180,17 +358,17 @@
           ],
           "values": [
             [
-              525,
-              370
+              992,
+              0
             ],
             [
-              0,
-              5
+              6,
+              2
             ]
           ]
         },
-        "rocAuc": 0.8688268156424581,
-        "prAuc": 0.6056657223796034
+        "rocAuc": 0.73046875,
+        "prAuc": 0.260752688172043
       },
       "classWeight": "balanced",
       "warnings": [
@@ -221,14 +399,14 @@
       "modelName": "random_forest",
       "status": "trained",
       "metrics": {
-        "accuracy": 0.7466666666666667,
-        "balancedAccuracy": 0.8726256983240224,
-        "precision": 0.02145922746781116,
+        "accuracy": 0.613,
+        "balancedAccuracy": 0.8049395161290323,
+        "precision": 0.020253164556962026,
         "recall": 1.0,
-        "f1": 0.04201680672268908,
+        "f1": 0.03970223325062035,
         "support": {
-          "negative": 895,
-          "positive": 5
+          "negative": 992,
+          "positive": 8
         },
         "confusionMatrix": {
           "labels": [
@@ -237,17 +415,17 @@
           ],
           "values": [
             [
-              667,
-              228
+              605,
+              387
             ],
             [
               0,
-              5
+              8
             ]
           ]
         },
-        "rocAuc": 0.9229050279329608,
-        "prAuc": 0.6086206896551724
+        "rocAuc": 0.8537046370967741,
+        "prAuc": 0.2651898734177215
       },
       "classWeight": "balanced",
       "warnings": [
