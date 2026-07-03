@@ -2427,6 +2427,10 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
     report.realExport?.limitation ?? "Historical ML report is unavailable.";
   const scenarioLine =
     report.scenarioStressTest?.limitation ?? "Scenario stress-test report is unavailable.";
+  const preview = report.predictionPreview ?? null;
+  const previewLine = preview
+    ? `Python best model: ${report.bestPrototypeModel ?? "unknown"}; preview ${preview.predictedLabel.toLowerCase()} at ${preview.predictedProbability?.toFixed?.(2) ?? "n/a"}; confidence ${preview.confidenceBand}.`
+    : null;
 
   return (
     <section className="card ml-prototype-card">
@@ -2448,6 +2452,10 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
           label="Training rows"
           value={String(report.realExport?.rows ?? 0)}
         />
+        <InfoTile
+          label="Best model"
+          value={report.bestPrototypeModel ?? "Waiting"}
+        />
       </div>
 
       <ul className="factor-list history-list">
@@ -2458,6 +2466,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
         </li>
         <li>{limitationLine}</li>
         <li>{scenarioLine}</li>
+        {previewLine && <li>{previewLine}</li>}
         <li>
           Rule engine: {ruleLabel}; ML prototype:{" "}
           {mlProbability === null ? mlLabel : `elevated probability ${mlProbability.toFixed(2)}`}

@@ -64,6 +64,13 @@ def write_model_card(results: list[dict]) -> None:
         f"- Scenario blocked leakage-prone fields: {', '.join(scenario_result.get('validation', {}).get('leakageControls', {}).get('blockedFromTraining', [])) or 'none reported'}",
         "- Columns such as `riskScore`, `ruleConcernLevel`, and label/provenance fields are treated as reference-only and excluded from training.",
         "",
+        "## Probability And Uncertainty",
+        "",
+        f"- Real export best-model preview: {format_prediction_preview(real_result.get('predictionPreview'))}",
+        f"- Scenario best-model preview: {format_prediction_preview(scenario_result.get('predictionPreview'))}",
+        "- Probability-style outputs are shadow-mode only and are paired with a confidence band and reason.",
+        "- Brier score and bucket summaries are reported for prototype calibration review where possible.",
+        "",
         "## Evaluated Models",
         "",
     ]
@@ -127,6 +134,20 @@ def main() -> None:
     )
     write_model_card([real, scenario])
     print(f"Model card written to {REPORTS_DIR / 'model_card.md'}")
+
+
+def format_prediction_preview(preview: dict | None) -> str:
+    """Render a compact one-line preview for the model card."""
+
+    if not preview:
+        return "unavailable"
+
+    probability = preview.get("predictedProbability")
+    probability_text = "n/a" if probability is None else f"{probability:.3f}"
+    return (
+        f"{preview.get('predictedLabel')} at {probability_text} "
+        f"({preview.get('confidenceBand')}: {preview.get('confidenceReason')})"
+    )
 
 
 if __name__ == "__main__":

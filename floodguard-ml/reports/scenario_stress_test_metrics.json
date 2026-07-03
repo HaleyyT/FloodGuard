@@ -275,6 +275,34 @@
       ]
     }
   },
+  "predictionPreview": {
+    "areaId": "north-parramatta",
+    "areaName": "North Parramatta, NSW",
+    "observedAt": "2026-07-06T10:00:00+00:00",
+    "predictedLabel": "Low concern",
+    "predictedProbability": 0.0004,
+    "confidenceBand": "higher",
+    "confidenceReason": "Probability is far from the decision boundary, but still shadow-mode only.",
+    "actualLabel": "Low concern"
+  },
+  "calibration": {
+    "bestModel": "logistic_regression",
+    "brierScore": 1.9282988848934555e-07,
+    "probabilityBuckets": [
+      {
+        "bucket": "0.0-0.2",
+        "rowCount": 12,
+        "meanPredictedProbability": 0.00030691895660815856,
+        "observedPositiveRate": 0.0
+      },
+      {
+        "bucket": "0.8-1.0",
+        "rowCount": 16,
+        "meanPredictedProbability": 0.9997417751609887,
+        "observedPositiveRate": 1.0
+      }
+    ]
+  },
   "models": [
     {
       "modelName": "majority_baseline",
@@ -306,8 +334,27 @@
           ]
         },
         "rocAuc": 0.5,
-        "prAuc": 0.5714285714285714
+        "prAuc": 0.5714285714285714,
+        "brierScore": 0.42857142857142855
       },
+      "predictionPreview": {
+        "areaId": "north-parramatta",
+        "areaName": "North Parramatta, NSW",
+        "observedAt": "2026-07-06T10:00:00+00:00",
+        "predictedLabel": "Elevated concern",
+        "predictedProbability": 1.0,
+        "confidenceBand": "higher",
+        "confidenceReason": "Probability is far from the decision boundary, but still shadow-mode only.",
+        "actualLabel": "Low concern"
+      },
+      "probabilityBuckets": [
+        {
+          "bucket": "0.8-1.0",
+          "rowCount": 28,
+          "meanPredictedProbability": 1.0,
+          "observedPositiveRate": 0.5714285714285714
+        }
+      ],
       "classWeight": null,
       "warnings": [
         "This baseline is expected to look strong on plain accuracy because elevated cases are rare."
@@ -363,8 +410,33 @@
           ]
         },
         "rocAuc": 1.0,
-        "prAuc": 1.0
+        "prAuc": 1.0,
+        "brierScore": 1.9282988848934555e-07
       },
+      "predictionPreview": {
+        "areaId": "north-parramatta",
+        "areaName": "North Parramatta, NSW",
+        "observedAt": "2026-07-06T10:00:00+00:00",
+        "predictedLabel": "Low concern",
+        "predictedProbability": 0.0004,
+        "confidenceBand": "higher",
+        "confidenceReason": "Probability is far from the decision boundary, but still shadow-mode only.",
+        "actualLabel": "Low concern"
+      },
+      "probabilityBuckets": [
+        {
+          "bucket": "0.0-0.2",
+          "rowCount": 12,
+          "meanPredictedProbability": 0.00030691895660815856,
+          "observedPositiveRate": 0.0
+        },
+        {
+          "bucket": "0.8-1.0",
+          "rowCount": 16,
+          "meanPredictedProbability": 0.9997417751609887,
+          "observedPositiveRate": 1.0
+        }
+      ],
       "classWeight": "balanced",
       "warnings": [
         "Logistic regression is still trained on rule-derived labels and should remain shadow-only."
@@ -420,8 +492,33 @@
           ]
         },
         "rocAuc": 1.0,
-        "prAuc": 1.0
+        "prAuc": 1.0,
+        "brierScore": 0.0
       },
+      "predictionPreview": {
+        "areaId": "north-parramatta",
+        "areaName": "North Parramatta, NSW",
+        "observedAt": "2026-07-06T10:00:00+00:00",
+        "predictedLabel": "Low concern",
+        "predictedProbability": 0.0,
+        "confidenceBand": "higher",
+        "confidenceReason": "Probability is far from the decision boundary, but still shadow-mode only.",
+        "actualLabel": "Low concern"
+      },
+      "probabilityBuckets": [
+        {
+          "bucket": "0.0-0.2",
+          "rowCount": 12,
+          "meanPredictedProbability": 0.0,
+          "observedPositiveRate": 0.0
+        },
+        {
+          "bucket": "0.8-1.0",
+          "rowCount": 16,
+          "meanPredictedProbability": 1.0,
+          "observedPositiveRate": 1.0
+        }
+      ],
       "classWeight": "balanced",
       "warnings": [
         "Random-forest importance is useful for prototype interpretation, not production flood causality claims."

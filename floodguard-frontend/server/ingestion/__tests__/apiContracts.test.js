@@ -312,6 +312,14 @@ function dependencies() {
       operationalUse: "disabled",
       labelSource: "rule_derived",
       readyForValidatedML: false,
+      bestPrototypeModel: "random_forest",
+      validationLevel: "prototype",
+      predictionPreview: {
+        predictedLabel: "Elevated concern",
+        predictedProbability: 0.72,
+        confidenceBand: "limited",
+        confidenceReason: "Prototype labels remain sparse.",
+      },
       models: ["majority_baseline", "logistic_regression", "random_forest"],
       liveDecisionAuthority: "rule_engine",
       summary: "FloodGuard ML is implemented as a prototype shadow-mode comparison layer.",
@@ -327,6 +335,10 @@ function dependencies() {
         available: true,
         summary: "Synthetic scenario dataset validates ML plumbing only.",
         limitation: "Scenario metrics are not real-world validation.",
+      },
+      calibrationSummary: {
+        available: true,
+        summary: "Prototype calibration summary is available.",
       },
     }),
   };
@@ -414,7 +426,10 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.equal(body.liveScoringEnabled, false);
   assert.equal(body.readyForValidatedML, false);
   assert.equal(body.liveDecisionAuthority, "rule_engine");
+  assert.equal(body.bestPrototypeModel, "random_forest");
+  assert.equal(body.validationLevel, "prototype");
   assert.ok(Array.isArray(body.models));
+  assert.equal(body.predictionPreview.predictedLabel, "Elevated concern");
   assert.match(body.realExport.limitation, /Rule-derived|imbalance/i);
   assert.match(body.scenarioStressTest.limitation, /not real-world validation|synthetic/i);
 });

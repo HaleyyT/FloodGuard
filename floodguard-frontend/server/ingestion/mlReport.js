@@ -12,6 +12,9 @@ function defaultReport() {
     operationalUse: "disabled",
     labelSource: "rule_derived",
     readyForValidatedML: false,
+    bestPrototypeModel: null,
+    validationLevel: "prototype",
+    predictionPreview: null,
     models: [],
     liveDecisionAuthority: "rule_engine",
     summary:
@@ -21,6 +24,7 @@ function defaultReport() {
       realExportMetrics: false,
       scenarioStressTestMetrics: false,
       modelCard: false,
+      calibrationSummary: false,
     },
     realExport: {
       available: false,
@@ -44,6 +48,10 @@ function defaultReport() {
     modelCard: {
       available: false,
       summary: "Model card is unavailable.",
+    },
+    calibrationSummary: {
+      available: false,
+      summary: "Calibration summary is unavailable.",
     },
   };
 }
@@ -130,13 +138,31 @@ function buildModelCardSummary(markdown) {
   };
 }
 
+function buildCalibrationSummary(markdown) {
+  if (!markdown) {
+    return defaultReport().calibrationSummary;
+  }
+
+  const firstMeaningfulLine = markdown
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0 && !line.startsWith("#"));
+
+  return {
+    available: true,
+    summary: firstMeaningfulLine ?? "Prototype calibration summary is available.",
+  };
+}
+
 export async function readMlReport(reportsDir = defaultReportsDir) {
   try {
-    const [metrics, realExportMetrics, scenarioMetrics, modelCard] = await Promise.all([
+    const [metrics, realExportMetrics, scenarioMetrics, modelCard, calibrationSummary] =
+      await Promise.all([
       readJsonIfPresent(path.join(reportsDir, "metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "real_export_metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "scenario_stress_test_metrics.json")),
       readTextIfPresent(path.join(reportsDir, "model_card.md")),
+      readTextIfPresent(path.join(reportsDir, "calibration_summary.md")),
     ]);
 
     const fallback = defaultReport();
@@ -159,13 +185,21 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
         realExportMetrics: Boolean(realExportMetrics),
         scenarioStressTestMetrics: Boolean(scenarioMetrics),
         modelCard: Boolean(modelCard),
+        calibrationSummary: Boolean(calibrationSummary),
       },
       realExport: buildRealExportSummary(realExportMetrics),
       scenarioStressTest: buildScenarioSummary(scenarioMetrics),
       modelCard: buildModelCardSummary(modelCard),
+      calibrationSummary: buildCalibrationSummary(calibrationSummary),
+      bestPrototypeModel:
+        realExportMetrics?.bestPrototypeModel ??
+        scenarioMetrics?.bestPrototypeModel ??
+        null,
+      validationLevel: "prototype",
+      predictionPreview: realExportMetrics?.predictionPreview ?? null,
     };
 
-    if (!realExportMetrics && !scenarioMetrics && !modelCard) {
+    if (!realExportMetrics && !scenarioMetrics && !modelCard && !calibrationSummary) {
       return fallback;
     }
 

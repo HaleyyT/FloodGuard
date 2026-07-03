@@ -16,6 +16,8 @@ from utils import (  # noqa: E402
     GROUP_TIMESTAMP_COLUMN,
     LABEL_COLUMN,
     assess_leakage_controls,
+    build_probability_bucket_summary,
+    confidence_band_for_probability,
     feature_columns_for_training,
     split_dataset_for_validation,
 )
@@ -133,6 +135,19 @@ class ValidationControlTests(unittest.TestCase):
         self.assertIn("riskScore", leakage["presentReferenceOnlyColumns"])
         self.assertIn("targetElevatedConcern", leakage["blockedFromTraining"])
         self.assertEqual(leakage["unsafeSelectedColumns"], [])
+
+    def test_confidence_band_stays_limited_when_elevated_examples_are_sparse(self) -> None:
+        band = confidence_band_for_probability(0.87, positive_count=8, row_count=3000, label_source_counts={"rule_derived": 3000})
+        self.assertEqual(band["band"], "limited")
+        self.assertIn("few elevated examples", band["reason"])
+
+    def test_probability_bucket_summary_groups_rows(self) -> None:
+        y_true = pd.Series([0, 0, 1, 1])
+        probabilities = pd.Series([0.1, 0.35, 0.62, 0.91]).to_numpy()
+        buckets = build_probability_bucket_summary(y_true, probabilities)
+
+        self.assertGreaterEqual(len(buckets), 3)
+        self.assertEqual(buckets[0]["bucket"], "0.0-0.2")
 
 
 if __name__ == "__main__":

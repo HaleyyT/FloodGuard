@@ -46,6 +46,13 @@ It is not used for live alerting or official warning decisions.
 - Scenario blocked leakage-prone fields: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable
 - Columns such as `riskScore`, `ruleConcernLevel`, and label/provenance fields are treated as reference-only and excluded from training.
 
+## Probability And Uncertainty
+
+- Real export best-model preview: Low concern at 0.009 (limited: Training data has very few elevated examples, so probability should be treated cautiously.)
+- Scenario best-model preview: Low concern at 0.000 (higher: Probability is far from the decision boundary, but still shadow-mode only.)
+- Probability-style outputs are shadow-mode only and are paired with a confidence band and reason.
+- Brier score and bucket summaries are reported for prototype calibration review where possible.
+
 ## Evaluated Models
 
 ### Real Export

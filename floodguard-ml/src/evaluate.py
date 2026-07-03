@@ -71,16 +71,19 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
             split["train"],
             split["test"],
             models_dir / "majority_baseline.joblib",
+            summary,
         ),
         train_logistic_regression(
             split["train"],
             split["test"],
             models_dir / "logistic_regression.joblib",
+            summary,
         ),
         train_random_forest(
             split["train"],
             split["test"],
             models_dir / "random_forest.joblib",
+            summary,
         ),
     ]
 
@@ -114,6 +117,14 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
             "primaryStrategy": split["strategy"],
             "candidateStrategies": split_metadata.get("candidateStrategies", []),
             "leakageControls": leakage_controls,
+        },
+        "predictionPreview": None if best_model is None else best_model.get("predictionPreview"),
+        "calibration": None
+        if best_model is None
+        else {
+            "bestModel": best_model["modelName"],
+            "brierScore": best_model["metrics"].get("brierScore"),
+            "probabilityBuckets": best_model.get("probabilityBuckets", []),
         },
         "models": [
             {
@@ -175,8 +186,72 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
             REPORTS_DIR / "feature_importance.png",
         )
 
+    write_calibration_summary(results)
     write_validation_summary(results)
     write_model_card(results)
+
+
+def write_calibration_summary(results: list[dict[str, Any]]) -> None:
+    """Write a markdown summary for prototype calibration and probability outputs."""
+
+    lines = [
+        "# FloodGuard ML Calibration Summary",
+        "",
+        "FloodGuard reports probability-style outputs in shadow mode only.",
+        "",
+    ]
+
+    for result in results:
+        calibration = result.get("calibration")
+        preview = result.get("predictionPreview")
+        lines.extend([f"## {result['datasetName'].replace('_', ' ').title()}", ""])
+        if calibration is None:
+            lines.extend(
+                [
+                    "- Calibration summary unavailable because no trained prototype model completed.",
+                    "",
+                ]
+            )
+            continue
+
+        lines.append(f"- Best model: `{calibration.get('bestModel')}`")
+        lines.append(
+            f"- Brier score: {calibration.get('brierScore') if calibration.get('brierScore') is not None else 'n/a'}"
+        )
+        if preview:
+            lines.append(
+                f"- Latest preview: {preview['predictedLabel']} at probability {preview['predictedProbability']}"
+            )
+            lines.append(
+                f"- Confidence band: {preview['confidenceBand']} ({preview['confidenceReason']})"
+            )
+        else:
+            lines.append("- Latest preview: unavailable")
+        lines.append("")
+
+        buckets = calibration.get("probabilityBuckets", [])
+        if buckets:
+            lines.append("Probability buckets:")
+            for bucket in buckets:
+                lines.append(
+                    f"- {bucket['bucket']}: {bucket['rowCount']} row(s), mean predicted {bucket['meanPredictedProbability']:.3f}, observed positive {bucket['observedPositiveRate']:.3f}"
+                )
+            lines.append("")
+        else:
+            lines.append("- Probability buckets: unavailable")
+            lines.append("")
+
+    lines.extend(
+        [
+            "## Interpretation",
+            "",
+            "- Brier score and bucket summaries are exploratory because the current real labels are still rule-derived or weak.",
+            "- Probability outputs are suitable for shadow-mode comparison and future calibration, not operational alerting.",
+            "",
+        ]
+    )
+
+    (REPORTS_DIR / "calibration_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_validation_summary(results: list[dict[str, Any]]) -> None:

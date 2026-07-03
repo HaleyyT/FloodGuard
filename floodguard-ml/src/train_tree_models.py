@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from utils import (
+    build_prediction_preview,
+    build_probability_bucket_summary,
     build_preprocessor,
     compute_classification_metrics,
     extract_feature_importance,
@@ -18,7 +20,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 
 
-def train_random_forest(train_df, test_df, model_path: Path) -> dict[str, Any]:
+def train_random_forest(train_df, test_df, model_path: Path, dataset_summary) -> dict[str, Any]:
     """Train and evaluate the balanced random-forest baseline."""
 
     feature_columns, dropped_features, blocked_features = feature_columns_for_training(train_df)
@@ -59,6 +61,10 @@ def train_random_forest(train_df, test_df, model_path: Path) -> dict[str, Any]:
         "modelName": "random_forest",
         "status": "trained",
         "metrics": compute_classification_metrics(y_test, predictions, probabilities),
+        "predictionPreview": build_prediction_preview(
+            test_df, predictions, probabilities, dataset_summary
+        ),
+        "probabilityBuckets": build_probability_bucket_summary(y_test, probabilities),
         "classWeight": "balanced",
         "warnings": [
             "Random-forest importance is useful for prototype interpretation, not production flood causality claims."

@@ -37,6 +37,7 @@ from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
     balanced_accuracy_score,
+    brier_score_loss,
     confusion_matrix,
     f1_score,
     precision_score,
@@ -713,11 +714,132 @@ def compute_classification_metrics(
     if probabilities is not None and y_true.nunique() > 1:
         metrics["rocAuc"] = float(roc_auc_score(y_true, probabilities))
         metrics["prAuc"] = float(average_precision_score(y_true, probabilities))
+        metrics["brierScore"] = float(brier_score_loss(y_true, probabilities))
     else:
         metrics["rocAuc"] = None
         metrics["prAuc"] = None
+        metrics["brierScore"] = None
 
     return metrics
+
+
+def confidence_band_for_probability(
+    probability: float | None,
+    positive_count: int,
+    row_count: int,
+    label_source_counts: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Translate a probability into cautious uncertainty wording."""
+
+    if probability is None:
+        return {
+            "band": "unknown",
+            "reason": "Probability is unavailable for this model output.",
+        }
+
+    label_source_counts = label_source_counts or {}
+    if positive_count < 25:
+        return {
+            "band": "limited",
+            "reason": "Training data has very few elevated examples, so probability should be treated cautiously.",
+        }
+    if set(label_source_counts.keys()) == {"rule_derived"}:
+        return {
+            "band": "limited",
+            "reason": "Probability comes from rule-derived labels rather than independent flood outcomes.",
+        }
+    if probability >= 0.8 or probability <= 0.2:
+        return {
+            "band": "higher",
+            "reason": "Probability is far from the decision boundary, but still shadow-mode only.",
+        }
+    if probability >= 0.65 or probability <= 0.35:
+        return {
+            "band": "moderate",
+            "reason": "Probability is directionally useful but still sensitive to prototype label quality.",
+        }
+    return {
+        "band": "low",
+        "reason": "Probability is close to the decision boundary and should not be treated as strong evidence.",
+    }
+
+
+def build_prediction_preview(
+    dataframe: pd.DataFrame,
+    predictions: np.ndarray,
+    probabilities: np.ndarray | None,
+    dataset_summary: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Build a compact preview for the latest scored row in a dataset split."""
+
+    if dataframe.empty:
+        return None
+
+    latest_index = dataframe[GROUP_TIMESTAMP_COLUMN].idxmax()
+    latest_position = dataframe.index.get_loc(latest_index)
+    latest_row = dataframe.loc[latest_index]
+    probability = None if probabilities is None else float(probabilities[latest_position])
+    predicted_label = int(predictions[latest_position])
+    confidence = confidence_band_for_probability(
+        probability,
+        dataset_summary.get("targetCounts", {}).get("1", 0),
+        dataset_summary.get("rowCount", 0),
+        dataset_summary.get("labelSourceCounts", {}),
+    )
+
+    return {
+        "areaId": latest_row.get("areaId"),
+        "areaName": latest_row.get("areaName"),
+        "observedAt": None
+        if pd.isna(latest_row.get(GROUP_TIMESTAMP_COLUMN))
+        else latest_row.get(GROUP_TIMESTAMP_COLUMN).isoformat(),
+        "predictedLabel": "Elevated concern" if predicted_label == 1 else "Low concern",
+        "predictedProbability": None if probability is None else round(probability, 4),
+        "confidenceBand": confidence["band"],
+        "confidenceReason": confidence["reason"],
+        "actualLabel": "Elevated concern" if int(latest_row[LABEL_COLUMN]) == 1 else "Low concern",
+    }
+
+
+def build_probability_bucket_summary(
+    y_true: pd.Series,
+    probabilities: np.ndarray | None,
+) -> list[dict[str, Any]]:
+    """Summarise how observed outcomes behave across coarse probability buckets."""
+
+    if probabilities is None or y_true.nunique() <= 1:
+        return []
+
+    frame = pd.DataFrame(
+        {
+            "actual": y_true.astype(int).to_numpy(),
+            "probability": probabilities,
+        }
+    )
+    bins = [0.0, 0.2, 0.4, 0.6, 0.8, 1.000001]
+    labels = ["0.0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"]
+    frame["bucket"] = pd.cut(
+        frame["probability"],
+        bins=bins,
+        labels=labels,
+        include_lowest=True,
+        right=False,
+    )
+
+    summaries: list[dict[str, Any]] = []
+    for label in labels:
+        bucket_rows = frame[frame["bucket"] == label]
+        if bucket_rows.empty:
+            continue
+        summaries.append(
+            {
+                "bucket": label,
+                "rowCount": int(len(bucket_rows)),
+                "meanPredictedProbability": float(bucket_rows["probability"].mean()),
+                "observedPositiveRate": float(bucket_rows["actual"].mean()),
+            }
+        )
+    return summaries
 
 
 def serialise_model_artifact(path: Path, payload: dict[str, Any]) -> None:
