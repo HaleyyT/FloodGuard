@@ -1,6 +1,6 @@
 # FloodGuard Progress Report
 
-_Last updated: 2026-07-03 (resident-facing dashboard clarity update)_
+_Last updated: 2026-07-04 (scenario demo mode, stronger verification, and beginner explanation update)_
 
 ## Purpose
 
@@ -42,15 +42,15 @@ These percentages are intentionally honest and reflect implemented code, tests, 
 |---|---:|---|
 | Core prototype / backend framework | **88%** | ingestion, health, cache, source registry, explainable risk, notifications, history, and API contracts are strongly implemented |
 | Reliability / trust architecture | **92%** | one of the strongest parts of FloodGuard; live vs cached vs stale vs missing vs fallback is handled and surfaced clearly |
-| Frontend dashboard / evidence UX | **86%** | strong overview, evidence, warning, map, signals, and ML panels exist, and the front page now explains concern, trust, and next steps more clearly, though some polish still remains |
+| Frontend dashboard / evidence UX | **88%** | strong overview, evidence, warning, map, signals, and ML panels exist; the front page now explains concern, trust, next steps, and simulated demo scenarios more clearly |
 | Official warning layer | **68%** | architecture, adapter states, relevance filtering, and separation are implemented, but full live operational maturity is still not there |
 | Historical data foundation | **72%** | snapshot history, deduplication, and export support exist, but storage is still lightweight and prototype-grade |
 | Rule engine / explainable concern logic | **83%** | feature engineering and risk reasoning are strong, but threshold calibration is still heuristic |
-| Testing / regression protection | **86%** | backend and ML logic are well protected; end-to-end visual/live-feed verification is still lighter |
+| Testing / regression protection | **89%** | backend, ML, replay, failure-injection, and browser smoke coverage are now strong, though deeper visual regression and broader live-source verification still remain |
 | ML engineering / shadow pipeline | **78%** | Python training, model comparison, validation controls, target selection, reporting, and dashboard honesty are implemented well |
 | Validated ML / real predictive credibility | **32%** | still limited by weak independent labels, no real elevated event coverage, and no validated production-grade outcome testing |
-| Overall project toward credible prototype goal | **84%** | FloodGuard is already a strong reliability-aware prototype |
-| Overall project toward final long-term vision | **66%** | still missing stronger labels, threshold calibration, deeper storage, and more mature official-warning/live validation |
+| Overall project toward credible prototype goal | **85%** | FloodGuard is already a strong reliability-aware prototype with clearer first-screen UX and stronger regression protection |
+| Overall project toward final long-term vision | **68%** | still missing stronger labels, threshold calibration, deeper storage, and more mature official-warning/live validation |
 
 ---
 
@@ -79,6 +79,11 @@ Newer work completed since the earlier progress snapshot includes:
 - resident-facing overview cards that answer the first-page questions more directly: current concern, whether the evidence can be trusted, why the concern was assigned, and what to check next;
 - softer, safer front-end wording for source modes and ML state such as "Older cached reading", "Not connected yet", "ML comparison only", and "Rule-derived ML target";
 - new presentation tests covering plain-language trust/explanation behavior so this UX improvement is protected by regression checks.
+- a deterministic Playwright smoke suite that now verifies the dashboard loads, areas switch correctly, degraded evidence is not presented as live, and the new scenario demo mode stays clearly simulated;
+- expanded replay tests covering low, warning-active, degraded, and ML-disagreement scenarios;
+- failure-injection tests for corrupt history rows, malformed ML reports, and richer ingestion-observability failure taxonomy;
+- a resident-facing overview mode switcher so the dashboard can show a clearly labelled simulated stress-test scenario without confusing it with live conditions;
+- a beginner-friendly explanation document that walks through FloodGuard's architecture, trust logic, and ML scope in plain language.
 
 What matters about this:
 
@@ -87,6 +92,7 @@ What matters about this:
 - the project now has a clearer professional story around safety, expert review, and what ML can honestly claim today;
 - the ML layer is now much better at saying not only what model was trained, but also what supervision target was trustworthy enough to use;
 - the dashboard is now better at helping a non-technical user understand both the current local concern and how much confidence they should place in the visible evidence;
+- the dashboard is also better at demonstrating behaviour under simulated stress-test conditions without weakening the honesty of the live/degraded source story;
 - the project still remains rule-based and prototype-grade in the places where it should be described carefully.
 
 ---

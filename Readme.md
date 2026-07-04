@@ -28,6 +28,7 @@ FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened t
 - [floodguard-ml](./floodguard-ml/README.md): Python ML experimentation workspace
 - [docs](./docs): submission notes, abstract/poster copy, and screenshots
 - [roadmap](./roadmap): implementation plans and progress tracking
+- [explanation.md](./explanation.md): beginner-friendly guide to FloodGuard's framework, logic, reliability model, and ML boundaries
 
 ## How FloodGuard works
 
