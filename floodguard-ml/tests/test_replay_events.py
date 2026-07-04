@@ -83,6 +83,148 @@ class ReplayEventsTests(unittest.TestCase):
         self.assertEqual(summary["agreementRate"], 1.0)
         self.assertIn("flood_watch", summary["warningStates"])
 
+    def test_summarise_window_keeps_low_scenario_clean_when_sources_and_ml_agree(self) -> None:
+        area_rows = pd.DataFrame(
+            [
+                {
+                    "areaId": "toongabbie",
+                    "observedAt": pd.Timestamp("2026-07-02T00:00:00Z"),
+                    "ruleConcernLevel": "Low",
+                    "targetRuleElevated": 0,
+                    "warningStatus": "no_current_warning",
+                    "sourceCoverage": 0.96,
+                    "dataFreshnessScore": 98,
+                },
+                {
+                    "areaId": "toongabbie",
+                    "observedAt": pd.Timestamp("2026-07-02T01:00:00Z"),
+                    "ruleConcernLevel": "Low",
+                    "targetRuleElevated": 0,
+                    "warningStatus": "no_current_warning",
+                    "sourceCoverage": 0.93,
+                    "dataFreshnessScore": 94,
+                },
+            ]
+        )
+        source_rows = pd.DataFrame(
+            [
+                {"source_type": "rainfall", "mode": "live", "freshness_status": "current"},
+                {"source_type": "river", "mode": "live", "freshness_status": "current"},
+            ]
+        )
+        scored_predictions = {
+            "toongabbie|2026-07-02T00:00:00+00:00": {
+                "predictedLabel": 0,
+                "predictedProbability": 0.04,
+            },
+            "toongabbie|2026-07-02T01:00:00+00:00": {
+                "predictedLabel": 0,
+                "predictedProbability": 0.06,
+            },
+        }
+
+        summary = summarise_window(area_rows, source_rows, scored_predictions)
+
+        self.assertEqual(summary["ruleConcern"], "Low")
+        self.assertEqual(summary["degradedRows"], 0)
+        self.assertEqual(summary["agreementRate"], 1.0)
+        self.assertEqual(summary["warningStates"], ["no_current_warning"])
+        self.assertEqual(summary["maxProbability"], 0.06)
+        self.assertIn("rainfall:live", summary["sourceModes"])
+
+    def test_summarise_window_flags_warning_active_high_window_and_ml_disagreement(self) -> None:
+        area_rows = pd.DataFrame(
+            [
+                {
+                    "areaId": "parramatta",
+                    "observedAt": pd.Timestamp("2026-07-03T00:00:00Z"),
+                    "ruleConcernLevel": "Moderate",
+                    "targetRuleElevated": 1,
+                    "warningStatus": "flood_watch",
+                    "sourceCoverage": 0.82,
+                    "dataFreshnessScore": 78,
+                },
+                {
+                    "areaId": "parramatta",
+                    "observedAt": pd.Timestamp("2026-07-03T01:00:00Z"),
+                    "ruleConcernLevel": "High",
+                    "targetRuleElevated": 1,
+                    "warningStatus": "major_flood_warning",
+                    "sourceCoverage": 0.58,
+                    "dataFreshnessScore": 45,
+                },
+                {
+                    "areaId": "parramatta",
+                    "observedAt": pd.Timestamp("2026-07-03T02:00:00Z"),
+                    "ruleConcernLevel": "High",
+                    "targetRuleElevated": 1,
+                    "warningStatus": "major_flood_warning",
+                    "sourceCoverage": 0.51,
+                    "dataFreshnessScore": 38,
+                },
+            ]
+        )
+        source_rows = pd.DataFrame(
+            [
+                {"source_type": "rainfall", "mode": "cached_stale", "freshness_status": "stale"},
+                {"source_type": "river", "mode": "live", "freshness_status": "current"},
+                {"source_type": "warnings", "mode": "remote", "freshness_status": "current"},
+            ]
+        )
+        scored_predictions = {
+            "parramatta|2026-07-03T00:00:00+00:00": {
+                "predictedLabel": 1,
+                "predictedProbability": 0.63,
+            },
+            "parramatta|2026-07-03T01:00:00+00:00": {
+                "predictedLabel": 0,
+                "predictedProbability": 0.41,
+            },
+            "parramatta|2026-07-03T02:00:00+00:00": {
+                "predictedLabel": 1,
+                "predictedProbability": 0.88,
+            },
+        }
+
+        summary = summarise_window(area_rows, source_rows, scored_predictions)
+
+        self.assertEqual(summary["ruleConcern"], "High")
+        self.assertEqual(summary["degradedRows"], 2)
+        self.assertEqual(summary["agreementRate"], 0.667)
+        self.assertEqual(summary["maxProbability"], 0.88)
+        self.assertEqual(summary["latestObservedAt"], "2026-07-03T02:00:00+00:00")
+        self.assertIn("flood_watch", summary["warningStates"])
+        self.assertIn("major_flood_warning", summary["warningStates"])
+        self.assertIn("rainfall:cached_stale", summary["sourceModes"])
+
+    def test_summarise_window_reports_unavailable_agreement_when_shadow_predictions_are_missing(self) -> None:
+        area_rows = pd.DataFrame(
+            [
+                {
+                    "areaId": "north-parramatta",
+                    "observedAt": pd.Timestamp("2026-07-04T00:00:00Z"),
+                    "ruleConcernLevel": "Moderate",
+                    "targetRuleElevated": 1,
+                    "warningStatus": "flood_watch",
+                    "sourceCoverage": 0.88,
+                    "dataFreshnessScore": 92,
+                }
+            ]
+        )
+        source_rows = pd.DataFrame(
+            [
+                {"source_type": "rainfall", "mode": "live", "freshness_status": "current"},
+            ]
+        )
+
+        summary = summarise_window(area_rows, source_rows, {})
+
+        self.assertEqual(summary["ruleConcern"], "Moderate")
+        self.assertIsNone(summary["agreementRate"])
+        self.assertIsNone(summary["maxProbability"])
+        self.assertEqual(summary["degradedRows"], 0)
+        self.assertEqual(summary["warningStates"], ["flood_watch"])
+
     def test_run_replay_writes_sqlite_tables_and_markdown_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
