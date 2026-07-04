@@ -11,8 +11,11 @@ This note explains how FloodGuard makes degraded ingestion states observable ins
 - freshness status
 - source mode
 - cache mode
+- whether the source is eligible for live core-flood claims
+- whether the source is a core flood input or supporting context
 - failure reason
 - last successful live fetch
+- minutes since the last successful live fetch
 
 ## Failure taxonomy
 

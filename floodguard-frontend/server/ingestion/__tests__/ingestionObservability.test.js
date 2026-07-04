@@ -36,8 +36,12 @@ test("ingestion observability report exposes degraded source taxonomy and debug 
   assert.equal(report.refreshStatus, "blocked-refresh");
   assert.match(report.debugLine, /degraded honestly/i);
   assert.equal(report.degradedSourceCount, 1);
+  assert.equal(report.degradedSources[0].contractVersion, "ingestion-observability-v2");
   assert.equal(report.degradedSources[0].failureReason, "cache_recent");
+  assert.equal(report.degradedSources[0].coreFloodRole, "core");
+  assert.equal(report.degradedSources[0].liveClaimEligible, false);
   assert.equal(report.degradedSources[0].lastSuccessfulLiveFetchAt, "2026-07-03T01:15:00Z");
+  assert.equal(report.degradedSources[0].lastSuccessfulLiveAgeMinutes, 45);
   assert.ok(report.failureTaxonomy.includes("parser_error"));
 });
 
@@ -109,4 +113,5 @@ test("ingestion observability classifies parser, timeout, unmapped, and unconfig
   assert.ok(reasons.includes("parser_error"));
   assert.ok(reasons.includes("station_unmapped"));
   assert.ok(reasons.includes("not_configured"));
+  assert.ok(report.degradedSources.every((source) => source.contractVersion === "ingestion-observability-v2"));
 });
