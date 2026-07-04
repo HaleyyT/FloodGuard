@@ -1,0 +1,63 @@
+{
+  "thresholdVersion": "0.3-calibration-review",
+  "reviewStatus": "needs_domain_expert_review",
+  "target": {
+    "column": "targetRuleElevated",
+    "kind": "rule",
+    "positiveRows": 18,
+    "reason": "Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).",
+    "supervisionQuality": {
+      "grade": "weak",
+      "summary": "FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.",
+      "eventLabelCoverage": 1.0,
+      "eventLabelRowCount": 3000,
+      "eventPositiveCount": 0,
+      "eventLabelStrengthCounts": {
+        "weak": 3000
+      },
+      "eventLabelReviewStatusCounts": {
+        "scaffold_only": 3000
+      },
+      "strongOrModerateLabelCount": 0,
+      "reviewedRowCount": 0,
+      "viableForIndependentSupervision": false,
+      "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
+    },
+    "eventTargetCandidate": {
+      "eligibleRowCount": 3000,
+      "positiveCount": 0,
+      "strengthCounts": {
+        "weak": 3000
+      },
+      "reviewStatusCounts": {
+        "scaffold_only": 3000
+      }
+    }
+  },
+  "selectedCandidate": {
+    "rainfall1hMm": 8.0,
+    "rainfall3hMm": 16.0,
+    "rainfall24hMm": 40.0,
+    "rainfall72hMm": 65.0,
+    "riverRise1hM": 0.12,
+    "riverRise3hM": 0.24,
+    "minimumCoreCoverage": 0.6,
+    "rows": 3000,
+    "positives": 18,
+    "negatives": 2982,
+    "tp": 0,
+    "tn": 2982,
+    "fp": 0,
+    "fn": 18,
+    "recall": 0.0,
+    "falsePositiveRate": 0.0,
+    "balancedAccuracy": 0.5,
+    "eventWindowCount": 3,
+    "detectedEventWindows": 0,
+    "missedEventWindows": 3,
+    "timeToDetectionHours": null,
+    "rawTriggeredRows": 0,
+    "degradedSourceSuppressedRows": 0,
+    "degradedSourceSuppressionRate": null
+  }
+}
