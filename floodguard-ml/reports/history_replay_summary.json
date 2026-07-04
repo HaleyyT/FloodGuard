@@ -1,0 +1,76 @@
+{
+  "available": true,
+  "sqlitePath": "/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-data/floodguard_history.sqlite",
+  "rowCount": 1000,
+  "windowCount": 3,
+  "windows": [
+    {
+      "areaId": "parramatta",
+      "startTime": "2026-06-24T00:00:00+00:00",
+      "endTime": "2026-07-02T00:00:00+00:00",
+      "label": 0,
+      "labelSource": "manual_demo",
+      "labelStrength": "weak",
+      "rowCount": 998,
+      "ruleConcern": "Moderate",
+      "warningStates": [
+        "no_current_warning"
+      ],
+      "agreementRate": 0.611,
+      "maxProbability": 0.9928,
+      "degradedRows": 627,
+      "latestObservedAt": "2026-06-30T06:56:47.412000+00:00",
+      "sourceModes": [
+        "rainfall:local-fallback",
+        "rainfall:remote",
+        "rainfall:remote-derived",
+        "river:local-fallback",
+        "river:remote",
+        "river:unavailable",
+        "warnings:not-configured",
+        "weather:local-fallback",
+        "weather:remote"
+      ],
+      "evidenceConfidenceStates": [],
+      "recommendationTypes": []
+    },
+    {
+      "areaId": "north-parramatta",
+      "startTime": "2026-06-24T00:00:00+00:00",
+      "endTime": "2026-07-02T00:00:00+00:00",
+      "label": 0,
+      "labelSource": "manual_demo",
+      "labelStrength": "weak",
+      "rowCount": 0,
+      "ruleConcern": "unavailable",
+      "warningStates": [],
+      "agreementRate": null,
+      "maxProbability": null,
+      "degradedRows": 0,
+      "latestObservedAt": null,
+      "sourceModes": [],
+      "evidenceConfidenceStates": [],
+      "recommendationTypes": []
+    },
+    {
+      "areaId": "toongabbie",
+      "startTime": "2026-06-24T00:00:00+00:00",
+      "endTime": "2026-07-02T00:00:00+00:00",
+      "label": 0,
+      "labelSource": "manual_demo",
+      "labelStrength": "weak",
+      "rowCount": 0,
+      "ruleConcern": "unavailable",
+      "warningStates": [],
+      "agreementRate": null,
+      "maxProbability": null,
+      "degradedRows": 0,
+      "latestObservedAt": null,
+      "sourceModes": [],
+      "evidenceConfidenceStates": [],
+      "recommendationTypes": []
+    }
+  ],
+  "shadowPredictionCount": 998,
+  "summary": "Historical replay is available for rule, warning, source-state, decision-audit, and shadow-ML comparison."
+}
