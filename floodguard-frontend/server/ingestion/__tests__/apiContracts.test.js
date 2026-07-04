@@ -397,6 +397,16 @@ function dependencies() {
         available: true,
         summary: "Prototype calibration summary is available.",
       },
+      historicalReplay: {
+        available: true,
+        rowCount: 998,
+        windowCount: 3,
+        areasCovered: ["parramatta", "north-parramatta", "toongabbie"],
+        degradedRows: 627,
+        highestAgreementRate: 0.611,
+        summary: "Historical replay is available for rule, warning, source-state, decision-audit, and shadow-ML comparison.",
+        limitation: "Replay supports review more strongly than validated event-level claims.",
+      },
       targetSelection: {
         available: true,
         selectedTargetKind: "rule",
@@ -458,6 +468,9 @@ function dependencies() {
         "Rule-derived labels and severe class imbalance limit interpretation.",
         "Scenario metrics are not real-world validation.",
       ],
+      reportAvailability: {
+        historyReplaySummary: true,
+      },
     }),
   };
 }
@@ -579,6 +592,10 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.equal(body.labelStrength, "rule_derived_or_weak");
   assert.ok(Array.isArray(body.models));
   assert.equal(body.predictionPreview.predictedLabel, "Elevated concern");
+  assert.equal(body.historicalReplay.available, true);
+  assert.equal(body.historicalReplay.windowCount, 3);
+  assert.equal(body.historicalReplay.degradedRows, 627);
+  assert.equal(body.reportAvailability.historyReplaySummary, true);
   assert.equal(body.targetSelection.selectedTargetKind, "rule");
   assert.equal(body.targetSelection.selectedTargetColumn, "targetRuleElevated");
   assert.equal(body.targetSelection.readyForIndependentSupervision, false);
