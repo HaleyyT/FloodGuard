@@ -40,10 +40,15 @@ FloodGuard's warning-status endpoint now keeps a stable contract that can be sur
 ```json
 {
   "source": "HazardWatch / NSW SES",
+  "contractVersion": "warning-adapter-v2",
   "status": "live | no_relevant_warning | stale | source_unavailable | not_configured | parser_error",
+  "statusReason": "human-readable explanation of why this warning state was chosen",
   "warnings": [],
   "lastFetchedAt": "2026-07-03T01:00:00Z",
   "lastObservedAt": "2026-07-03T00:55:00Z",
+  "freshnessMinutes": 5,
+  "sourceMode": "remote | missing",
+  "failureCategory": "network_timeout | parser_error | not_configured | null",
   "relevanceMethod": "area-name-catchment-and-warning-type",
   "limitations": []
 }
@@ -53,5 +58,6 @@ This keeps the warning layer explicit about:
 
 - which official source FloodGuard is targeting;
 - whether the source is live, stale, unavailable, or simply has no relevant warning;
+- why that state was assigned in plain language and what transport/parser failure category applies;
 - how relevance was decided for Parramatta, North Parramatta, and Toongabbie;
 - what limitation should be shown instead of pretending the warning layer is stronger than it really is.
