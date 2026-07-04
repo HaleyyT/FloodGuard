@@ -550,3 +550,24 @@ test("degraded source fixture keeps stale evidence visible without presenting it
   await expect(page.getByText("Stale").first()).toBeVisible();
   await expect(page.getByText("Live gauge")).toHaveCount(0);
 });
+
+test("scenario stress-test mode is clearly labelled as simulated and does not look live", async ({
+  page,
+}) => {
+  await installMockFloodguardApi(page);
+
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Scenario stress-test view" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Scenario stress-test view", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Simulated demo mode", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Simulated scenario rows are shown for explanation and demo only."),
+  ).toBeVisible();
+  await expect(page.getByText("Watch and Act (simulated)")).toBeVisible();
+  await expect(page.getByText("Demo/Fallback").first()).toBeVisible();
+  await expect(page.getByText("Scenario stress-test view for Parramatta, NSW")).toBeVisible();
+});

@@ -229,3 +229,228 @@ export function buildNotificationBannerModel(notifications = { candidates: [], s
       null,
   };
 }
+
+function buildScenarioRainfallTrend() {
+  const baseDate = new Date("2026-03-26T00:00:00Z");
+  const totals = [10.8, 5.1, 0.2, 0, 0, 0, 0];
+
+  return totals.map((rainfall, index, points) => {
+    const day = new Date(baseDate);
+    day.setUTCDate(baseDate.getUTCDate() + index);
+
+    return {
+      dayKey: day.toISOString().slice(0, 10),
+      time: day.toLocaleDateString("en-AU", { day: "numeric", month: "short" }),
+      timestamp: day.toLocaleDateString("en-AU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+      rainfall,
+      change:
+        index === 0 ? null : Number((rainfall - Number(points[index - 1])).toFixed(1)),
+    };
+  });
+}
+
+function buildScenarioSourceHealth(areaName, primaryStationName) {
+  return [
+    {
+      label: "Simulated rainfall surge",
+      type: "rainfall",
+      dataMode: "local_demo_fallback",
+      mode: "local_demo_fallback",
+      freshnessStatus: "current",
+      sourceStrength: "scenario_demo",
+      observedAt: "2026-03-31T09:00:00Z",
+      areaRelevance: [areaName.replace(", NSW", "")],
+      note: "Simulated rainfall stress-test signal for demo only; this is not a live gauge feed.",
+    },
+    {
+      label: "Simulated river rise",
+      type: "river",
+      dataMode: "local_demo_fallback",
+      mode: "local_demo_fallback",
+      freshnessStatus: "current",
+      sourceStrength: "scenario_demo",
+      observedAt: "2026-03-31T09:00:00Z",
+      areaRelevance: [primaryStationName],
+      note: "Simulated river-rise signal for demo only; this does not represent a current official reading.",
+    },
+    {
+      label: "Simulated weather context",
+      type: "weather",
+      dataMode: "local_demo_fallback",
+      mode: "local_demo_fallback",
+      freshnessStatus: "current",
+      sourceStrength: "scenario_demo",
+      observedAt: "2026-03-31T09:00:00Z",
+      areaRelevance: [areaName.replace(", NSW", "")],
+      note: "Simulated wetness and storm context used to explain the scenario stress-test view.",
+    },
+    {
+      label: "Simulated official warning context",
+      type: "warnings",
+      dataMode: "local_demo_fallback",
+      mode: "local_demo_fallback",
+      freshnessStatus: "current",
+      sourceStrength: "scenario_demo",
+      observedAt: "2026-03-31T09:00:00Z",
+      areaRelevance: [areaName.replace(", NSW", "")],
+      note: "Simulated warning context for demo only; always confirm live NSW SES / BoM advice separately.",
+    },
+  ];
+}
+
+function buildScenarioReports(areaName) {
+  const shortAreaName = areaName.replace(", NSW", "");
+
+  return [
+    {
+      id: `${shortAreaName}-scenario-rainfall`,
+      title: `${shortAreaName} heavy rainfall scenario`,
+      time: "Simulated replay window",
+      severity: "High",
+      description:
+        "Synthetic scenario where short-window rainfall climbs rapidly and keeps local flood pressure elevated.",
+    },
+    {
+      id: `${shortAreaName}-scenario-river`,
+      title: `${shortAreaName} river-rise scenario`,
+      time: "Simulated river response",
+      severity: "High",
+      description:
+        "Synthetic scenario where the primary river station rises quickly enough to support stronger concern review.",
+    },
+    {
+      id: `${shortAreaName}-scenario-warning`,
+      title: `${shortAreaName} warning-context scenario`,
+      time: "Simulated official context",
+      severity: "Moderate",
+      description:
+        "Synthetic scenario showing how FloodGuard keeps local concern explanation separate from official emergency advice.",
+    },
+  ];
+}
+
+export function buildOverviewModeState(dashboardData, overviewMode = "live") {
+  const defaultState = {
+    data: dashboardData,
+    notifications: null,
+    meta: {
+      id: "live",
+      label: "Current source state",
+      chip: "Live/degraded evidence",
+      description:
+        "This view uses the current area snapshot and preserves FloodGuard's live-vs-degraded source honesty.",
+      simulated: false,
+    },
+  };
+
+  if (!dashboardData || overviewMode === "live") {
+    return defaultState;
+  }
+
+  const areaName = dashboardData.areaName;
+  const primaryStationName = dashboardData.riverSummary?.primaryStationName ?? "Configured river station";
+
+  const scenarioData = {
+    ...dashboardData,
+    riskLevel: "High",
+    riskScore: 74,
+    summary:
+      `Simulated stress-test for ${areaName.replace(", NSW", "")}: heavy recent rainfall, a rising river, and warning context combine into high local concern.`,
+    sourceHealth: buildScenarioSourceHealth(areaName, primaryStationName),
+    officialSignals: {
+      ...dashboardData.officialSignals,
+      warningLevel: "Watch and Act (simulated)",
+      sourceFreshness: "Simulated current",
+      rainfall24h: "47 mm",
+      waterTrend: `rising at ${primaryStationName}`,
+      areaSignalFit: "Scenario mapped",
+    },
+    riverSummary: {
+      ...dashboardData.riverSummary,
+      primaryHeight: "1.22",
+      primaryTendency: "rising",
+      stationCount: Math.max(dashboardData.riverSummary?.stationCount ?? 0, 3),
+    },
+    rainfallTrend: buildScenarioRainfallTrend(),
+    riskSignals: [
+      { name: "Rainfall", value: 86 },
+      { name: "River", value: 79 },
+      { name: "Wetness", value: 68 },
+      { name: "Public", value: 52 },
+      { name: "Confidence", value: 91 },
+    ],
+    recommendedActions: [
+      "Check live NSW SES and BoM advice immediately before travelling or changing plans.",
+      "Avoid flood-prone crossings, creek paths, and low-lying routes in this simulated high-pressure scenario.",
+      "Use this mode to inspect FloodGuard's explanation flow, not to interpret current live conditions.",
+    ],
+    reports: buildScenarioReports(areaName),
+    decisionAudit: {
+      ...dashboardData.decisionAudit,
+      hazardPressure: {
+        rainfall: "elevated",
+        river: "elevated",
+        wetness: "moderate",
+      },
+      evidenceConfidence: "high",
+      officialWarningContext: "warning_active",
+      recommendationType: "prepare_to_act_and_check_official_sources",
+      whatIncreasedConcern: [
+        "Simulated 24h rainfall has accumulated into a stronger flood-pressure window.",
+        "Simulated river rise at the primary station suggests faster catchment response.",
+        "Simulated warning context is active and should be checked beside FloodGuard's own explanation.",
+      ],
+      whatReducedConcern: [
+        "This mode is clearly marked as simulated, so it cannot be mistaken for a live operational alert.",
+      ],
+      excludedEvidence: [
+        "Live operational decisions are excluded from this scenario view because the inputs are synthetic.",
+      ],
+      sourceLimitations: [
+        "Scenario stress-test view is simulated for demos, posters, and explanation walkthroughs only.",
+      ],
+      checkNext: [
+        "Check official NSW SES and BoM advice for real conditions.",
+        "Review how rainfall, river pressure, and warning context changed the explanation.",
+        "Return to Current source state before interpreting live local conditions.",
+      ],
+      reliability: {
+        score: 91,
+        level: "High",
+        warnings: [
+          "Scenario mode is simulated and must not be interpreted as a live operational warning.",
+        ],
+        blockers: [],
+      },
+    },
+  };
+
+  return {
+    data: scenarioData,
+    notifications: {
+      candidates: [
+        {
+          id: `${areaName}-scenario-banner`,
+          notificationType: "awareness_notice",
+          title: `Scenario stress-test view for ${areaName}`,
+          message:
+            "This is a simulated high-pressure flood scenario for demo and explanation only; it does not reflect the current live area state.",
+          severity: "High",
+        },
+      ],
+      suppressed: [],
+    },
+    meta: {
+      id: "scenario-stress",
+      label: "Scenario stress-test view",
+      chip: "Simulated demo mode",
+      description:
+        "Synthetic high-pressure scenario showing how FloodGuard explains stronger flood concern without claiming the view is live.",
+      simulated: true,
+    },
+  };
+}

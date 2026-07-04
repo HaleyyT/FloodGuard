@@ -33,6 +33,7 @@ import {
 import {
   buildDataEvidenceRows,
   buildNotificationBannerModel,
+  buildOverviewModeState,
   buildResidentOverviewModel,
   buildRiskSummaryModel,
   humanizeMlMode,
@@ -712,6 +713,49 @@ function OverviewDashboard({ data, report, experiment }) {
       <div className="overview-full-banner">
         <DataEvidencePanel className="source-banner-card" maxItems={4} sources={data.sourceHealth} />
       </div>
+    </section>
+  );
+}
+
+function OverviewModeSwitcher({ mode, modeMeta, onModeChange }) {
+  return (
+    <section className="card overview-mode-switcher">
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">Overview mode</p>
+          <h3>{modeMeta.label}</h3>
+        </div>
+        <span className={`source-badge ${modeMeta.simulated ? "fallback" : "live"}`}>
+          {modeMeta.chip}
+        </span>
+      </div>
+
+      <p className="reliability-note">{modeMeta.description}</p>
+
+      <div className="overview-mode-actions" role="tablist" aria-label="Overview display modes">
+        <button
+          aria-selected={mode === "live"}
+          className={mode === "live" ? "active" : ""}
+          onClick={() => onModeChange("live")}
+          type="button"
+        >
+          Current source state
+        </button>
+        <button
+          aria-selected={mode === "scenario-stress"}
+          className={mode === "scenario-stress" ? "active" : ""}
+          onClick={() => onModeChange("scenario-stress")}
+          type="button"
+        >
+          Scenario stress-test view
+        </button>
+      </div>
+
+      <p className="report-form-message">
+        {modeMeta.simulated
+          ? "Simulated scenario rows are shown for explanation and demo only. Return to Current source state before interpreting live conditions."
+          : "Use Scenario stress-test view to inspect how FloodGuard would explain a clearly labelled simulated high-pressure event."}
+      </p>
     </section>
   );
 }
@@ -2796,6 +2840,7 @@ export default function App() {
   const areas = useFloodguardAreas();
   const [selectedAreaId, setSelectedAreaId] = useState("parramatta");
   const [activeView, setActiveView] = useState("overview");
+  const [overviewMode, setOverviewMode] = useState("live");
   const { signals, sourceStatus, liveStatus } = useParramattaSignals(selectedAreaId);
   const selectedArea = areas.find((area) => area.id === selectedAreaId);
   const signalsAreaId = signals.area?.id ?? "parramatta";
@@ -2812,6 +2857,9 @@ export default function App() {
   const notifications = useAreaNotifications(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = hasSelectedAreaSignals
     ? buildDashboardData(signals, sourceStatus, liveStatus)
+    : null;
+  const overviewModeState = dashboardData
+    ? buildOverviewModeState(dashboardData, overviewMode)
     : null;
   const selectedAreaName = selectedArea?.name ?? selectedAreaId;
 
@@ -2833,9 +2881,14 @@ export default function App() {
 
       {hasSelectedAreaSignals && activeView === "overview" && (
         <>
-          <NotificationBanner notifications={notifications} />
+          <OverviewModeSwitcher
+            mode={overviewMode}
+            modeMeta={overviewModeState.meta}
+            onModeChange={setOverviewMode}
+          />
+          <NotificationBanner notifications={overviewModeState.notifications ?? notifications} />
           <OverviewDashboard
-            data={dashboardData}
+            data={overviewModeState.data}
             experiment={modelExperiment}
             report={mlReport}
           />

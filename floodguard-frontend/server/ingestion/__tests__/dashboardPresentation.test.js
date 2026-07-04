@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildDataEvidenceRows,
   buildNotificationBannerModel,
+  buildOverviewModeState,
   buildResidentOverviewModel,
   buildRiskSummaryModel,
   humanizeMlMode,
@@ -143,4 +144,57 @@ test("notification banner model separates official warnings from app-generated a
   assert.equal(model.dataQualityNotices.length, 1);
   assert.equal(model.primary.id, "1");
   assert.match(model.suppressed[0].reason, /suppressed/i);
+});
+
+test("overview mode state preserves the live dashboard view by default", () => {
+  const dashboardData = { areaName: "Parramatta, NSW", riskLevel: "Low" };
+  const mode = buildOverviewModeState(dashboardData, "live");
+
+  assert.equal(mode.data, dashboardData);
+  assert.equal(mode.meta.simulated, false);
+  assert.equal(mode.notifications, null);
+});
+
+test("overview mode state builds a clearly simulated stress-test view", () => {
+  const dashboardData = {
+    areaName: "Parramatta, NSW",
+    riskLevel: "Low",
+    riskScore: 11,
+    sourceHealth: [],
+    officialSignals: {
+      warningLevel: "No current official warning",
+      sourceFreshness: "Current",
+      rainfall24h: "0 mm",
+      waterTrend: "steady at Parramatta River at Riverside Theatre",
+      areaSignalFit: "100% complete",
+    },
+    riverSummary: {
+      primaryStationName: "Parramatta River at Riverside Theatre",
+      primaryHeight: "0.97",
+      primaryTendency: "steady",
+      stationCount: 3,
+    },
+    decisionAudit: {
+      hazardPressure: { rainfall: "low", river: "stable", wetness: "low" },
+      evidenceConfidence: "high",
+      officialWarningContext: "no_current_warning",
+      recommendationType: "monitor_and_check_official_sources",
+      reliability: { score: 99, level: "High", warnings: [], blockers: [] },
+    },
+    recommendedActions: [],
+    rainfallTrend: [],
+    riskSignals: [],
+    reports: [],
+  };
+
+  const mode = buildOverviewModeState(dashboardData, "scenario-stress");
+
+  assert.equal(mode.meta.simulated, true);
+  assert.match(mode.meta.label, /scenario stress-test/i);
+  assert.equal(mode.data.riskLevel, "High");
+  assert.equal(mode.data.riskScore, 74);
+  assert.equal(mode.data.decisionAudit.recommendationType, "prepare_to_act_and_check_official_sources");
+  assert.equal(mode.data.decisionAudit.officialWarningContext, "warning_active");
+  assert.match(mode.data.sourceHealth[0].note, /demo only/i);
+  assert.match(mode.notifications.candidates[0].message, /simulated high-pressure flood scenario/i);
 });
