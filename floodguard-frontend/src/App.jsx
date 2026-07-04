@@ -717,47 +717,6 @@ function OverviewDashboard({ data, report, experiment }) {
   );
 }
 
-function OverviewModeSwitcher({ mode, modeMeta, onModeChange }) {
-  return (
-    <section className="card overview-mode-switcher">
-      <div className="section-header compact">
-        <div>
-          <p className="section-label">Overview mode</p>
-          <h3>{modeMeta.label}</h3>
-        </div>
-        <span className={`source-badge ${modeMeta.simulated ? "fallback" : "live"}`}>
-          {modeMeta.chip}
-        </span>
-      </div>
-
-      <div className="overview-mode-controls">
-        <div className="overview-mode-field">
-          <label className="section-label" htmlFor="overview-mode-select">
-            View selector
-          </label>
-          <select
-            className="overview-mode-select"
-            id="overview-mode-select"
-            onChange={(event) => onModeChange(event.target.value)}
-            value={mode}
-          >
-            <option value="live">Current source state</option>
-            <option value="scenario-stress">Scenario stress-test view</option>
-          </select>
-        </div>
-
-        <p className="reliability-note">{modeMeta.description}</p>
-      </div>
-
-      <p className="report-form-message">
-        {modeMeta.simulated
-          ? "Simulated scenario rows are shown for explanation and demo only. Return to Current source state before interpreting live conditions."
-          : "Use Scenario stress-test view to inspect how FloodGuard would explain a clearly labelled simulated high-pressure event."}
-      </p>
-    </section>
-  );
-}
-
 function NotificationBanner({ notifications }) {
   const model = buildNotificationBannerModel(notifications);
 
@@ -1823,21 +1782,61 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange, sourceS
 }
 
 // #app section navigation
-function AppNavigation({ activeView, onViewChange }) {
+function AppNavigation({ activeView, onViewChange, overviewMode }) {
   return (
-    <nav className="app-nav" aria-label="FloodGuard sections">
-      {appSections.map((section) => (
-        <button
-          aria-current={activeView === section.id ? "page" : undefined}
-          className={activeView === section.id ? "active" : ""}
-          key={section.id}
-          onClick={() => onViewChange(section.id)}
-          type="button"
-        >
-          {section.label}
-        </button>
-      ))}
-    </nav>
+    <div className="app-nav-shell">
+      <div className="app-nav-strip">
+        <nav className="app-nav" aria-label="FloodGuard sections">
+          {appSections.map((section) => (
+            <button
+              aria-current={activeView === section.id ? "page" : undefined}
+              className={activeView === section.id ? "active" : ""}
+              key={section.id}
+              onClick={() => onViewChange(section.id)}
+              type="button"
+            >
+              {section.label}
+            </button>
+          ))}
+        </nav>
+
+        {overviewMode ? (
+          <div className="app-nav-mode-inline">
+            <div className="app-nav-mode-field">
+              <label className="section-label" htmlFor="overview-mode-select">
+                View mode
+              </label>
+              <div className="app-nav-mode-select-wrap">
+                <select
+                  className="overview-mode-select"
+                  id="overview-mode-select"
+                  onChange={(event) => overviewMode.onModeChange(event.target.value)}
+                  value={overviewMode.mode}
+                >
+                  <option value="live">Current source state</option>
+                  <option value="scenario-stress">Scenario stress-test</option>
+                </select>
+                <span aria-hidden="true" className="app-nav-mode-chevron">
+                  ▼
+                </span>
+              </div>
+            </div>
+
+            <span className={`source-badge ${overviewMode.modeMeta.simulated ? "fallback" : "live"}`}>
+              {overviewMode.modeMeta.chip}
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      {overviewMode ? (
+        <p className="app-nav-mode-note">
+          {overviewMode.modeMeta.simulated
+            ? "Simulated scenario rows are shown for explanation and demo only. Return to Current source state before interpreting live conditions."
+            : "Use Scenario stress-test to inspect how FloodGuard explains a clearly labelled simulated high-pressure event."}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -2871,7 +2870,19 @@ export default function App() {
         liveStatus={liveStatus}
         onAreaChange={setSelectedAreaId}
       />
-      <AppNavigation activeView={activeView} onViewChange={setActiveView} />
+      <AppNavigation
+        activeView={activeView}
+        onViewChange={setActiveView}
+        overviewMode={
+          hasSelectedAreaSignals && activeView === "overview" && overviewModeState
+            ? {
+                mode: overviewMode,
+                modeMeta: overviewModeState.meta,
+                onModeChange: setOverviewMode,
+              }
+            : null
+        }
+      />
 
       {!hasSelectedAreaSignals && (
         <AreaDataGuard areaName={selectedAreaName} liveStatus={liveStatus} />
@@ -2879,11 +2890,6 @@ export default function App() {
 
       {hasSelectedAreaSignals && activeView === "overview" && (
         <>
-          <OverviewModeSwitcher
-            mode={overviewMode}
-            modeMeta={overviewModeState.meta}
-            onModeChange={setOverviewMode}
-          />
           <NotificationBanner notifications={overviewModeState.notifications ?? notifications} />
           <OverviewDashboard
             data={overviewModeState.data}

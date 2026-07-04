@@ -558,11 +558,9 @@ test("scenario stress-test mode is clearly labelled as simulated and does not lo
 
   await page.goto("/");
 
-  await page.getByLabel("View selector").selectOption("scenario-stress");
+  await page.getByLabel("View mode").selectOption("scenario-stress");
 
-  await expect(
-    page.getByRole("heading", { name: "Scenario stress-test view", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByLabel("View mode")).toHaveValue("scenario-stress");
   await expect(page.getByText("Simulated demo mode", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Simulated scenario rows are shown for explanation and demo only."),
