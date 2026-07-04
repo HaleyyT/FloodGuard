@@ -83,6 +83,7 @@ test("resident overview model explains concern, trust, and next steps in plain l
     decisionAudit: {
       hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
       evidenceConfidence: "partial",
+      officialWarningContext: "not_configured",
       whatIncreasedConcern: ["Short-window rainfall is elevated at 5 mm in the last hour."],
       whatReducedConcern: ["River trend is stable, which lowers immediate local concern."],
       checkNext: ["Check official NSW SES and BoM advice."],
@@ -91,11 +92,33 @@ test("resident overview model explains concern, trust, and next steps in plain l
   });
 
   assert.equal(model.currentConcern, "Moderate");
+  assert.equal(model.concernTitle, "Current concern level");
+  assert.equal(model.trustTitle, "Evidence reliability");
+  assert.equal(model.driversTitle, "Key concern drivers");
   assert.match(model.trustLabel, /Partly/i);
   assert.match(model.trustNote, /82% confidence/i);
   assert.match(model.whyAssigned[0], /Short-window rainfall/i);
   assert.match(model.whatNext[0], /NSW SES|BoM/i);
+  assert.match(model.decisionOutlook, /Rainfall is elevated enough to watch/i);
+  assert.match(model.decisionOutlook, /official warning feed is not connected yet/i);
   assert.ok(model.whyThisMatters.some((item) => /Weather context is stale/i.test(item)));
+});
+
+test("resident overview model produces a calm outlook for low concern windows", () => {
+  const model = buildResidentOverviewModel({
+    riskLevel: "Low",
+    summary: "Low local concern is present.",
+    decisionAudit: {
+      hazardPressure: { rainfall: "low", river: "stable", wetness: "low" },
+      evidenceConfidence: "high",
+      officialWarningContext: "no_current_warning",
+      reliability: { score: 96, level: "High" },
+    },
+  });
+
+  assert.match(model.decisionOutlook, /Rainfall remains low/i);
+  assert.match(model.decisionOutlook, /river conditions are stable/i);
+  assert.match(model.decisionOutlook, /no current official warning/i);
 });
 
 test("humanised UI labels soften technical terminology", () => {

@@ -1839,21 +1839,22 @@ function OverviewPanel({ data }) {
       <div className="resident-overview-grid">
         <div className="resident-overview-left-column">
           <div className="resident-answer-card concern-card">
-            <p className="section-label">What is the current local concern?</p>
+            <p className="section-label">{residentOverview.concernTitle}</p>
             <h3>
               {typeof riskSummary.riskScore === "number"
                 ? `${residentOverview.currentConcern } | Risk score: ${riskSummary.riskScore}/100`
                 : residentOverview.currentConcern}
             </h3>
             <p>{residentOverview.concernSummary}</p>
+            <p className="resident-support-note">{residentOverview.decisionOutlook}</p>
           </div>
           <div className="resident-answer-card trust-card">
-            <p className="section-label">Can I trust the evidence?</p>
+            <p className="section-label">{residentOverview.trustTitle}</p>
             <h3>{residentOverview.trustLabel}</h3>
             <p>{residentOverview.trustNote}</p>
           </div>
           <div className="resident-answer-card why-card">
-            <p className="section-label">Why was this concern assigned?</p>
+            <p className="section-label">{residentOverview.driversTitle}</p>
             {residentOverview.whyAssigned.length > 0 ? (
               <ul className="factor-list history-list resident-answer-list">
                 {residentOverview.whyAssigned.map((item) => (
@@ -1866,7 +1867,7 @@ function OverviewPanel({ data }) {
           </div>
         </div>
         <div className="resident-answer-card next-card">
-          <p className="section-label">What should I check next?</p>
+          <p className="section-label">{residentOverview.nextTitle}</p>
           {residentOverview.whatNext.length > 0 ? (
             <ul className="factor-list history-list resident-answer-list">
               {residentOverview.whatNext.map((item) => (

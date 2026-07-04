@@ -109,6 +109,50 @@ export function buildRiskSummaryModel(dashboardData) {
   };
 }
 
+function humanizeHazardPressureLevel(level, signalLabel) {
+  if (!level) return `${signalLabel} status is unavailable`;
+  if (level === "stable") {
+    return signalLabel.endsWith("conditions")
+      ? `${signalLabel} are stable`
+      : `${signalLabel} is stable`;
+  }
+  if (level === "low") return `${signalLabel} remains low`;
+  if (level === "watch") return `${signalLabel} is elevated enough to watch`;
+  if (level === "moderate") return `${signalLabel} is moderately elevated`;
+  if (level === "elevated") return `${signalLabel} is elevated`;
+  if (level === "high") return `${signalLabel} is high`;
+  return `${signalLabel} is ${level}`;
+}
+
+function humanizeWarningContext(context) {
+  if (context === "not_configured" || context === "not-connected") {
+    return "official warning feed is not connected yet";
+  }
+  if (context === "no_current_warning" || context === "no_relevant_warning") {
+    return "no current official warning is affecting this area";
+  }
+  if (context === "warning_active") {
+    return "an official warning is active and should be checked directly";
+  }
+  if (!context || context === "unknown") {
+    return "official warning context is limited";
+  }
+  return `official warning context is ${context.replaceAll("_", " ")}`;
+}
+
+function buildDecisionOutlook(audit, dashboardData) {
+  const rainfall = humanizeHazardPressureLevel(audit?.hazardPressure?.rainfall, "Rainfall");
+  const river = humanizeHazardPressureLevel(audit?.hazardPressure?.river, "River conditions");
+  const warningContext = humanizeWarningContext(audit?.officialWarningContext);
+  const concern = dashboardData?.riskLevel ?? "Unknown";
+
+  if (concern === "Low") {
+    return `${rainfall}, ${river.toLowerCase()}, and ${warningContext}.`;
+  }
+
+  return `${rainfall}, ${river.toLowerCase()}, and FloodGuard is keeping ${concern.toLowerCase()} concern under review while ${warningContext}.`;
+}
+
 export function buildResidentOverviewModel(dashboardData) {
   const audit = dashboardData?.decisionAudit ?? null;
   const reliability = audit?.reliability ?? null;
@@ -129,8 +173,13 @@ export function buildResidentOverviewModel(dashboardData) {
   }
 
   return {
+    concernTitle: "Current concern level",
+    trustTitle: "Evidence reliability",
+    driversTitle: "Key concern drivers",
+    nextTitle: "What should I check next?",
     currentConcern: dashboardData?.riskLevel ?? "Unknown",
     concernSummary: dashboardData?.summary ?? "No current local concern summary is available.",
+    decisionOutlook: buildDecisionOutlook(audit, dashboardData),
     trustLabel:
       audit?.evidenceConfidence === "high"
         ? "Yes, core evidence is strong"

@@ -512,9 +512,9 @@ test("resident-facing overview renders key FloodGuard cards", async ({ page }) =
 
   await expect(page.getByRole("heading", { name: "FloodGuard", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Parramatta, NSW", exact: true })).toBeVisible();
-  await expect(page.getByText("What is the current local concern?")).toBeVisible();
-  await expect(page.getByText("Can I trust the evidence?")).toBeVisible();
-  await expect(page.getByText("Why was this concern assigned?")).toBeVisible();
+  await expect(page.getByText("Current concern level", { exact: true })).toBeVisible();
+  await expect(page.getByText("Evidence reliability", { exact: true })).toBeVisible();
+  await expect(page.getByText("Key concern drivers", { exact: true })).toBeVisible();
   await expect(page.getByText("What should I check next?")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recent rainfall trend" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Risk signal breakdown" })).toBeVisible();

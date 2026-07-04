@@ -3333,6 +3333,13 @@ body {
   margin: 0;
 }
 
+.resident-support-note {
+  color: var(--fg-premium-body-soft);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin-top: 0.55rem;
+}
+
 .overview-meta-strip {
   align-items: center;
   display: flex;
