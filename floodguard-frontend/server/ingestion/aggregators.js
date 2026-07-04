@@ -762,19 +762,29 @@ export function readAreaWarningStatus(areaSignals) {
   const adapterState = buildWarningAdapterState(areaSignals);
   const adapterStatus = buildLegacyWarningAdapterStatus(adapterState);
   const hasWarning = adapterState === "live" && (warningSummary.warningCount ?? 0) > 0;
+  const limitations = [...(warningSummary.notes ?? [])];
+
+  if (warningSource?.status === "failed" && warningSource?.note) limitations.push(warningSource.note);
+  if (warningSource?.status === "not-connected" && warningSource?.note) limitations.push(warningSource.note);
 
   return {
     area: areaSignals.area.name,
+    source: warningSummary.provider ?? "HazardWatch / NSW SES",
+    status: adapterState,
     hasWarning,
     warningLevel: hasWarning ? presentWarningLevel(warningSummary.status) : undefined,
     hazardType: hasWarning ? inferHazardType(warningSummary.warnings ?? []) : undefined,
     issuedAt: warningSummary.issuedAt ?? undefined,
     updatedAt: warningSummary.observedAt ?? undefined,
+    lastFetchedAt: warningSource?.fetchedAt ?? null,
+    lastObservedAt: warningSummary.observedAt ?? warningSource?.observedAt ?? null,
     sourceName: "NSW SES HazardWatch",
     sourceUrl: warningSource?.source ?? "https://www.hazardwatch.gov.au/",
     sourceTarget: warningSummary.targetSource ?? "HazardWatch / NSW SES official warning adapter",
     adapterState,
     adapterStatus,
+    relevanceMethod: warningSummary.relevance?.filterMode ?? "area-name-catchment-and-warning-type",
+    limitations,
     officialText:
       hasWarning && (warningSummary.warnings ?? []).length > 0
         ? warningSummary.warnings.map((warning) => warning.headline).join(" | ")

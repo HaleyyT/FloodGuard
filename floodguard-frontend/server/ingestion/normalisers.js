@@ -57,6 +57,38 @@ function buildWarningText(warning) {
     .join(" ");
 }
 
+function normalizeWarningTextValue(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function uniqueNonEmpty(values = []) {
+  return [...new Set(values.map((value) => String(value ?? "").trim()).filter(Boolean))];
+}
+
+function buildAreaAliases(area) {
+  const shortAreaName = area.name.replace(", NSW", "");
+  return uniqueNonEmpty([
+    area.id,
+    area.id.replaceAll("-", " "),
+    area.name,
+    shortAreaName,
+    ...shortAreaName.split("/"),
+  ]);
+}
+
+function buildCatchmentAliases(area) {
+  return uniqueNonEmpty(
+    area.catchment
+      .split("/")
+      .flatMap((segment) => segment.split(","))
+      .map((segment) => segment.trim())
+      .filter(Boolean),
+  );
+}
+
 function normaliseWarningHazardType(warning) {
   const text = buildWarningText(warning).toLowerCase();
 
@@ -74,14 +106,16 @@ function isRelevantWarningHazardType(hazardType) {
 function warningMatchDetails(warning, area) {
   const areaIds = warning.areaIds ?? warning.area_ids ?? [];
   const areas = warning.areas ?? warning.locations ?? warning.suburbs ?? [];
-  const text = buildWarningText(warning).toLowerCase();
+  const text = normalizeWarningTextValue(buildWarningText(warning));
+  const normalizedAreaEntries = areas.map((value) => normalizeWarningTextValue(value));
+  const areaAliases = buildAreaAliases(area).map(normalizeWarningTextValue);
+  const catchmentAliases = buildCatchmentAliases(area).map(normalizeWarningTextValue);
   const matchedBy = [];
 
   if (areaIds.includes(area.id)) matchedBy.push("area_id");
-  if (text.includes(area.id.replaceAll("-", " "))) matchedBy.push("area_slug");
-  if (text.includes(area.name.toLowerCase().replace(", nsw", ""))) matchedBy.push("area_name");
-  if (text.includes(area.catchment.toLowerCase())) matchedBy.push("catchment");
-  if (areas.some((value) => String(value).toLowerCase() === area.name.toLowerCase().replace(", nsw", ""))) {
+  if (areaAliases.some((alias) => alias && text.includes(alias))) matchedBy.push("area_name");
+  if (catchmentAliases.some((alias) => alias && text.includes(alias))) matchedBy.push("catchment");
+  if (normalizedAreaEntries.some((entry) => areaAliases.includes(entry))) {
     matchedBy.push("area_list");
   }
 

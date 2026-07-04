@@ -32,3 +32,26 @@ This keeps bushfire and unrelated hazard notices from being treated as local flo
 - Official warning wording stays official and is never rewritten into FloodGuard's own concern level.
 - FloodGuard only displays official warning headlines beside local sensor-derived concern.
 - Future work should add polygon/catchment intersection once warning geometry is available.
+
+## Stable adapter contract
+
+FloodGuard's warning-status endpoint now keeps a stable contract that can be surfaced to the dashboard or used in tests:
+
+```json
+{
+  "source": "HazardWatch / NSW SES",
+  "status": "live | no_relevant_warning | stale | source_unavailable | not_configured | parser_error",
+  "warnings": [],
+  "lastFetchedAt": "2026-07-03T01:00:00Z",
+  "lastObservedAt": "2026-07-03T00:55:00Z",
+  "relevanceMethod": "area-name-catchment-and-warning-type",
+  "limitations": []
+}
+```
+
+This keeps the warning layer explicit about:
+
+- which official source FloodGuard is targeting;
+- whether the source is live, stale, unavailable, or simply has no relevant warning;
+- how relevance was decided for Parramatta, North Parramatta, and Toongabbie;
+- what limitation should be shown instead of pretending the warning layer is stronger than it really is.
