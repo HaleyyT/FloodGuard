@@ -20,6 +20,7 @@ FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened t
 - Notification decision logic with suppression and degraded-data safeguards
 - Python ML prototype pipeline for offline training, evaluation, metrics, and model-card reporting
 - Shadow-mode ML comparison surfaced in the backend and dashboard without overriding the live rule engine
+- Deterministic Playwright dashboard smoke tests plus replay and failure-injection regression coverage
 
 ## Project structure
 
@@ -136,6 +137,13 @@ npm run check:ingestion
 ```bash
 cd floodguard-frontend
 npm run test
+```
+
+### Run end-to-end smoke tests
+
+```bash
+cd floodguard-frontend
+npm run test:e2e
 ```
 
 ### Build production frontend
