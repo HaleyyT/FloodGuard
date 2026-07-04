@@ -5,7 +5,7 @@ FloodGuard is a reliability-aware flood-awareness and decision-support prototype
 
 FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
 
-![FloodGuard dashboard prototype](docs/images/floodguard-4-july-final.png)
+![FloodGuard dashboard prototype](docs/images/floodguard-4-july-final1.png)
 
 
 ## What is implemented
