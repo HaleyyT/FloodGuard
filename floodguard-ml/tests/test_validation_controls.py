@@ -11,9 +11,10 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from utils import (  # noqa: E402
-    EVENT_LABEL_AVAILABLE_COLUMN,
-    EVENT_LABEL_SOURCE_COLUMN,
-    EVENT_LABEL_STRENGTH_COLUMN,
+        EVENT_LABEL_AVAILABLE_COLUMN,
+        EVENT_LABEL_REVIEW_STATUS_COLUMN,
+        EVENT_LABEL_SOURCE_COLUMN,
+        EVENT_LABEL_STRENGTH_COLUMN,
     EVENT_TARGET_COLUMN,
     GROUP_TIMESTAMP_COLUMN,
     LABEL_COLUMN,
@@ -69,6 +70,7 @@ def make_row(
         EVENT_LABEL_AVAILABLE_COLUMN: event_available,
         EVENT_LABEL_SOURCE_COLUMN: "warning_derived" if event_available else None,
         EVENT_LABEL_STRENGTH_COLUMN: "moderate" if event_available else None,
+        EVENT_LABEL_REVIEW_STATUS_COLUMN: "candidate_review" if event_available else None,
         "riskScore": 65 if label else 15,
     }
     return row
@@ -194,6 +196,7 @@ class ValidationControlTests(unittest.TestCase):
         frame = pd.DataFrame(rows)
         frame[GROUP_TIMESTAMP_COLUMN] = pd.to_datetime(frame[GROUP_TIMESTAMP_COLUMN], utc=True)
         frame[EVENT_LABEL_STRENGTH_COLUMN] = "moderate"
+        frame[EVENT_LABEL_REVIEW_STATUS_COLUMN] = "reviewed_for_shadow_mode"
 
         selection = choose_training_target(frame)
         projected = apply_training_target_selection(frame, selection)
@@ -201,6 +204,30 @@ class ValidationControlTests(unittest.TestCase):
         self.assertEqual(selection["selectedTargetKind"], "event")
         self.assertEqual(selection["selectedTargetColumn"], EVENT_TARGET_COLUMN)
         self.assertEqual(int(projected[LABEL_COLUMN].sum()), 10)
+
+    def test_target_selection_rejects_candidate_review_labels_even_when_counts_are_large(self) -> None:
+        rows = []
+        for index in range(40):
+            label = 1 if index in {5, 8, 11, 15, 19, 23, 27, 32, 35, 38} else 0
+            rows.append(
+                make_row(
+                    f"2026-06-{1 + (index // 6):02d}T{index % 6:02d}:00:00Z",
+                    label,
+                    area_id="parramatta" if index % 2 == 0 else "toongabbie",
+                    event_label=label,
+                    event_available=1,
+                )
+            )
+
+        frame = pd.DataFrame(rows)
+        frame[GROUP_TIMESTAMP_COLUMN] = pd.to_datetime(frame[GROUP_TIMESTAMP_COLUMN], utc=True)
+        frame[EVENT_LABEL_STRENGTH_COLUMN] = "moderate"
+        frame[EVENT_LABEL_REVIEW_STATUS_COLUMN] = "candidate_review"
+
+        selection = choose_training_target(frame)
+
+        self.assertEqual(selection["selectedTargetKind"], "rule")
+        self.assertIn("candidate-review supervision", selection["reason"])
 
 
 if __name__ == "__main__":

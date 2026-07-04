@@ -62,6 +62,8 @@ def load_label_windows(labels_path: Path = LABELS_DATASET) -> pd.DataFrame:
                 "label",
                 "label_source",
                 "label_strength",
+                "review_status",
+                "evidence_link",
                 "notes",
             ]
         )
@@ -86,6 +88,8 @@ def apply_event_labels_to_features(
     dataframe[EVENT_TARGET_COLUMN] = pd.NA
     dataframe[EVENT_LABEL_SOURCE_COLUMN] = pd.NA
     dataframe[EVENT_LABEL_STRENGTH_COLUMN] = pd.NA
+    dataframe["eventLabelReviewStatus"] = pd.NA
+    dataframe["eventLabelEvidenceLink"] = pd.NA
     dataframe[EVENT_LABEL_NOTES_COLUMN] = pd.NA
     dataframe[EVENT_LABEL_AVAILABLE_COLUMN] = 0
 
@@ -112,6 +116,8 @@ def apply_event_labels_to_features(
         dataframe.at[index, EVENT_TARGET_COLUMN] = int(best_match["label"])
         dataframe.at[index, EVENT_LABEL_SOURCE_COLUMN] = best_match["label_source"]
         dataframe.at[index, EVENT_LABEL_STRENGTH_COLUMN] = best_match["label_strength"]
+        dataframe.at[index, "eventLabelReviewStatus"] = best_match.get("review_status")
+        dataframe.at[index, "eventLabelEvidenceLink"] = best_match.get("evidence_link")
         dataframe.at[index, EVENT_LABEL_NOTES_COLUMN] = best_match["notes"]
         dataframe.at[index, EVENT_LABEL_AVAILABLE_COLUMN] = 1
 

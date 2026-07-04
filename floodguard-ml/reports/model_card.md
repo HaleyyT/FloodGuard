@@ -15,9 +15,10 @@ It is not used for live alerting or official warning decisions.
 - Scenario stress-test rows: 84
 - Real export label source: rule_derived
 - Real export selected training target: `targetRuleElevated` (rule)
+- Real export supervision grade: `weak`
 - Real export independent-label layer: `targetEventElevated` when a curated label window overlaps the row
 - Scenario label source: scenario_generated
-- Scenario selected training target: `targetEventElevated` (event)
+- Scenario selected training target: `targetRuleElevated` (rule)
 
 ## Target Definition
 
@@ -31,7 +32,16 @@ It is not used for live alerting or official warning decisions.
 - `impact` labels should represent verified local consequences such as road closures or observed inundation.
 - `scenario_generated` labels are for ML plumbing and stress testing only, never real-world validation.
 - Real export target selection reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
-- Scenario target selection reason: Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.
+- Real export supervision-quality summary: FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.
+- Scenario target selection reason: Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.
+
+## Supervision Quality
+
+- Real export grade: `weak`
+- Real export viable for independent supervision: `False`
+- Real export review-status counts: {'scaffold_only': 3000}
+- Real export primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes.
+- Validated prediction depends on stronger supervision: independent flood-event labels, expert-calibrated thresholds, and event-holdout validation.
 
 ## Features Used
 
@@ -49,7 +59,7 @@ It is not used for live alerting or official warning decisions.
 
 ## Leakage Controls
 
-- Real export blocked leakage-prone fields: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable
+- Real export blocked leakage-prone fields: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelReviewStatus, eventLabelEvidenceLink, eventLabelNotes, eventLabelAvailable
 - Scenario blocked leakage-prone fields: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable
 - Columns such as `riskScore`, `ruleConcernLevel`, and label/provenance fields are treated as reference-only and excluded from training.
 

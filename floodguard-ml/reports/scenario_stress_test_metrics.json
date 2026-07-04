@@ -27,6 +27,7 @@
     "eventLabelStrengthCounts": {
       "synthetic": 84
     },
+    "eventLabelReviewStatusCounts": {},
     "ruleConcernLevelCounts": {
       "Low": 36,
       "Moderate": 24,
@@ -86,23 +87,43 @@
     "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
     "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
     "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable.",
-    "Training target selection: Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision."
+    "Training target selection: Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision."
   ],
   "targetSelection": {
-    "selectedTargetColumn": "targetEventElevated",
-    "selectedLabelSourceColumn": "eventLabelSource",
-    "selectedLabelAvailabilityColumn": "eventLabelAvailable",
-    "selectedTargetKind": "event",
-    "readyForIndependentSupervision": true,
-    "reason": "Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.",
+    "selectedTargetColumn": "targetRuleElevated",
+    "selectedLabelSourceColumn": "ruleLabelSource",
+    "selectedLabelAvailabilityColumn": null,
+    "selectedTargetKind": "rule",
+    "readyForIndependentSupervision": false,
+    "reason": "Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.",
     "eligibleRowCount": 84,
     "positiveCount": 48,
     "sourceCounts": {
       "scenario_generated": 84
     },
-    "strengthCounts": {
-      "synthetic": 84
+    "eventTargetCandidate": {
+      "eligibleRowCount": 84,
+      "positiveCount": 48,
+      "strengthCounts": {
+        "synthetic": 84
+      },
+      "reviewStatusCounts": {}
     }
+  },
+  "supervisionQuality": {
+    "grade": "weak",
+    "summary": "FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.",
+    "eventLabelCoverage": 1.0,
+    "eventLabelRowCount": 84,
+    "eventPositiveCount": 48,
+    "eventLabelStrengthCounts": {
+      "synthetic": 84
+    },
+    "eventLabelReviewStatusCounts": {},
+    "strongOrModerateLabelCount": 0,
+    "reviewedRowCount": 0,
+    "viableForIndependentSupervision": false,
+    "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
   },
   "split": {
     "strategy": "area_holdout_north-parramatta",
@@ -912,6 +933,7 @@
           "expert review pending"
         ],
         "blockers": [
+          "Independent event supervision is not yet strong enough.",
           "Event-holdout validation is not yet viable.",
           "Acceptance gates still failing: non_zero_recall_on_elevated_events."
         ]

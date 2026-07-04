@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from audit_labels import load_event_backlog, summarise_label_frame  # noqa: E402
+from audit_labels import assess_supervision_quality, load_event_backlog, summarise_label_frame  # noqa: E402
 
 import pandas as pd  # noqa: E402
 
@@ -30,6 +30,8 @@ class AuditLabelsTests(unittest.TestCase):
                         "label_class": 1,
                         "label_source": "warning_derived",
                         "label_strength": "moderate",
+                        "review_status": "candidate_review",
+                        "promotion_ready": "no",
                         "evidence_link": "",
                         "notes": "Test",
                     }
@@ -38,9 +40,10 @@ class AuditLabelsTests(unittest.TestCase):
 
             backlog = load_event_backlog(backlog_path)
 
-            self.assertEqual(int(backlog.loc[0, "label_class"]), 1)
-            self.assertEqual(backlog.loc[0, "label_source"], "warning_derived")
-            self.assertTrue(pd.notna(backlog.loc[0, "start_time"]))
+        self.assertEqual(int(backlog.loc[0, "label_class"]), 1)
+        self.assertEqual(backlog.loc[0, "label_source"], "warning_derived")
+        self.assertEqual(backlog.loc[0, "review_status"], "candidate_review")
+        self.assertTrue(pd.notna(backlog.loc[0, "start_time"]))
 
     def test_summarise_label_frame_counts_positive_backlog_rows(self) -> None:
         frame = pd.DataFrame(
@@ -53,6 +56,7 @@ class AuditLabelsTests(unittest.TestCase):
                     "label_class": 0,
                     "label_source": "manual_demo",
                     "label_strength": "weak",
+                    "review_status": "scaffold_only",
                 },
                 {
                     "area": "toongabbie",
@@ -62,6 +66,7 @@ class AuditLabelsTests(unittest.TestCase):
                     "label_class": 2,
                     "label_source": "impact_candidate",
                     "label_strength": "weak",
+                    "review_status": "candidate_review",
                 },
             ]
         )
@@ -72,6 +77,21 @@ class AuditLabelsTests(unittest.TestCase):
         self.assertEqual(summary["positiveRows"], 1)
         self.assertIn("parramatta", summary["areas"])
         self.assertEqual(summary["labelSourceCounts"]["manual_demo"], 1)
+        self.assertEqual(summary["reviewStatusCounts"]["scaffold_only"], 1)
+
+    def test_assess_supervision_quality_stays_weak_for_scaffold_only_labels(self) -> None:
+        labels_summary = {
+            "positiveRows": 0,
+            "labelStrengthCounts": {"weak": 3},
+            "reviewStatusCounts": {"scaffold_only": 3},
+        }
+        backlog_summary = {"rowCount": 5, "positiveRows": 2}
+
+        quality = assess_supervision_quality(labels_summary, backlog_summary)
+
+        self.assertEqual(quality["grade"], "weak")
+        self.assertFalse(quality["viableForIndependentSupervision"])
+        self.assertIn("scaffold-level", quality["summary"])
 
 
 if __name__ == "__main__":

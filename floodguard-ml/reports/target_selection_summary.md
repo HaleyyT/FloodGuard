@@ -18,12 +18,17 @@ Event-target candidate review:
 
 ## Scenario Stress Test
 
-- Selected target kind: `event`
-- Selected target column: `targetEventElevated`
+- Selected target kind: `rule`
+- Selected target column: `targetRuleElevated`
 - Eligible rows for selected target: 84
 - Elevated examples in selected target: 48
-- Ready for independent supervision: `True`
-- Reason: Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.
+- Ready for independent supervision: `False`
+- Reason: Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.
+
+Event-target candidate review:
+- Labelled rows: 84
+- Elevated examples: 48
+- Strength counts: {'synthetic': 84}
 
 ## Interpretation
 

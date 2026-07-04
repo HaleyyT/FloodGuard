@@ -63,6 +63,8 @@ EVENT_TARGET_COLUMN = "targetEventElevated"
 RULE_LABEL_SOURCE_COLUMN = "ruleLabelSource"
 EVENT_LABEL_SOURCE_COLUMN = "eventLabelSource"
 EVENT_LABEL_STRENGTH_COLUMN = "eventLabelStrength"
+EVENT_LABEL_REVIEW_STATUS_COLUMN = "eventLabelReviewStatus"
+EVENT_LABEL_EVIDENCE_LINK_COLUMN = "eventLabelEvidenceLink"
 EVENT_LABEL_NOTES_COLUMN = "eventLabelNotes"
 EVENT_LABEL_AVAILABLE_COLUMN = "eventLabelAvailable"
 AREA_COLUMN = "areaId"
@@ -79,6 +81,8 @@ LEAKAGE_PRONE_COLUMNS = [
     "ruleLabelSource",
     "eventLabelSource",
     "eventLabelStrength",
+    "eventLabelReviewStatus",
+    "eventLabelEvidenceLink",
     "eventLabelNotes",
     "eventLabelAvailable",
     "notificationType",
@@ -205,6 +209,14 @@ def build_dataset_summary(dataframe: pd.DataFrame, dataset_name: str) -> dict[st
         if EVENT_LABEL_STRENGTH_COLUMN in usable.columns
         else {}
     )
+    event_label_review_status_counts = (
+        usable[EVENT_LABEL_REVIEW_STATUS_COLUMN]
+        .fillna("unknown")
+        .value_counts(dropna=False)
+        .to_dict()
+        if EVENT_LABEL_REVIEW_STATUS_COLUMN in usable.columns
+        else {}
+    )
     event_label_available = (
         int(usable[EVENT_LABEL_AVAILABLE_COLUMN].fillna(0).astype(int).sum())
         if EVENT_LABEL_AVAILABLE_COLUMN in usable.columns
@@ -233,6 +245,7 @@ def build_dataset_summary(dataframe: pd.DataFrame, dataset_name: str) -> dict[st
         "ruleLabelSourceCounts": rule_label_counts,
         "eventLabelSourceCounts": event_label_counts,
         "eventLabelStrengthCounts": event_label_strength_counts,
+        "eventLabelReviewStatusCounts": event_label_review_status_counts,
         "ruleConcernLevelCounts": rule_counts,
         "targetCounts": {str(key): int(value) for key, value in target_counts.items()},
         "positiveRate": positive_rate,
@@ -255,6 +268,7 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
     event_label_row_count = summary.get("eventLabelRowCount", 0)
     event_positive_count = summary.get("eventPositiveCount", 0)
     event_label_strengths = summary.get("eventLabelStrengthCounts", {})
+    event_label_review_statuses = summary.get("eventLabelReviewStatusCounts", {})
 
     if row_count < 30:
         warnings.append(
@@ -284,6 +298,12 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
         warnings.append(
             "Current joined event labels are all weak-strength placeholders and must not be treated as validated outcomes."
         )
+    if event_label_review_statuses and set(event_label_review_statuses.keys()).issubset(
+        {"scaffold_only", "candidate_review", "unknown"}
+    ):
+        warnings.append(
+            "Current joined event labels are still scaffold or candidate-review rows and are not yet reviewed enough for independent ML validation."
+        )
     if high_count == 0:
         warnings.append("No High class examples are available in this dataset.")
 
@@ -305,6 +325,63 @@ def build_dataset_warnings(summary: dict[str, Any]) -> list[str]:
         )
 
     return warnings
+
+
+def build_supervision_quality_summary(
+    summary: dict[str, Any], target_selection: dict[str, Any]
+) -> dict[str, Any]:
+    """Summarise how trustworthy the current supervision is for ML training and review."""
+
+    strengths = summary.get("eventLabelStrengthCounts", {})
+    review_statuses = summary.get("eventLabelReviewStatusCounts", {})
+    event_positive_count = int(summary.get("eventPositiveCount", 0))
+    event_label_row_count = int(summary.get("eventLabelRowCount", 0))
+    coverage = float(summary.get("eventLabelCoverage", 0.0))
+    ready = bool(target_selection.get("readyForIndependentSupervision"))
+    strong_or_moderate = int(strengths.get("strong", 0)) + int(strengths.get("moderate", 0))
+    reviewed_rows = int(review_statuses.get("reviewed_for_shadow_mode", 0)) + int(
+        review_statuses.get("expert_validated", 0)
+    )
+
+    if ready:
+        grade = "reviewable"
+        summary_text = (
+            "Independent event supervision is strong enough for shadow-mode model comparison, "
+            "but still not for operational promotion."
+        )
+        primary_limitation = "Event-holdout validation and domain review are still required."
+    elif event_positive_count > 0 and strong_or_moderate > 0:
+        grade = "developing"
+        summary_text = (
+            "FloodGuard has some independent event supervision signals, but coverage or review quality "
+            "is still too limited for validated ML claims."
+        )
+        primary_limitation = (
+            "Event labels exist, but they are not yet strong or reviewed enough to replace rule-derived supervision."
+        )
+    else:
+        grade = "weak"
+        summary_text = (
+            "FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, "
+            "tracking, and future calibration preparation."
+        )
+        primary_limitation = (
+            "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
+        )
+
+    return {
+        "grade": grade,
+        "summary": summary_text,
+        "eventLabelCoverage": coverage,
+        "eventLabelRowCount": event_label_row_count,
+        "eventPositiveCount": event_positive_count,
+        "eventLabelStrengthCounts": strengths,
+        "eventLabelReviewStatusCounts": review_statuses,
+        "strongOrModerateLabelCount": strong_or_moderate,
+        "reviewedRowCount": reviewed_rows,
+        "viableForIndependentSupervision": ready,
+        "primaryLimitation": primary_limitation,
+    }
 
 
 def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
@@ -348,7 +425,15 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
         if EVENT_LABEL_STRENGTH_COLUMN in labelled.columns
         else {}
     )
+    review_status_counts = (
+        labelled[EVENT_LABEL_REVIEW_STATUS_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict()
+        if EVENT_LABEL_REVIEW_STATUS_COLUMN in labelled.columns
+        else {}
+    )
     all_weak = set(strength_counts.keys()).issubset({"weak", "unknown"})
+    only_unreviewed = set(review_status_counts.keys()).issubset(
+        {"scaffold_only", "candidate_review", "unknown"}
+    )
 
     if len(labelled) < TARGET_SELECTION_MIN_ROWS:
         return {
@@ -358,6 +443,7 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
                 "eligibleRowCount": int(len(labelled)),
                 "positiveCount": event_positive_count,
                 "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+                "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
             },
         }
 
@@ -369,6 +455,7 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
                 "eligibleRowCount": int(len(labelled)),
                 "positiveCount": event_positive_count,
                 "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+                "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
             },
         }
 
@@ -380,6 +467,19 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
                 "eligibleRowCount": int(len(labelled)),
                 "positiveCount": event_positive_count,
                 "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+                "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
+            },
+        }
+
+    if only_unreviewed:
+        return {
+            **base_selection,
+            "reason": "Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.",
+            "eventTargetCandidate": {
+                "eligibleRowCount": int(len(labelled)),
+                "positiveCount": event_positive_count,
+                "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+                "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
             },
         }
 
@@ -394,6 +494,7 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
         "positiveCount": event_positive_count,
         "sourceCounts": labelled[EVENT_LABEL_SOURCE_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict(),
         "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+        "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
     }
 
 
