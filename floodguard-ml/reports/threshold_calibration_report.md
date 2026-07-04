@@ -2,10 +2,10 @@
 
 FloodGuard calibrates thresholds in a reviewable shadow workflow and does not auto-promote threshold changes into operational claims.
 
-- Threshold version under review: `0.2-prototype`
+- Threshold version under review: `0.3-calibration-review`
 - Review status: `needs_domain_expert_review`
-- Calibration target kind: `rule_reference`
-- Calibration target reason: Independent elevated event labels are unavailable, so calibration stays reference-only against rule-derived concern.
+- Calibration target kind: `rule`
+- Calibration target reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 - Positive rows available for this target: `18`
 - Candidate threshold sets evaluated: `2187`
 
@@ -14,6 +14,21 @@ FloodGuard calibrates thresholds in a reviewable shadow workflow and does not au
 - limited independent labels
 - no production validation
 - current sweep is strongest for replay and expert review, not for automatic promotion
+- current event labels are still scaffold or candidate-review supervision rather than verified flood outcomes
+
+## Supervision quality
+
+- Grade: `weak`
+- Viable for independent supervision: `False`
+- Summary: FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.
+- Primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes.
+
+## Event-label candidate review
+
+- Candidate rows: `3000`
+- Candidate elevated examples: `0`
+- Strength counts: `{'weak': 3000}`
+- Review status counts: `{'scaffold_only': 3000}`
 
 ## Current candidate recommendation
 

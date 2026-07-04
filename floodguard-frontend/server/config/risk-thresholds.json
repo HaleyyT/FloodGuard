@@ -1,11 +1,12 @@
 {
-  "version": "0.2-prototype",
+  "version": "0.3-calibration-review",
   "reviewStatus": "needs_domain_expert_review",
-  "calibratedOn": "event_label_backlog_v1",
+  "calibratedOn": "event_label_backlog_v2",
   "limitations": [
     "limited independent labels",
     "no production validation",
-    "current sweep is strongest for replay and expert review, not for automatic promotion"
+    "current sweep is strongest for replay and expert review, not for automatic promotion",
+    "current event labels are still scaffold or candidate-review supervision rather than verified flood outcomes"
   ],
   "reviewNeeded": [
     "hydrologist",
@@ -39,5 +40,5 @@
       "notes": "Prototype thresholds currently inherit defaults and require suburb-specific review."
     }
   },
-  "notes": "FloodGuard prototype thresholds require expert calibration before operational use. They are intentionally conservative and should be reviewed alongside historical flood events, local warning practice, and station update behaviour."
+  "notes": "FloodGuard prototype thresholds require expert calibration before operational use. They are intentionally conservative and should be reviewed alongside historical flood events, local warning practice, station update behaviour, and the current supervision-quality limits of the label backlog."
 }

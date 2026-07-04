@@ -13,14 +13,15 @@ from build_dataset import build_training_dataset
 from utils import (
     DEFAULT_DATASET,
     EVENT_LABEL_AVAILABLE_COLUMN,
-    EVENT_LABEL_SOURCE_COLUMN,
-    EVENT_TARGET_COLUMN,
     GROUP_TIMESTAMP_COLUMN,
     LABEL_COLUMN,
     REPORTS_DIR,
-    RULE_TARGET_COLUMN,
+    build_dataset_summary,
+    build_supervision_quality_summary,
+    choose_training_target,
     ensure_runtime_dirs,
     load_dataset,
+    write_json,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,8 @@ REPO_ROOT = PROJECT_ROOT.parent
 THRESHOLD_CONFIG_PATH = REPO_ROOT / "floodguard-frontend/server/config/risk-thresholds.json"
 SWEEP_PATH = REPORTS_DIR / "threshold_sweep.csv"
 REPORT_PATH = REPORTS_DIR / "threshold_calibration_report.md"
+SUMMARY_PATH = REPORTS_DIR / "calibration_summary.md"
+SUMMARY_JSON_PATH = REPORTS_DIR / "threshold_calibration_summary.json"
 
 
 def load_threshold_config(path: Path = THRESHOLD_CONFIG_PATH) -> dict[str, Any]:
@@ -114,25 +117,16 @@ def row_trigger_state(row, thresholds: dict[str, float]) -> dict[str, Any]:
 def target_metadata(dataframe) -> dict[str, Any]:
     """Choose the most honest calibration target available and explain its limitations."""
 
-    labelled = dataframe[dataframe[EVENT_LABEL_AVAILABLE_COLUMN].fillna(0).astype(int) == 1].copy()
-    event_positive_count = (
-        int((labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1).sum())
-        if EVENT_TARGET_COLUMN in labelled.columns
-        else 0
-    )
-    if not labelled.empty and event_positive_count > 0:
-        return {
-            "column": EVENT_TARGET_COLUMN,
-            "kind": "event",
-            "positiveRows": event_positive_count,
-            "reason": "Using joined event labels because at least one elevated event row exists.",
-        }
-
+    selection = choose_training_target(dataframe)
+    summary = build_dataset_summary(dataframe, "calibration_reference")
+    supervision_quality = build_supervision_quality_summary(summary, selection)
     return {
-        "column": RULE_TARGET_COLUMN if RULE_TARGET_COLUMN in dataframe.columns else LABEL_COLUMN,
-        "kind": "rule_reference",
-        "positiveRows": int((dataframe[LABEL_COLUMN].fillna(0).astype(int) == 1).sum()),
-        "reason": "Independent elevated event labels are unavailable, so calibration stays reference-only against rule-derived concern.",
+        "column": selection["selectedTargetColumn"],
+        "kind": selection["selectedTargetKind"],
+        "positiveRows": int(selection["positiveCount"]),
+        "reason": selection["reason"],
+        "supervisionQuality": supervision_quality,
+        "eventTargetCandidate": selection.get("eventTargetCandidate"),
     }
 
 
@@ -316,6 +310,33 @@ def calibration_report_text(
             lines.append(f"- {limitation}")
         lines.append("")
 
+    supervision_quality = target.get("supervisionQuality", {})
+    lines.extend(
+        [
+            "## Supervision quality",
+            "",
+            f"- Grade: `{supervision_quality.get('grade', 'unknown')}`",
+            f"- Viable for independent supervision: `{supervision_quality.get('viableForIndependentSupervision', False)}`",
+            f"- Summary: {supervision_quality.get('summary', 'unavailable')}",
+            f"- Primary limitation: {supervision_quality.get('primaryLimitation', 'unavailable')}",
+            "",
+        ]
+    )
+
+    if target.get("eventTargetCandidate"):
+        candidate = target["eventTargetCandidate"]
+        lines.extend(
+            [
+                "## Event-label candidate review",
+                "",
+                f"- Candidate rows: `{candidate.get('eligibleRowCount', 0)}`",
+                f"- Candidate elevated examples: `{candidate.get('positiveCount', 0)}`",
+                f"- Strength counts: `{candidate.get('strengthCounts', {})}`",
+                f"- Review status counts: `{candidate.get('reviewStatusCounts', {})}`",
+                "",
+            ]
+        )
+
     lines.extend(
         [
             "## Current candidate recommendation",
@@ -374,11 +395,33 @@ def calibration_report_text(
     return "\n".join(lines)
 
 
+def calibration_summary_text(
+    config: dict[str, Any], target: dict[str, Any], selected_row: dict[str, Any]
+) -> str:
+    """Write a concise calibration summary for the dashboard/backend report reader."""
+
+    supervision_quality = target.get("supervisionQuality", {})
+    return "\n".join(
+        [
+            "# FloodGuard Threshold Calibration Summary",
+            "",
+            f"Threshold version `{config.get('version')}` remains review-only.",
+            f"Calibration target kind: `{target['kind']}`.",
+            f"Supervision grade: `{supervision_quality.get('grade', 'unknown')}`.",
+            f"Recommended action: keep current thresholds for live prototype use while using sweep results for expert review.",
+            f"Best review candidate recall: `{selected_row['recall']}`; false positive rate: `{selected_row['falsePositiveRate']}`.",
+            "",
+        ]
+    )
+
+
 def run_calibration(
     dataset_path: Path = DEFAULT_DATASET,
     config_path: Path = THRESHOLD_CONFIG_PATH,
     sweep_path: Path = SWEEP_PATH,
     report_path: Path = REPORT_PATH,
+    summary_path: Path = SUMMARY_PATH,
+    summary_json_path: Path = SUMMARY_JSON_PATH,
 ) -> dict[str, Any]:
     """Execute the full threshold sweep and write the report artifacts."""
 
@@ -400,12 +443,27 @@ def run_calibration(
         f"{calibration_report_text(config, target, ranked_rows, selected_row)}\n",
         encoding="utf-8",
     )
+    summary_path.write_text(
+        f"{calibration_summary_text(config, target, selected_row)}\n",
+        encoding="utf-8",
+    )
+    write_json(
+        summary_json_path,
+        {
+            "thresholdVersion": config.get("version"),
+            "reviewStatus": config.get("reviewStatus"),
+            "target": target,
+            "selectedCandidate": selected_row,
+        },
+    )
     return {
         "targetKind": target["kind"],
         "candidateCount": len(ranked_rows),
         "selectedCandidate": selected_row,
         "sweepPath": str(sweep_path),
         "reportPath": str(report_path),
+        "summaryPath": str(summary_path),
+        "summaryJsonPath": str(summary_json_path),
     }
 
 
@@ -416,6 +474,7 @@ def main() -> None:
     print(f"Evaluated {result['candidateCount']} threshold candidate(s).")
     print(f"Sweep: {result['sweepPath']}")
     print(f"Report: {result['reportPath']}")
+    print(f"Summary: {result['summaryPath']}")
 
 
 if __name__ == "__main__":
