@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -132,6 +132,64 @@ test("readAreaHistory filters to the requested rolling time window", async () =>
 
     assert.equal(recentHistory.length, 2);
     assert.ok(recentHistory.every((entry) => new Date(entry.ingestedAt).getTime() >= now - 72 * 60 * 60 * 1000));
+  } finally {
+    await rm(historyDir, { force: true, recursive: true });
+  }
+});
+
+test("readAreaHistory skips corrupt JSONL rows instead of crashing the dashboard history view", async () => {
+  const historyDir = await mkdtemp(path.join(os.tmpdir(), "floodguard-history-"));
+  const historyPath = path.join(historyDir, "parramatta.jsonl");
+
+  try {
+    await writeFile(
+      historyPath,
+      [
+        JSON.stringify(buildAreaHistoryRecord(mockAreaSignals())),
+        "{bad json line",
+        JSON.stringify(
+          buildAreaHistoryRecord(
+            mockAreaSignals({
+              ingestedAt: "2026-06-29T04:00:00.000Z",
+              riskAssessment: {
+                concernLevel: "Low",
+                score: 18,
+                signals: {},
+                features: {},
+                decisionAudit: { reliability: { score: 88, level: "High" } },
+              },
+            }),
+          ),
+        ),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const history = await readAreaHistory(historyDir, "parramatta", 10);
+
+    assert.equal(history.length, 2);
+    assert.equal(history[0].ingestedAt, "2026-06-29T04:00:00.000Z");
+    assert.equal(history[1].ingestedAt, "2026-06-29T03:00:00.000Z");
+  } finally {
+    await rm(historyDir, { force: true, recursive: true });
+  }
+});
+
+test("appendAreaHistory still records the next snapshot when the previous last line is corrupt", async () => {
+  const historyDir = await mkdtemp(path.join(os.tmpdir(), "floodguard-history-"));
+  const historyPath = path.join(historyDir, "parramatta.jsonl");
+
+  try {
+    await writeFile(historyPath, "{broken", "utf8");
+
+    await appendAreaHistory(
+      historyDir,
+      mockAreaSignals({ ingestedAt: "2026-06-29T05:00:00.000Z" }),
+    );
+
+    const history = await readAreaHistory(historyDir, "parramatta", 10);
+    assert.equal(history.length, 1);
+    assert.equal(history[0].ingestedAt, "2026-06-29T05:00:00.000Z");
   } finally {
     await rm(historyDir, { force: true, recursive: true });
   }

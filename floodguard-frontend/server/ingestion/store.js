@@ -1,6 +1,14 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
 
+function parseJsonLine(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+
 export async function writeLatestSignals(filePath, signals) {
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, `${JSON.stringify(signals, null, 2)}\n`, "utf8");
@@ -114,7 +122,12 @@ export async function appendAreaHistory(historyDir, areaSignals) {
     const lastLine = existing.trim().split("\n").filter(Boolean).at(-1);
 
     if (lastLine) {
-      const previousRecord = JSON.parse(lastLine);
+      const previousRecord = parseJsonLine(lastLine);
+      if (!previousRecord) {
+        const separator = existing.endsWith("\n") || existing.length === 0 ? "" : "\n";
+        await appendFile(historyPath, `${separator}${JSON.stringify(record)}\n`, "utf8");
+        return record;
+      }
       if (dedupeKeyForRecord(previousRecord) === nextKey) {
         return previousRecord;
       }
@@ -151,7 +164,8 @@ export async function readAreaHistory(historyDir, areaId, limit = 24) {
       .trim()
       .split("\n")
       .filter(Boolean)
-      .map((line) => JSON.parse(line))
+      .map((line) => parseJsonLine(line))
+      .filter(Boolean)
       .filter((record) => {
         if (options.sinceHours === null) return true;
         const ingestedAtMs = new Date(record.ingestedAt).getTime();

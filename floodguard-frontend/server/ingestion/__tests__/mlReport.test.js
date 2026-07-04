@@ -141,3 +141,22 @@ test("readMlReport reads available files without crashing on partial reports", a
     await rm(reportsDir, { recursive: true, force: true });
   }
 });
+
+test("readMlReport degrades safely when a metrics file is malformed JSON", async () => {
+  const reportsDir = await mkdtemp(path.join(os.tmpdir(), "floodguard-ml-report-malformed-"));
+
+  try {
+    await writeFile(path.join(reportsDir, "real_export_metrics.json"), "{not-valid-json", "utf8");
+
+    const report = await readMlReport(reportsDir);
+
+    assert.equal(report.mode, "shadow");
+    assert.equal(report.liveDecisionAuthority, "rule_engine");
+    assert.equal(report.realExport.available, false);
+    assert.equal(report.scenarioStressTest.available, false);
+    assert.match(report.realExport.warnings[0], /degraded safely/i);
+    assert.match(report.realExport.warnings[0], /unexpected token|expected property name/i);
+  } finally {
+    await rm(reportsDir, { recursive: true, force: true });
+  }
+});
