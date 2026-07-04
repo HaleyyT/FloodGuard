@@ -544,14 +544,20 @@ p {
 }
 
 .frontpage-reports {
-  align-self: start;
+  align-self: stretch;
 }
 
 .frontpage-reports .card {
-  height: auto;
+  height: 100%;
+  justify-content: space-between;
 }
 
 .frontpage-reports .reports-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  justify-content: space-between;
   margin-top: 0;
 }
 
@@ -564,11 +570,15 @@ p {
 }
 
 .frontpage-map .map-panel {
-  height: 320px;
+  height: 1108px;
 }
 
 .frontpage-map .location-card {
-  padding-bottom: 16px;
+  padding-bottom: 101px;
+}
+
+.frontpage-reports .local-signals-card {
+  padding-bottom: 81px;
 }
 
 /* #contributing factors and recommended actions */
@@ -864,6 +874,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 15px;
 }
 
 .report-card {
@@ -898,6 +909,7 @@ p {
   margin-bottom: 0;
   font-size: 0.88rem;
 }
+
 
 /* #community report intake */
 .report-form {
@@ -1196,11 +1208,11 @@ p {
   }
 
   .frontpage-map .map-panel {
-    height: 280px;
+    height: 400px;
   }
 
   .frontpage-rainfall .signal-chart-card .chart-box {
-    height: 230px;
+    height: 240px;
   }
 }
 
@@ -1244,11 +1256,11 @@ p {
   }
 
   .frontpage-map .map-panel {
-    height: 260px;
+    height: 310px;
   }
 
   .frontpage-rainfall .signal-chart-card .chart-box {
-    height: 210px;
+    height: 220px;
   }
 
   .section-header {
@@ -1260,7 +1272,7 @@ p {
 
 /* #signal visualisation and decision evidence charts */
 .signal-chart-card .chart-box {
-  height: 235px;
+  height: 290px;
 }
 
 .chart-note {
@@ -1276,7 +1288,7 @@ p {
 
 /* #location context map */
 .location-card {
-  padding-bottom: 18px;
+  padding-bottom: 20px;
 }
 
 .map-panel {
@@ -1324,10 +1336,10 @@ p {
 
 .map-river-label {
   position: absolute;
-  top: 40%;
-  right: 18px;
+  top: 46%;
+  right: 16px;
   color: #255b92;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
@@ -1396,8 +1408,8 @@ p {
 
 .map-pin {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   display: flex;
@@ -1411,8 +1423,8 @@ p {
 
 .map-pin::before {
   content: "";
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
   transform: rotate(45deg);
@@ -1445,7 +1457,8 @@ p {
 }
 
 .map-event-label {
-  padding: 4px 8px;
+  padding: 2px 5px;
+  font-size: 0.52rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1463,26 +1476,28 @@ p {
 }
 
 .map-neighbourhood {
-  padding: 4px 9px;
+  padding: 3px 8px;
+  font-size: 0.68rem;
 }
 
 .map-neighbourhood.north {
-  top: 14%;
-  right: 14%;
+  top: 11%;
+  right: 9%;
 }
 
 .map-neighbourhood.south {
-  bottom: 14%;
-  left: 14%;
+  bottom: 17%;
+  left: 10%;
 }
 
 .map-legend {
-  right: 14px;
-  bottom: 14px;
+  right: 12px;
+  bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 10px;
+  gap: 6px;
+  padding: 6px 9px;
+  font-size: 0.74rem;
   font-weight: 700;
 }
 
@@ -3301,6 +3316,10 @@ body {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 248, 255, 0.86)) !important;
 }
 
+.frontpage-reports .report-card {
+  padding: 90px 20px !important;
+}
+
 .resident-answer-card.next-card {
   border-left: 1px solid var(--fg-premium-border) !important;
   grid-area: next;
@@ -3485,9 +3504,27 @@ body {
   grid-column: span 4;
 }
 
+.overview-sidebar-column .location-card,
+.overview-sidebar-column .local-signals-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.overview-sidebar-column .location-card {
+  min-height: 390px;
+}
+
+.overview-sidebar-column .local-signals-card {
+  min-height: 392px;
+}
+
 .overview-top-grid .card,
 .overview-middle-grid .card {
   height: 100%;
+}
+
+.overview-main-column .overview-top-grid .card {
+  min-height: 274px;
 }
 
 .overview-top-grid .action-list {
@@ -3513,6 +3550,19 @@ body {
 
 .overview-middle-grid .signal-chart-card .chart-box {
   flex: 1 1 auto;
+}
+
+.overview-sidebar-column .location-card .map-panel {
+  height: 330px;
+}
+
+.overview-sidebar-column .local-signals-card .reports-list {
+  flex: 1 1 auto;
+}
+
+.overview-sidebar-column .local-signals-card .report-card {
+  padding-bottom: calc(var(--space-sm) + 10px);
+  padding-top: calc(var(--space-sm) + 10px);
 }
 
 .overview-full-banner {

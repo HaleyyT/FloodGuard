@@ -2978,19 +2978,19 @@ function MapPanel({ areaName }) {
         <div className="map-focus-ring"></div>
         <div className="map-label precinct">Active community reports</div>
 
-        <div className="map-pin high" style={{ top: "28%", left: "68%" }}>
+        <div className="map-pin high" style={{ top: "24%", left: "74%" }}>
         </div>
-        <div className="map-event-label high" style={{ top: "23%", left: "73%" }}>
+        <div className="map-event-label high" style={{ top: "19%", left: "79%" }}>
           Road pooling
         </div>
-        <div className="map-pin moderate" style={{ top: "48%", left: "42%" }}>
+        <div className="map-pin moderate" style={{ top: "50%", left: "35%" }}>
         </div>
-        <div className="map-event-label moderate" style={{ top: "43%", left: "47%" }}>
+        <div className="map-event-label moderate" style={{ top: "45%", left: "48%" }}>
           Creek watch
         </div>
-        <div className="map-pin low" style={{ top: "66%", left: "74%" }}>
+        <div className="map-pin low" style={{ top: "74%", left: "78%" }}>
         </div>
-        <div className="map-event-label low" style={{ top: "62%", left: "56%" }}>
+        <div className="map-event-label low" style={{ top: "67%", left: "60%" }}>
           Minor debris
         </div>
 
