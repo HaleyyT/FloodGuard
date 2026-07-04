@@ -287,11 +287,16 @@ function dependencies() {
     readAreaWarningStatus: () => ({
       area: "Parramatta, NSW",
       source: "HazardWatch / NSW SES",
+      contractVersion: "warning-adapter-v2",
       status: "not_configured",
+      statusReason: "No live official warning source is configured for this area yet.",
       hasWarning: false,
       sourceName: "NSW SES HazardWatch",
       sourceUrl: "https://www.hazardwatch.gov.au/",
       relevanceMethod: "area-name-catchment-and-warning-type",
+      sourceMode: "missing",
+      freshnessMinutes: null,
+      failureCategory: null,
       limitations: ["Official warning source is not currently connected."],
       adapterStatus: "not_configured",
       officialText: "Official warning source is not currently connected.",
@@ -520,7 +525,12 @@ test("warnings endpoint returns separate official warning status", async () => {
   assert.equal(body.source, "HazardWatch / NSW SES");
   assert.equal(body.status, "not_configured");
   assert.equal(body.adapterStatus, "not_configured");
+  assert.equal(body.contractVersion, "warning-adapter-v2");
   assert.equal(body.relevanceMethod, "area-name-catchment-and-warning-type");
+  assert.equal(body.sourceMode, "missing");
+  assert.equal(body.failureCategory, null);
+  assert.equal(body.freshnessMinutes, null);
+  assert.match(body.statusReason, /configured/i);
   assert.ok(Array.isArray(body.limitations));
   assert.equal(body.sourceName, "NSW SES HazardWatch");
 });

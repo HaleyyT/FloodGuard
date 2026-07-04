@@ -170,6 +170,15 @@ function hoursBetween(start, end) {
   return Math.max(0, Math.round(((endMs - startMs) / (60 * 60 * 1000)) * 10) / 10);
 }
 
+function minutesBetween(start, end) {
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return null;
+
+  return Math.max(0, Math.round((endMs - startMs) / (60 * 1000)));
+}
+
 function sourceObservedAt(metadata, signals) {
   if (metadata.type === "weather") {
     return parseSourceTimestamp(signals.weatherObservations?.observedAt);
@@ -763,24 +772,46 @@ export function readAreaWarningStatus(areaSignals) {
   const adapterStatus = buildLegacyWarningAdapterStatus(adapterState);
   const hasWarning = adapterState === "live" && (warningSummary.warningCount ?? 0) > 0;
   const limitations = [...(warningSummary.notes ?? [])];
+  const lastFetchedAt = warningSource?.fetchedAt ?? null;
+  const lastObservedAt = warningSummary.observedAt ?? warningSource?.observedAt ?? null;
+  const freshnessMinutes =
+    lastObservedAt && lastFetchedAt ? minutesBetween(lastObservedAt, lastFetchedAt) : null;
 
   if (warningSource?.status === "failed" && warningSource?.note) limitations.push(warningSource.note);
   if (warningSource?.status === "not-connected" && warningSource?.note) limitations.push(warningSource.note);
 
+  const statusReason =
+    adapterState === "live"
+      ? "A relevant official warning matched the area and passed the warning-type filter."
+      : adapterState === "no_relevant_warning"
+        ? "The warning source responded, but no relevant official warning matched this area."
+        : adapterState === "stale"
+          ? "The warning source responded, but the latest warning timestamp is too old for current reliance."
+          : adapterState === "parser_error"
+            ? "The warning payload could not be parsed safely into FloodGuard's warning contract."
+            : adapterState === "source_unavailable"
+              ? "The configured warning source could not be fetched safely, so the warning layer remains degraded."
+              : "No live official warning source is configured for this area yet.";
+
   return {
     area: areaSignals.area.name,
     source: warningSummary.provider ?? "HazardWatch / NSW SES",
+    contractVersion: "warning-adapter-v2",
     status: adapterState,
+    statusReason,
     hasWarning,
     warningLevel: hasWarning ? presentWarningLevel(warningSummary.status) : undefined,
     hazardType: hasWarning ? inferHazardType(warningSummary.warnings ?? []) : undefined,
     issuedAt: warningSummary.issuedAt ?? undefined,
     updatedAt: warningSummary.observedAt ?? undefined,
-    lastFetchedAt: warningSource?.fetchedAt ?? null,
-    lastObservedAt: warningSummary.observedAt ?? warningSource?.observedAt ?? null,
+    lastFetchedAt,
+    lastObservedAt,
     sourceName: "NSW SES HazardWatch",
     sourceUrl: warningSource?.source ?? "https://www.hazardwatch.gov.au/",
     sourceTarget: warningSummary.targetSource ?? "HazardWatch / NSW SES official warning adapter",
+    sourceMode: warningSource?.dataMode ?? warningSource?.mode ?? "missing",
+    freshnessMinutes,
+    failureCategory: warningSource?.failureCategory ?? null,
     adapterState,
     adapterStatus,
     relevanceMethod: warningSummary.relevance?.filterMode ?? "area-name-catchment-and-warning-type",
@@ -790,6 +821,7 @@ export function readAreaWarningStatus(areaSignals) {
         ? warningSummary.warnings.map((warning) => warning.headline).join(" | ")
         : warningSource?.note ?? "Official warning source is not currently connected.",
     warningCount: warningSummary.warningCount ?? 0,
+    matchedWarningCount: warningSummary.warningCount ?? 0,
     availableWarningCount: warningSummary.availableWarningCount ?? 0,
     parseStatus: warningSummary.parseStatus ?? "parsed",
     relevance: warningSummary.relevance ?? {
