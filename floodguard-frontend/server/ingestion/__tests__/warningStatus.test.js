@@ -71,6 +71,8 @@ test("warning status reports parser_error when payload shape is unsafe", () => {
   assert.equal(warning.adapterStatus, "parser_error");
   assert.equal(warning.parseStatus, "parser_error");
   assert.equal(warning.hasWarning, false);
+  assert.equal(warning.contractVersion, "warning-adapter-v2");
+  assert.match(warning.statusReason, /parsed safely|warning contract/i);
 });
 
 test("warning status reports no_relevant_warning for current but empty warning feeds", () => {
@@ -81,6 +83,8 @@ test("warning status reports no_relevant_warning for current but empty warning f
   assert.equal(warning.adapterState, "no_relevant_warning");
   assert.equal(warning.adapterStatus, "no_relevant_warning");
   assert.equal(warning.warningCount, 0);
+  assert.equal(warning.matchedWarningCount, 0);
+  assert.match(warning.statusReason, /no relevant official warning/i);
 });
 
 test("warning normaliser matches north parramatta through suburb and catchment aliases", () => {
@@ -152,6 +156,8 @@ test("warning status exposes the explicit adapter contract and limitations when 
       {
         status: "failed",
         freshnessStatus: "missing",
+        failureCategory: "network_timeout",
+        dataMode: "remote",
         note: "Warning source timed out before a live response was available.",
       },
     ),
@@ -159,9 +165,14 @@ test("warning status exposes the explicit adapter contract and limitations when 
 
   assert.equal(warning.source, "HazardWatch");
   assert.equal(warning.status, "source_unavailable");
+  assert.equal(warning.contractVersion, "warning-adapter-v2");
   assert.equal(warning.relevanceMethod, "area-name-catchment-and-warning-type");
   assert.equal(warning.lastFetchedAt, "2026-07-03T01:00:00Z");
   assert.equal(warning.lastObservedAt, "2026-07-03T00:55:00Z");
+  assert.equal(warning.freshnessMinutes, 5);
+  assert.equal(warning.failureCategory, "network_timeout");
+  assert.equal(warning.sourceMode, "remote");
   assert.ok(Array.isArray(warning.limitations));
+  assert.match(warning.statusReason, /could not be fetched safely|degraded/i);
   assert.match(warning.limitations.join(" "), /timed out|unavailable|matched/i);
 });
