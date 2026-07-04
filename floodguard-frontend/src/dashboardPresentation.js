@@ -83,9 +83,19 @@ export function buildDataEvidenceRows(sources = []) {
 export function buildRiskSummaryModel(dashboardData) {
   const audit = dashboardData?.decisionAudit ?? null;
   const reliability = audit?.reliability ?? null;
+  const riskScore = dashboardData?.riskScore ?? null;
+
+  let scoreNote = "This score blends rainfall, river, wetness, and evidence confidence.";
+  if (typeof riskScore === "number") {
+    if (riskScore >= 70) scoreNote = "Higher scores mean stronger local flood pressure in the current prototype.";
+    else if (riskScore >= 40) scoreNote = "This mid-range score suggests some local pressure, but not the strongest concern band.";
+    else scoreNote = "This lower score suggests the current local signals remain relatively calm.";
+  }
 
   return {
     riskLevel: dashboardData?.riskLevel ?? "Unknown",
+    riskScore,
+    scoreNote,
     summary: dashboardData?.summary ?? "No current risk summary is available.",
     hazardPressure: audit?.hazardPressure ?? null,
     evidenceConfidence: audit?.evidenceConfidence ?? "unknown",
@@ -135,7 +145,15 @@ export function buildResidentOverviewModel(dashboardData) {
       ...(audit?.whatIncreasedConcern ?? []).slice(0, 2),
       ...(audit?.whatReducedConcern ?? []).slice(0, 1),
     ].filter(Boolean),
+    whyAssignedEmptyState:
+      dashboardData?.riskLevel === "Low"
+        ? "Core signals remain calm and there are no strong local flood drivers right now."
+        : "FloodGuard has not surfaced a stronger explanation yet. Continue reviewing local signals and official advice.",
     whatNext: (audit?.checkNext ?? []).slice(0, 3).filter(Boolean),
+    nextStepEmptyState:
+      dashboardData?.riskLevel === "Low"
+        ? "All clear. No immediate actions are required for this risk level."
+        : "No extra guidance is available yet. Continue monitoring official advice and local conditions.",
     whyThisMatters,
   };
 }

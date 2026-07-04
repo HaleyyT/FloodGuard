@@ -1,6 +1,6 @@
 # FloodGuard Progress Report
 
-_Last updated: 2026-07-03_
+_Last updated: 2026-07-03 (resident-facing dashboard clarity update)_
 
 ## Purpose
 
@@ -34,6 +34,26 @@ It is not yet a production emergency-warning system, and it is not yet a validat
 
 ---
 
+## Progress Snapshot
+
+These percentages are intentionally honest and reflect implemented code, tests, reports, and current limitations rather than optimism.
+
+| Area | Progress | Why |
+|---|---:|---|
+| Core prototype / backend framework | **88%** | ingestion, health, cache, source registry, explainable risk, notifications, history, and API contracts are strongly implemented |
+| Reliability / trust architecture | **92%** | one of the strongest parts of FloodGuard; live vs cached vs stale vs missing vs fallback is handled and surfaced clearly |
+| Frontend dashboard / evidence UX | **86%** | strong overview, evidence, warning, map, signals, and ML panels exist, and the front page now explains concern, trust, and next steps more clearly, though some polish still remains |
+| Official warning layer | **68%** | architecture, adapter states, relevance filtering, and separation are implemented, but full live operational maturity is still not there |
+| Historical data foundation | **72%** | snapshot history, deduplication, and export support exist, but storage is still lightweight and prototype-grade |
+| Rule engine / explainable concern logic | **83%** | feature engineering and risk reasoning are strong, but threshold calibration is still heuristic |
+| Testing / regression protection | **86%** | backend and ML logic are well protected; end-to-end visual/live-feed verification is still lighter |
+| ML engineering / shadow pipeline | **78%** | Python training, model comparison, validation controls, target selection, reporting, and dashboard honesty are implemented well |
+| Validated ML / real predictive credibility | **32%** | still limited by weak independent labels, no real elevated event coverage, and no validated production-grade outcome testing |
+| Overall project toward credible prototype goal | **84%** | FloodGuard is already a strong reliability-aware prototype |
+| Overall project toward final long-term vision | **66%** | still missing stronger labels, threshold calibration, deeper storage, and more mature official-warning/live validation |
+
+---
+
 ## Progress Since The Previous Report
 
 Newer work completed since the earlier progress snapshot includes:
@@ -50,13 +70,58 @@ Newer work completed since the earlier progress snapshot includes:
 - visible prototype threshold configuration with review metadata instead of hidden-only threshold code;
 - label-strategy documentation, `labels.csv`, and a joined ML training dataset contract;
 - time-aware ML validation reporting, leakage-control checks, and validation-summary generation.
+- stronger ML feature-quality reporting and model-comparison outputs;
+- a central ML model registry with an added `extra_trees` ensemble baseline;
+- honest target-selection logic so the Python pipeline can choose event-style supervision only when it is actually viable;
+- `target_selection_summary.md` plus refreshed model-card/report outputs;
+- `/api/ml/report` contract updates so target-selection honesty is visible to the frontend;
+- dashboard ML panel updates so the app now explains whether training currently uses the rule target or event target and why.
+- resident-facing overview cards that answer the first-page questions more directly: current concern, whether the evidence can be trusted, why the concern was assigned, and what to check next;
+- softer, safer front-end wording for source modes and ML state such as "Older cached reading", "Not connected yet", "ML comparison only", and "Rule-derived ML target";
+- new presentation tests covering plain-language trust/explanation behavior so this UX improvement is protected by regression checks.
 
 What matters about this:
 
 - the backend is now much closer to a coherent decision-support system than a simple live-data mockup;
 - the frontend is much stronger at exposing evidence, trends, trust, and next-step guidance;
 - the project now has a clearer professional story around safety, expert review, and what ML can honestly claim today;
+- the ML layer is now much better at saying not only what model was trained, but also what supervision target was trustworthy enough to use;
+- the dashboard is now better at helping a non-technical user understand both the current local concern and how much confidence they should place in the visible evidence;
 - the project still remains rule-based and prototype-grade in the places where it should be described carefully.
+
+---
+
+## Current ML Position
+
+Status: `Strong shadow-mode engineering, still weak validated supervision`
+
+What is now implemented:
+
+- Python dataset builder and scenario dataset generator;
+- label-strategy document and label-join contract;
+- feature-quality report;
+- model registry and multiple baseline models;
+- time-aware validation with area/event holdout checks;
+- calibration and uncertainty summaries;
+- target-selection logic that can prefer event supervision when it is truly viable;
+- backend and dashboard reporting for model status, target choice, and limitations.
+
+What is still not implemented strongly enough:
+
+- real independent elevated event labels in the export;
+- validated event-holdout evidence on real historical flood periods;
+- expert-calibrated thresholds linked back into ML target credibility;
+- a production-quality predictive model that could justify leaving shadow mode.
+
+Current honest percentage:
+
+- **ML engineering progress:** **78%**
+- **ML validation credibility progress:** **32%**
+
+That difference is important:
+
+- FloodGuard is already strong at ML plumbing, safeguards, and reporting.
+- FloodGuard is not yet strong at real validated flood prediction.
 
 ---
 
@@ -81,7 +146,7 @@ What is strong here:
 
 Remaining limitation:
 
-- Some wording and UX polish could still improve how these states are explained to non-technical users.
+- This area is much stronger now, but there is still room to improve visual density and information hierarchy for very small screens or poster-style demo layouts.
 
 ---
 
@@ -103,7 +168,7 @@ What is strong here:
 
 Remaining limitation:
 
-- Some registry terms are still project-internal and could be simplified for non-technical audiences.
+- Some registry detail is still more technical than a general resident user needs, so continuing to separate expert detail from first-screen guidance would help.
 
 ---
 
