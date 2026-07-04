@@ -1842,7 +1842,7 @@ function OverviewPanel({ data }) {
             <p className="section-label">What is the current local concern?</p>
             <h3>
               {typeof riskSummary.riskScore === "number"
-                ? `${residentOverview.currentConcern} | Risk score: ${riskSummary.riskScore}/100`
+                ? `${residentOverview.currentConcern } | Risk score: ${riskSummary.riskScore}/100`
                 : residentOverview.currentConcern}
             </h3>
             <p>{residentOverview.concernSummary}</p>
