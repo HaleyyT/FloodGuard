@@ -105,7 +105,7 @@ p {
 
 .live-status {
   color: #42546f;
-  font-size: 0.9rem;
+  font-size: 0.rem;
   margin-bottom: 0;
 }
 
@@ -246,42 +246,81 @@ p {
 }
 
 .overview-summary {
-  font-size: 0.9rem;
+  font-size: 0.96rem;
   color: #354863;
-  margin-bottom: 14px;
-  max-width: 940px;
+  margin-bottom: 16px;
+  max-width: 920px;
 }
 
 .resident-overview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
+  grid-template-areas:
+    "concern trust next"
+    "why why next";
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .resident-answer-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(232, 242, 252, 0.92));
-  border: 1px solid #d7e4f3;
-  border-radius: 12px;
-  min-height: 136px;
-  padding: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(232, 242, 252, 0.94));
+  border: 1px solid #d5e4f5;
+  border-radius: 14px;
+  min-height: 132px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 .resident-answer-card h3 {
   color: #19345a;
-  font-size: 0.98rem;
+  font-size: 1rem;
   margin-bottom: 8px;
 }
 
 .resident-answer-card p {
   color: #344962;
-  font-size: 0.85rem;
+  font-size: 0.87rem;
   line-height: 1.45;
   margin-bottom: 0;
 }
 
+.resident-score-note {
+  color: #3f5574;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin-top: 10px;
+}
+
+.resident-score-note strong {
+  color: #19345a;
+  font-weight: 700;
+}
+
 .resident-answer-list {
   margin-top: 0;
+}
+
+.resident-answer-card.concern-card {
+  grid-area: concern;
+  background: linear-gradient(160deg, #ffffff, #e9f3ff);
+}
+
+.resident-answer-card.concern-card h3 {
+  font-size: 1.6rem;
+  line-height: 1.05;
+}
+
+.resident-answer-card.trust-card {
+  grid-area: trust;
+}
+
+.resident-answer-card.why-card {
+  grid-area: why;
+}
+
+.resident-answer-card.next-card {
+  grid-area: next;
+  background: linear-gradient(160deg, #fffef8, #e7f3ea);
 }
 
 .why-matters-strip {
@@ -303,8 +342,8 @@ p {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 /* #data reliability summary */
@@ -319,8 +358,8 @@ p {
   background: #eef3f9;
   border: 1px solid #e0eaf7;
   border-radius: 12px;
-  min-height: 78px;
-  padding: 11px;
+  min-height: 82px;
+  padding: 12px;
 }
 
 .info-tile h3 {
@@ -365,11 +404,12 @@ p {
 .frontpage-grid {
   align-items: stretch;
   display: grid;
-  gap: 14px;
+  gap: 16px;
   grid-template-areas:
-    "actions rainfall river"
-    "actions map reports";
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr) minmax(300px, 0.9fr);
+    "actions river rainfall"
+    "actions map rainfall"
+    "reports map rainfall";
+  grid-template-columns: minmax(280px, 0.92fr) minmax(0, 1.06fr) minmax(0, 1.04fr);
   grid-template-rows: minmax(0, auto) minmax(0, auto);
   margin-bottom: 12px;
   min-width: 0;
@@ -446,12 +486,14 @@ p {
 
 .frontpage-actions .card {
   background: linear-gradient(160deg, #fffdf3, #dff0ea);
+  padding: 16px;
 }
 
 .frontpage-rainfall .card,
 .frontpage-river .card,
 .frontpage-map .card {
   background: linear-gradient(160deg, #fbfdff, #d9ebf7);
+  padding: 16px;
 }
 
 .frontpage-actions .section-header {
@@ -460,17 +502,17 @@ p {
 
 .frontpage-actions .action-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   list-style: none;
   padding-left: 0;
 }
 
 .frontpage-actions .action-list li,
 .frontpage-reports .report-card {
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(221, 232, 242, 0.9);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 12px 14px;
 }
 
 .frontpage-actions .action-list li {
@@ -483,17 +525,18 @@ p {
 
 .frontpage-river .river-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .frontpage-rainfall .signal-chart-card .chart-box {
-  height: 235px;
+  height: 270px;
 }
 
 .rainfall-summary-grid {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .rainfall-summary-grid .info-tile {
@@ -521,11 +564,11 @@ p {
 }
 
 .frontpage-map .map-panel {
-  height: 270px;
+  height: 320px;
 }
 
 .frontpage-map .location-card {
-  padding-bottom: 14px;
+  padding-bottom: 16px;
 }
 
 /* #contributing factors and recommended actions */
@@ -826,7 +869,7 @@ p {
 .report-card {
   border: 1px solid #e5ecf6;
   border-radius: 12px;
-  padding: 12px;
+  padding: 18px 12px;
   background: #fbfdff;
 }
 
@@ -1478,4 +1521,2010 @@ p {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+/* ======================================================================
+   Enterprise UI refactor — operational dashboard rhythm
+   Keeps the existing component names, but places them on a cleaner,
+   wider, better-aligned layout system for the Coding Fest showcase.
+   ====================================================================== */
+
+:root {
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --space-2xs: 6px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 18px;
+  --space-lg: 28px;
+  --space-xl: 40px;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  --bg-app: #f4f7fc;
+  --bg-card: #ffffff;
+  --bg-card-soft: #f8fbff;
+  --bg-elevated: #eef6ff;
+  --text-strong: #0f172a;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --border-color: rgba(203, 213, 225, 0.8);
+  --border-subtle: rgba(226, 232, 240, 0.95);
+  --brand: #1d4ed8;
+  --brand-deep: #1e3a8a;
+  --brand-soft: #dbeafe;
+  --accent-cyan: #0e7490;
+
+  --color-high: #dc2626;
+  --color-high-bg: #fef2f2;
+  --color-high-border: #fecaca;
+  --color-mod: #d97706;
+  --color-mod-bg: #fffbeb;
+  --color-mod-border: #fde68a;
+  --color-low: #16a34a;
+  --color-low-bg: #f0fdf4;
+  --color-low-border: #bbf7d0;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.07), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --shadow-focus: 0 0 0 4px rgba(29, 78, 216, 0.12);
+}
+
+html {
+  background: var(--bg-app);
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(219, 234, 254, 0.78), transparent 28rem),
+    linear-gradient(180deg, #f8fbff 0%, var(--bg-app) 45%, #eef4fb 100%);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* --- Workspace shell --- */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 1440px;
+  padding: var(--space-md) var(--space-lg) var(--space-xl);
+  width: 100%;
+}
+
+.hero,
+.area-selector,
+.app-nav,
+.card {
+  margin-bottom: 0;
+}
+
+.hero {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(239, 246, 255, 0.94) 58%, rgba(191, 219, 254, 0.82) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);
+}
+
+.eyebrow {
+  color: #7e22ce;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  margin-bottom: var(--space-xs);
+}
+
+.hero h1 {
+  color: var(--text-strong);
+  font-size: clamp(2rem, 3vw, 3rem);
+  letter-spacing: -0.045em;
+}
+
+.subtitle {
+  color: var(--text-body);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* --- Navigation and area selector --- */
+.area-selector,
+.app-nav {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  padding: var(--space-sm);
+}
+
+.area-selector {
+  padding: var(--space-md);
+}
+
+.area-selector h3,
+.section-header h3,
+.report-top h4,
+.source-health-top h4 {
+  color: var(--text-strong);
+  letter-spacing: -0.015em;
+}
+
+.live-status,
+.report-time,
+.report-description,
+.report-form-message,
+.source-health-meta,
+.reliability-note,
+.overview-summary {
+  color: var(--text-muted);
+}
+
+.area-tabs button,
+.app-nav button,
+.refresh-button {
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.area-tabs button,
+.app-nav button {
+  border-color: transparent;
+  color: var(--text-body);
+}
+
+.area-tabs button.active,
+.area-tabs button:hover,
+.app-nav button.active,
+.app-nav button:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-focus);
+  color: #ffffff;
+}
+
+.refresh-button {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--brand-deep);
+}
+
+.refresh-button:hover:not(:disabled) {
+  border-color: var(--brand);
+  box-shadow: var(--shadow-focus);
+}
+
+/* --- Enterprise dashboard layout --- */
+.dashboard-grid {
+  align-items: start;
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  width: 100%;
+}
+
+.overview-workspace {
+  margin-bottom: var(--space-md);
+}
+
+.primary-ops-column,
+.context-sidebar-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.primary-ops-column {
+  grid-column: span 8;
+}
+
+.context-sidebar-column {
+  grid-column: span 4;
+}
+
+.data-subgrid-2col {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.decision-row,
+.analytics-row {
+  align-items: stretch;
+}
+
+.decision-row > *,
+.analytics-row > *,
+.context-sidebar-column > * {
+  min-width: 0;
+}
+
+/* --- Premium card surface --- */
+.card,
+.card-base {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  padding: var(--space-md);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.card:hover {
+  border-color: rgba(191, 219, 254, 0.85);
+  box-shadow: var(--shadow-md);
+}
+
+.section-label {
+  color: var(--brand);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.095em;
+  margin-bottom: var(--space-2xs);
+}
+
+.section-header {
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.section-header.compact {
+  margin-bottom: var(--space-sm);
+}
+
+.section-header h2 {
+  color: var(--text-strong);
+  font-size: 1.75rem;
+  letter-spacing: -0.035em;
+}
+
+.section-header h3 {
+  font-size: 1.05rem;
+}
+
+/* --- High-impact resident guidance hero --- */
+.hero-signal-card {
+  overflow: hidden;
+  padding: var(--space-lg);
+  position: relative;
+}
+
+.hero-signal-card::before {
+  content: "";
+  inset: 0 0 auto 0;
+  height: 5px;
+  position: absolute;
+}
+
+.hero-signal-card.risk-high {
+  background: linear-gradient(180deg, var(--color-high-bg), #ffffff 42%);
+  border-color: var(--color-high-border);
+}
+
+.hero-signal-card.risk-high::before {
+  background: var(--color-high);
+}
+
+.hero-signal-card.risk-moderate {
+  background: linear-gradient(180deg, var(--color-mod-bg), #ffffff 42%);
+  border-color: var(--color-mod-border);
+}
+
+.hero-signal-card.risk-moderate::before {
+  background: var(--color-mod);
+}
+
+.hero-signal-card.risk-low {
+  background: linear-gradient(180deg, var(--color-low-bg), #ffffff 42%);
+  border-color: var(--color-low-border);
+}
+
+.hero-signal-card.risk-low::before {
+  background: var(--color-low);
+}
+
+.hero-signal-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  margin: 0 calc(var(--space-lg) * -1) var(--space-md);
+  padding: 0 var(--space-lg) var(--space-md);
+}
+
+.hero-signal-title {
+  color: var(--text-strong) !important;
+  font-size: clamp(1.45rem, 2.2vw, 2.25rem) !important;
+  font-weight: 850;
+}
+
+.risk-pill {
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-xs);
+  font-size: 0.84rem;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.risk-pill.high {
+  background: var(--color-high-bg);
+  border-color: var(--color-high-border);
+  color: #991b1b;
+}
+
+.risk-pill.moderate {
+  background: var(--color-mod-bg);
+  border-color: var(--color-mod-border);
+  color: #92400e;
+}
+
+.risk-pill.low {
+  background: var(--color-low-bg);
+  border-color: var(--color-low-border);
+  color: #166534;
+}
+
+.overview-summary {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  margin-bottom: var(--space-md);
+  max-width: 940px;
+}
+
+.resident-overview-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-areas:
+    "concern next"
+    "trust next"
+    "why why";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-bottom: var(--space-md);
+}
+
+.resident-answer-card {
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  min-height: 0;
+  padding: var(--space-md);
+}
+
+.resident-answer-card h3 {
+  color: var(--text-strong);
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+}
+
+.resident-answer-card p,
+.factor-list,
+.action-list {
+  color: var(--text-body);
+  line-height: 1.58;
+}
+
+.resident-answer-card.concern-card {
+  background: #ffffff;
+}
+
+.resident-answer-card.concern-card h3 {
+  font-size: 1.75rem;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.resident-answer-card.next-card {
+  background: linear-gradient(180deg, #ffffff, #f7fee7);
+  border-color: #d9f99d;
+  border-left: 4px solid var(--color-low);
+}
+
+.resident-answer-card.why-card {
+  background: #ffffff;
+}
+
+.signal-kpi-grid,
+.overview-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.info-tile,
+.community-summary div,
+.flow-box,
+.mini-box,
+.history-grid .info-tile {
+  background: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  min-height: 76px;
+  padding: var(--space-sm);
+}
+
+.info-tile h3 {
+  color: var(--text-strong);
+  font-size: 0.98rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.why-matters-strip {
+  gap: var(--space-xs);
+}
+
+.why-matters-strip span {
+  background: var(--brand-soft);
+  border-color: rgba(29, 78, 216, 0.18);
+  color: var(--brand-deep);
+}
+
+/* --- First-screen cards --- */
+.decision-row .card,
+.analytics-row .card,
+.context-sidebar-column .card {
+  height: 100%;
+}
+
+.decision-row .action-list {
+  display: grid;
+  gap: var(--space-sm);
+  list-style: none;
+  padding-left: 0;
+}
+
+.decision-row .action-list li {
+  background: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--brand);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0;
+  padding: var(--space-sm);
+}
+
+.river-grid,
+.history-grid,
+.compact-metric-grid,
+.rainfall-summary-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rainfall-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.analytics-row .chart-box {
+  height: 280px;
+}
+
+.signal-chart-card .chart-box {
+  background: linear-gradient(180deg, #fbfdff, #f8fafc);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  padding: var(--space-xs);
+}
+
+.context-sidebar-column .location-card .map-panel {
+  height: 280px;
+}
+
+.context-sidebar-column .reports-list,
+.context-sidebar-column .source-health-list {
+  gap: var(--space-sm);
+}
+
+.context-sidebar-column .report-card,
+.source-health-item,
+.community-report-item,
+.evidence-review-item {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+.report-top,
+.source-health-top,
+.relevance-source-row,
+.audit-score-row {
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.72);
+  padding-bottom: var(--space-xs);
+}
+
+.source-health-item,
+.report-card {
+  padding: var(--space-sm);
+}
+
+.source-badge {
+  border: 1px solid transparent;
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
+  padding: 5px 8px;
+}
+
+.source-badge.live,
+.source-badge.pass,
+.source-badge.complete,
+.source-badge.high,
+.source-badge.live-gauge,
+.source-badge.current,
+.source-badge.current-context {
+  background: var(--color-low-bg);
+  border-color: var(--color-low-border);
+  color: #166534;
+}
+
+.source-badge.warn,
+.source-badge.partial,
+.source-badge.medium,
+.source-badge.stale,
+.source-badge.stale-context {
+  background: var(--color-mod-bg);
+  border-color: var(--color-mod-border);
+  color: #92400e;
+}
+
+.source-badge.blocked,
+.source-badge.limited,
+.source-badge.low,
+.source-badge.fallback {
+  background: var(--color-high-bg);
+  border-color: var(--color-high-border);
+  color: #991b1b;
+}
+
+.source-badge.not-connected,
+.source-badge.not_connected,
+.source-badge.missing,
+.source-badge.unknown {
+  background: #f1f5f9;
+  border-color: var(--border-color);
+  color: #475569;
+}
+
+.compact-ml-card .compact-metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: var(--space-sm);
+}
+
+.compact-ml-card .info-tile {
+  min-height: 66px;
+}
+
+/* --- Supporting pages keep the same design language --- */
+.section-page {
+  gap: var(--space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: var(--space-md);
+}
+
+.overview-support-grid {
+  gap: var(--space-md);
+}
+
+.frontpage-grid {
+  gap: var(--space-md);
+}
+
+.report-form select,
+.report-form input,
+.report-form textarea {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.report-submit,
+button[type="submit"] {
+  border-radius: 999px;
+  box-shadow: var(--shadow-xs);
+}
+
+/* --- Responsive rules --- */
+@media (max-width: 1180px) {
+  .app-shell {
+    padding-inline: var(--space-md);
+  }
+
+  .primary-ops-column,
+  .context-sidebar-column {
+    grid-column: span 12;
+  }
+
+  .context-sidebar-column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    padding: var(--space-sm);
+  }
+
+  .hero,
+  .area-selector,
+  .hero-signal-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .area-controls,
+  .area-tabs {
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .area-tabs button,
+  .refresh-button {
+    flex: 1 1 auto;
+  }
+
+  .data-subgrid-2col,
+  .context-sidebar-column,
+  .section-page,
+  .resident-overview-grid,
+  .signal-kpi-grid,
+  .overview-grid,
+  .river-grid,
+  .history-grid,
+  .compact-metric-grid,
+  .rainfall-summary-grid,
+  .community-summary,
+  .report-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resident-overview-grid {
+    grid-template-areas:
+      "concern"
+      "next"
+      "trust"
+      "why";
+  }
+
+  .hero-signal-card,
+  .card {
+    padding: var(--space-md);
+  }
+
+  .hero-signal-header {
+    margin-inline: calc(var(--space-md) * -1);
+    padding-inline: var(--space-md);
+  }
+}
+
+/* ======================================================================
+   FloodGuard previous palette theme — applied to enterprise layout
+   Keeps the clean 12-column operational structure while restoring the
+   original soft aqua / sky-blue / cream visual identity.
+   ====================================================================== */
+
+:root {
+  --bg-app: #d7ecfa;
+  --bg-card: linear-gradient(135deg, #fbfdf4 0%, #e9f4f8 48%, #bddfeb 100%);
+  --bg-card-soft: rgba(246, 251, 255, 0.76);
+  --bg-elevated: #e6f4fb;
+
+  --text-strong: #10213a;
+  --text-body: #354863;
+  --text-muted: #42546f;
+  --text-faint: #73839a;
+
+  --border-color: rgba(199, 216, 239, 0.96);
+  --border-subtle: rgba(214, 228, 245, 0.96);
+
+  --brand: #184e9f;
+  --brand-deep: #19345a;
+  --brand-soft: rgba(24, 78, 159, 0.08);
+  --accent-cyan: #2b8aa6;
+  --accent-purple: #561b9d;
+  --accent-purple-deep: #4d0856;
+
+  --color-high: #a12a2a;
+  --color-high-bg: #fde8e8;
+  --color-high-border: #f4b7b7;
+  --color-mod: #9a5d00;
+  --color-mod-bg: #fff3d8;
+  --color-mod-border: #f5d48b;
+  --color-low: #156f39;
+  --color-low-bg: #d8f6e1;
+  --color-low-border: #a7e5ba;
+
+  --shadow-xs: 0 1px 2px rgba(16, 33, 58, 0.05);
+  --shadow-sm: 0 8px 22px rgba(16, 33, 58, 0.08);
+  --shadow-md: 0 14px 30px rgba(16, 33, 58, 0.11);
+  --shadow-focus: 0 0 0 4px rgba(24, 78, 159, 0.13);
+}
+
+html,
+body {
+  background: #d7ecfa;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(251, 253, 237, 0.88), transparent 24rem),
+    radial-gradient(circle at top right, rgba(138, 188, 237, 0.34), transparent 28rem),
+    linear-gradient(180deg, #d7ecfa 0%, #c8e6f2 48%, #d9eef8 100%);
+  color: var(--text-body);
+}
+
+.app-shell {
+  max-width: 1380px;
+}
+
+.hero {
+  background: linear-gradient(135deg, #fbfded 0%, #d8ecf1 48%, #8abced 100%);
+  border-color: #c7d8ef;
+  box-shadow: 0 10px 26px rgba(16, 33, 58, 0.08);
+}
+
+.eyebrow {
+  color: var(--accent-purple-deep);
+}
+
+.hero h1 {
+  color: #10213a;
+}
+
+.subtitle {
+  color: #02122a;
+}
+
+.area-selector,
+.app-nav {
+  background: rgba(246, 251, 255, 0.82);
+  border-color: #cfe0f2;
+  box-shadow: 0 8px 22px rgba(16, 33, 58, 0.06);
+}
+
+.area-tabs button,
+.app-nav button {
+  background: rgba(246, 251, 255, 0.44);
+  color: #19345a;
+}
+
+.area-tabs button.active,
+.area-tabs button:hover,
+.app-nav button.active,
+.app-nav button:hover {
+  background: #184e9f;
+  border-color: #184e9f;
+  color: #ffffff;
+}
+
+.refresh-button {
+  background: #ffffff;
+  border-color: #c8d7e8;
+  color: #184e9f;
+}
+
+.card,
+.card-base {
+  background: linear-gradient(135deg, #fbfdf4 0%, #eaf5fa 54%, #bddfeb 100%);
+  border-color: #e6edf7;
+  box-shadow: 0 8px 22px rgba(16, 33, 58, 0.08);
+}
+
+.card:hover {
+  border-color: #bfd3ea;
+  box-shadow: 0 14px 30px rgba(16, 33, 58, 0.11);
+}
+
+.section-label {
+  color: #184e9f;
+}
+
+.section-header h2 {
+  color: #561b9d;
+}
+
+.section-header h3,
+.area-selector h3,
+.report-top h4,
+.source-health-top h4,
+.info-tile h3 {
+  color: #10213a;
+}
+
+/* First, communicate risk and resident action with the old calm-aqua identity. */
+.hero-signal-card {
+  box-shadow: 0 12px 30px rgba(16, 33, 58, 0.11);
+}
+
+.hero-signal-card.risk-high {
+  background: linear-gradient(180deg, #fde8e8 0%, #fffafa 36%, #dcecf8 100%);
+  border-color: #f4b7b7;
+}
+
+.hero-signal-card.risk-moderate {
+  background: linear-gradient(180deg, #fff3d8 0%, #fffdf3 38%, #dcecf8 100%);
+  border-color: #f5d48b;
+}
+
+.hero-signal-card.risk-low {
+  background: linear-gradient(180deg, #d8f6e1 0%, #fbfdf4 42%, #dcecf8 100%);
+  border-color: #a7e5ba;
+}
+
+.hero-signal-header {
+  border-bottom-color: rgba(199, 216, 239, 0.82);
+}
+
+.hero-signal-title {
+  color: #10213a !important;
+}
+
+.resident-answer-card,
+.report-card,
+.source-health-item,
+.community-report-item,
+.evidence-review-item,
+.relevance-source-row,
+.audit-score-row {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(221, 232, 242, 0.95);
+}
+
+.resident-answer-card.concern-card,
+.resident-answer-card.why-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(232, 242, 252, 0.92));
+}
+
+.resident-answer-card.next-card {
+  background: linear-gradient(160deg, #fffef8 0%, #e7f3ea 100%);
+  border-color: #caead2;
+  border-left-color: #156f39;
+}
+
+.info-tile,
+.community-summary div,
+.flow-box,
+.mini-box,
+.history-grid .info-tile,
+.decision-row .action-list li,
+.frontpage-actions .action-list li,
+.frontpage-reports .report-card,
+.rainfall-summary-grid .info-tile {
+  background: rgba(246, 251, 255, 0.76);
+  border-color: rgba(214, 228, 245, 0.98);
+}
+
+.decision-row .action-list li {
+  border-left-color: #184e9f;
+}
+
+.why-matters-strip span,
+.nearest-station-list span {
+  background: rgba(24, 78, 159, 0.08);
+  border-color: rgba(24, 78, 159, 0.18);
+  color: #214066;
+}
+
+.signal-chart-card .chart-box {
+  background: linear-gradient(180deg, rgba(251, 253, 255, 0.86), rgba(232, 244, 251, 0.72));
+  border-color: rgba(207, 224, 242, 0.96);
+}
+
+.context-sidebar-column .location-card .map-panel,
+.map-panel {
+  background: linear-gradient(160deg, rgba(251, 253, 255, 0.84), rgba(220, 236, 248, 0.88));
+  border-color: rgba(207, 224, 242, 0.96);
+}
+
+.source-badge.live,
+.source-badge.pass,
+.source-badge.complete,
+.source-badge.high,
+.source-badge.live-gauge,
+.source-badge.current,
+.source-badge.current-context,
+.risk-pill.low {
+  background: #d8f6e1;
+  border-color: #a7e5ba;
+  color: #156f39;
+}
+
+.source-badge.warn,
+.source-badge.partial,
+.source-badge.medium,
+.source-badge.stale,
+.source-badge.stale-context,
+.risk-pill.moderate {
+  background: #fff3d8;
+  border-color: #f5d48b;
+  color: #9a5d00;
+}
+
+.source-badge.blocked,
+.source-badge.limited,
+.source-badge.low,
+.source-badge.fallback,
+.risk-pill.high {
+  background: #fde8e8;
+  border-color: #f4b7b7;
+  color: #a12a2a;
+}
+
+.source-badge.not-connected,
+.source-badge.not_connected,
+.source-badge.missing,
+.source-badge.unknown {
+  background: #e8eef7;
+  border-color: #d7e3f1;
+  color: #42546f;
+}
+
+.report-form select,
+.report-form input,
+.report-form textarea {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: #c8d7e8;
+}
+
+.report-submit,
+button[type="submit"] {
+  background: #184e9f;
+  color: #ffffff;
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    padding-inline: 12px;
+  }
+}
+
+/* =====================================================================
+   FloodGuard polished glow treatment — previous palette retained
+   Purpose: keep the enterprise layout, remove the green header fade,
+   and make the monitored-region cards feel luminous/glass-like.
+   ===================================================================== */
+:root {
+  --fg-glow-cream: rgba(251, 253, 237, 0.94);
+  --fg-glow-sky: rgba(138, 188, 237, 0.42);
+  --fg-glow-aqua: rgba(189, 223, 235, 0.52);
+  --fg-glow-blue: rgba(24, 78, 159, 0.2);
+  --fg-glow-blue-strong: rgba(24, 78, 159, 0.32);
+  --fg-glass: rgba(255, 255, 255, 0.58);
+  --fg-glass-strong: rgba(255, 255, 255, 0.78);
+  --fg-glass-border: rgba(255, 255, 255, 0.78);
+  --fg-glass-border-blue: rgba(176, 209, 236, 0.96);
+  --fg-glass-shadow: 0 20px 50px rgba(16, 33, 58, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --fg-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -18px 42px rgba(138, 188, 237, 0.12);
+}
+
+body {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(251, 253, 237, 0.92), transparent 28rem),
+    radial-gradient(circle at 88% 10%, rgba(138, 188, 237, 0.54), transparent 34rem),
+    linear-gradient(180deg, #d7ecfa 0%, #c8e6f2 44%, #d9eef8 100%);
+}
+
+/* Remove the status-colour strip/fade from the monitored-region panel. */
+.hero-signal-card::before,
+.hero-signal-card.risk-low::before,
+.hero-signal-card.risk-moderate::before,
+.hero-signal-card.risk-high::before {
+  display: none;
+}
+
+/* Main monitored-region panel: blue/cream glass, not green-tinted. */
+.hero-signal-card,
+.hero-signal-card.risk-low,
+.hero-signal-card.risk-moderate,
+.hero-signal-card.risk-high {
+  background:
+    radial-gradient(circle at 9% 0%, rgba(251, 253, 237, 0.98), transparent 20rem),
+    radial-gradient(circle at 90% 6%, rgba(138, 188, 237, 0.36), transparent 24rem),
+    linear-gradient(145deg, rgba(251, 253, 244, 0.9) 0%, rgba(235, 248, 250, 0.88) 48%, rgba(207, 232, 243, 0.9) 100%);
+  border: 1px solid rgba(168, 204, 232, 0.9);
+  border-radius: 22px;
+  box-shadow: var(--fg-glass-shadow), 0 0 0 1px rgba(255, 255, 255, 0.48);
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-signal-card::after {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.72), transparent 13rem),
+    radial-gradient(circle at 88% 0%, rgba(138, 188, 237, 0.28), transparent 18rem);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.hero-signal-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-signal-header {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12));
+  border-bottom: 1px solid rgba(183, 211, 234, 0.72);
+}
+
+.hero-signal-title {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+/* Risk pill: make status feel clickable/operational and clearly visible. */
+.risk-pill {
+  border-width: 1px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  padding: 10px 16px;
+  transform: translateZ(0);
+}
+
+.risk-pill.low {
+  background:
+    radial-gradient(circle at 28% 16%, rgba(255, 255, 255, 0.92), transparent 42%),
+    linear-gradient(135deg, #eaffef 0%, #c9f5d5 100%);
+  border-color: rgba(92, 202, 123, 0.72);
+  box-shadow:
+    0 0 0 5px rgba(21, 111, 57, 0.08),
+    0 0 24px rgba(21, 111, 57, 0.28),
+    0 10px 22px rgba(16, 33, 58, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  color: #105c31;
+}
+
+.risk-pill.moderate {
+  background:
+    radial-gradient(circle at 28% 16%, rgba(255, 255, 255, 0.9), transparent 42%),
+    linear-gradient(135deg, #fff8e7 0%, #ffe4aa 100%);
+  border-color: rgba(217, 119, 6, 0.52);
+  box-shadow:
+    0 0 0 5px rgba(154, 93, 0, 0.08),
+    0 0 24px rgba(154, 93, 0, 0.22),
+    0 10px 22px rgba(16, 33, 58, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  color: #875200;
+}
+
+.risk-pill.high {
+  background:
+    radial-gradient(circle at 28% 16%, rgba(255, 255, 255, 0.9), transparent 42%),
+    linear-gradient(135deg, #fff2f2 0%, #ffc7c7 100%);
+  border-color: rgba(161, 42, 42, 0.52);
+  box-shadow:
+    0 0 0 5px rgba(161, 42, 42, 0.08),
+    0 0 24px rgba(161, 42, 42, 0.24),
+    0 10px 22px rgba(16, 33, 58, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  color: #8f2222;
+}
+
+/* Luminous inner boxes inside the monitored region. */
+.resident-answer-card,
+.info-tile,
+.hero-signal-card .source-health-item,
+.hero-signal-card .report-card {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 255, 255, 0.96), transparent 9rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72) 0%, rgba(242, 248, 252, 0.66) 52%, rgba(225, 241, 248, 0.72) 100%);
+  border: 1px solid var(--fg-glass-border-blue);
+  box-shadow:
+    0 14px 30px rgba(16, 33, 58, 0.08),
+    0 0 22px rgba(138, 188, 237, 0.16),
+    var(--fg-inner-glow);
+  backdrop-filter: blur(14px);
+}
+
+.resident-answer-card:hover,
+.info-tile:hover {
+  border-color: rgba(99, 166, 220, 0.88);
+  box-shadow:
+    0 16px 34px rgba(16, 33, 58, 0.12),
+    0 0 28px rgba(138, 188, 237, 0.28),
+    var(--fg-inner-glow);
+}
+
+.resident-answer-card.concern-card {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.98), transparent 10rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84) 0%, rgba(235, 246, 255, 0.78) 100%);
+  border-color: rgba(194, 216, 240, 0.98);
+}
+
+.resident-answer-card.trust-card {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.98), transparent 10rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82) 0%, rgba(238, 248, 253, 0.76) 100%);
+}
+
+.resident-answer-card.next-card {
+  background:
+    radial-gradient(circle at 16% 0%, rgba(255, 255, 255, 0.98), transparent 10rem),
+    linear-gradient(145deg, rgba(255, 255, 248, 0.84) 0%, rgba(235, 247, 238, 0.78) 100%);
+  border-color: rgba(142, 214, 163, 0.72);
+  border-left: 5px solid rgba(21, 111, 57, 0.92);
+  box-shadow:
+    0 14px 30px rgba(16, 33, 58, 0.08),
+    0 0 26px rgba(21, 111, 57, 0.14),
+    var(--fg-inner-glow);
+}
+
+.resident-answer-card.why-card {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.96), transparent 10rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78) 0%, rgba(240, 247, 252, 0.72) 100%);
+}
+
+.signal-kpi-grid .info-tile {
+  min-height: 96px;
+  padding: 16px;
+  text-align: center;
+}
+
+.signal-kpi-grid .info-tile .section-label,
+.resident-answer-card .section-label {
+  color: #184e9f;
+  font-weight: 950;
+  letter-spacing: 0.13em;
+}
+
+.signal-kpi-grid .info-tile h3 {
+  color: #10213a;
+  font-size: clamp(1rem, 1.15vw, 1.22rem);
+  font-weight: 900;
+}
+
+/* Keep surrounding cards coherent with the glow language without overdoing it. */
+.context-sidebar-column .card,
+.decision-row .card,
+.analytics-row .card,
+.compact-ml-card,
+.source-health-list .source-health-item,
+.reports-list .report-card {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(255, 255, 255, 0.88), transparent 11rem),
+    linear-gradient(145deg, rgba(251, 253, 244, 0.84) 0%, rgba(232, 245, 250, 0.82) 100%);
+  border-color: rgba(202, 224, 241, 0.92);
+  box-shadow:
+    0 12px 28px rgba(16, 33, 58, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.card:hover,
+.context-sidebar-column .card:hover,
+.decision-row .card:hover,
+.analytics-row .card:hover {
+  border-color: rgba(143, 190, 228, 0.9);
+  box-shadow:
+    0 18px 40px rgba(16, 33, 58, 0.12),
+    0 0 28px rgba(138, 188, 237, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .risk-pill.low {
+    animation: floodguardLowPulse 3.6s ease-in-out infinite;
+  }
+
+  .resident-answer-card,
+  .info-tile,
+  .card {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+}
+
+@keyframes floodguardLowPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 5px rgba(21, 111, 57, 0.08),
+      0 0 20px rgba(21, 111, 57, 0.22),
+      0 10px 22px rgba(16, 33, 58, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  }
+  50% {
+    box-shadow:
+      0 0 0 7px rgba(21, 111, 57, 0.12),
+      0 0 32px rgba(21, 111, 57, 0.34),
+      0 12px 26px rgba(16, 33, 58, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* =====================================================================
+   FloodGuard status wordmark treatment
+   - Removes the button/pill look from the risk status.
+   - Keeps the status colour dynamic.
+   - Adds a soft colour fade/glow from the right side of the words.
+   ===================================================================== */
+.hero-signal-header {
+  overflow: visible;
+  position: relative;
+}
+
+.risk-pill,
+.risk-pill.low,
+.risk-pill.moderate,
+.risk-pill.high {
+  align-items: center;
+  animation: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: clamp(1.02rem, 1.05vw, 1.22rem);
+  font-weight: 950;
+  isolation: isolate;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  min-width: max-content;
+  padding: 6px 4px 6px 12px !important;
+  position: relative;
+  text-transform: none;
+  transform: none !important;
+}
+
+.risk-pill::after {
+  border-radius: 999px;
+  content: "";
+  filter: blur(12px);
+  height: 76px;
+  opacity: 0.95;
+  pointer-events: none;
+  position: absolute;
+  right: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 118px;
+  z-index: -1;
+}
+
+.risk-pill.low {
+  color: #105c31 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 18px rgba(21, 111, 57, 0.2);
+}
+
+.risk-pill.low::after {
+  background:
+    radial-gradient(circle at 78% 50%, rgba(21, 111, 57, 0.34) 0%, rgba(102, 225, 137, 0.24) 34%, rgba(216, 246, 225, 0.1) 56%, transparent 74%);
+}
+
+.risk-pill.moderate {
+  color: #875200 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78), 0 0 18px rgba(154, 93, 0, 0.2);
+}
+
+.risk-pill.moderate::after {
+  background:
+    radial-gradient(circle at 78% 50%, rgba(154, 93, 0, 0.34) 0%, rgba(255, 195, 84, 0.26) 34%, rgba(255, 243, 216, 0.12) 56%, transparent 74%);
+}
+
+.risk-pill.high {
+  color: #8f2222 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78), 0 0 18px rgba(161, 42, 42, 0.22);
+}
+
+.risk-pill.high::after {
+  background:
+    radial-gradient(circle at 78% 50%, rgba(161, 42, 42, 0.38) 0%, rgba(255, 126, 126, 0.26) 34%, rgba(253, 232, 232, 0.12) 56%, transparent 74%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .risk-pill::after {
+    animation: floodguardStatusGlow 4.2s ease-in-out infinite;
+  }
+}
+
+@keyframes floodguardStatusGlow {
+  0%, 100% {
+    opacity: 0.82;
+    transform: translateY(-50%) scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.05);
+  }
+}
+
+@media (max-width: 720px) {
+  .risk-pill,
+  .risk-pill.low,
+  .risk-pill.moderate,
+  .risk-pill.high {
+    align-self: flex-start;
+    padding-left: 0 !important;
+  }
+
+  .risk-pill::after {
+    right: -28px;
+    width: 100px;
+  }
+}
+
+/* =====================================================================
+   FloodGuard short corner status fade
+   - Keeps the risk status as text, not a button.
+   - Moves the status colour cue from the word glow to the monitored-region
+     card corner, angled from the top-right with a shorter fade length.
+   ===================================================================== */
+.hero-signal-card,
+.hero-signal-card.risk-low,
+.hero-signal-card.risk-moderate,
+.hero-signal-card.risk-high {
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Reintroduce the colour cue, but only as a short top-right angled fade. */
+.hero-signal-card::before,
+.hero-signal-card.risk-low::before,
+.hero-signal-card.risk-moderate::before,
+.hero-signal-card.risk-high::before {
+  border-radius: 999px 0 0 999px;
+  content: "";
+  display: block;
+  filter: blur(4px);
+  height: 170px;
+  opacity: 0.92;
+  pointer-events: none;
+  position: absolute;
+  right: -72px;
+  top: -58px;
+  transform: rotate(-16deg);
+  transform-origin: top right;
+  width: 300px;
+  z-index: 0;
+}
+
+.hero-signal-card.risk-low::before {
+  background:
+    radial-gradient(ellipse at 78% 24%, rgba(21, 111, 57, 0.34) 0%, rgba(102, 225, 137, 0.22) 34%, rgba(216, 246, 225, 0.1) 54%, transparent 72%);
+}
+
+.hero-signal-card.risk-moderate::before {
+  background:
+    radial-gradient(ellipse at 78% 24%, rgba(154, 93, 0, 0.34) 0%, rgba(255, 195, 84, 0.23) 34%, rgba(255, 243, 216, 0.11) 54%, transparent 72%);
+}
+
+.hero-signal-card.risk-high::before {
+  background:
+    radial-gradient(ellipse at 78% 24%, rgba(161, 42, 42, 0.36) 0%, rgba(255, 126, 126, 0.24) 34%, rgba(253, 232, 232, 0.12) 54%, transparent 72%);
+}
+
+/* Remove the old word-level glow so the corner fade does the visual work. */
+.risk-pill::after,
+.risk-pill.low::after,
+.risk-pill.moderate::after,
+.risk-pill.high::after {
+  animation: none !important;
+  background: none !important;
+  content: none !important;
+  display: none !important;
+}
+
+.risk-pill,
+.risk-pill.low,
+.risk-pill.moderate,
+.risk-pill.high {
+  padding-right: 0 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+}
+
+.hero-signal-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 720px) {
+  .hero-signal-card::before,
+  .hero-signal-card.risk-low::before,
+  .hero-signal-card.risk-moderate::before,
+  .hero-signal-card.risk-high::before {
+    height: 135px;
+    right: -82px;
+    top: -48px;
+    width: 245px;
+  }
+}
+
+/* =====================================================================
+   FloodGuard status button treatment
+   - Removes the short corner fade.
+   - Restores the risk status as a compact status-colour button.
+   - Keeps the previous FloodGuard aqua/cream glass palette.
+   ===================================================================== */
+.hero-signal-card::before,
+.hero-signal-card.risk-low::before,
+.hero-signal-card.risk-moderate::before,
+.hero-signal-card.risk-high::before {
+  background: none !important;
+  content: none !important;
+  display: none !important;
+}
+
+.hero-signal-header {
+  overflow: visible;
+}
+
+.risk-pill,
+.risk-pill.low,
+.risk-pill.moderate,
+.risk-pill.high {
+  align-items: center;
+  animation: none !important;
+  border-radius: 999px !important;
+  border-style: solid !important;
+  border-width: 1px !important;
+  cursor: default;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: clamp(0.92rem, 0.95vw, 1.04rem);
+  font-weight: 950;
+  isolation: isolate;
+  justify-content: center;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  min-width: max-content;
+  padding: 10px 16px !important;
+  position: relative;
+  text-transform: none;
+  transform: none !important;
+  white-space: nowrap;
+}
+
+.risk-pill::after,
+.risk-pill.low::after,
+.risk-pill.moderate::after,
+.risk-pill.high::after {
+  animation: none !important;
+  background: none !important;
+  content: none !important;
+  display: none !important;
+}
+
+.risk-pill.low {
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.95), transparent 38%),
+    linear-gradient(135deg, #effff4 0%, #d8f6e1 48%, #bdf0cc 100%) !important;
+  border-color: rgba(21, 111, 57, 0.26) !important;
+  box-shadow:
+    0 0 0 4px rgba(21, 111, 57, 0.06),
+    0 0 22px rgba(21, 111, 57, 0.2),
+    0 10px 22px rgba(16, 33, 58, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88) !important;
+  color: #105c31 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.risk-pill.moderate {
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.94), transparent 38%),
+    linear-gradient(135deg, #fffaf0 0%, #fff3d8 48%, #ffdc91 100%) !important;
+  border-color: rgba(154, 93, 0, 0.26) !important;
+  box-shadow:
+    0 0 0 4px rgba(154, 93, 0, 0.06),
+    0 0 22px rgba(154, 93, 0, 0.18),
+    0 10px 22px rgba(16, 33, 58, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88) !important;
+  color: #875200 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.risk-pill.high {
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.94), transparent 38%),
+    linear-gradient(135deg, #fff4f4 0%, #fde8e8 48%, #ffc1c1 100%) !important;
+  border-color: rgba(161, 42, 42, 0.28) !important;
+  box-shadow:
+    0 0 0 4px rgba(161, 42, 42, 0.06),
+    0 0 22px rgba(161, 42, 42, 0.2),
+    0 10px 22px rgba(16, 33, 58, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88) !important;
+  color: #8f2222 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .risk-pill.low {
+    animation: floodguardLowStatusButtonPulse 4s ease-in-out infinite !important;
+  }
+}
+
+@keyframes floodguardLowStatusButtonPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 4px rgba(21, 111, 57, 0.06),
+      0 0 18px rgba(21, 111, 57, 0.16),
+      0 10px 22px rgba(16, 33, 58, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(21, 111, 57, 0.1),
+      0 0 30px rgba(21, 111, 57, 0.26),
+      0 12px 26px rgba(16, 33, 58, 0.13),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  }
+}
+
+@media (max-width: 720px) {
+  .risk-pill,
+  .risk-pill.low,
+  .risk-pill.moderate,
+  .risk-pill.high {
+    align-self: flex-start;
+    padding: 9px 14px !important;
+  }
+}
+
+/* =====================================================================
+   FloodGuard production polish
+   - Softer typography hierarchy
+   - Cleaner status/fallback handling
+   - Subtle enterprise shadows instead of glow-heavy cards
+   ===================================================================== */
+
+:root {
+  --fg-premium-title: #253b75;
+  --fg-premium-body: #40526f;
+  --fg-premium-muted: #5f83c4;
+  --fg-premium-border: rgba(210, 228, 247, 0.96);
+  --fg-premium-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --fg-premium-shadow-hover: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+body {
+  color: var(--fg-premium-body);
+}
+
+.card,
+.card-base,
+.area-selector,
+.app-nav,
+.hero {
+  box-shadow: var(--fg-premium-shadow) !important;
+}
+
+.card,
+.card-base {
+  padding: 1.25rem !important;
+}
+
+.card:hover,
+.context-sidebar-column .card:hover,
+.decision-row .card:hover,
+.analytics-row .card:hover,
+.resident-answer-card:hover,
+.info-tile:hover {
+  box-shadow: var(--fg-premium-shadow-hover) !important;
+  transform: none;
+}
+
+.section-label {
+  color: var(--fg-premium-muted) !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.section-header h2,
+.hero-signal-title {
+  color: var(--fg-premium-title) !important;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.section-header h3,
+.area-selector h3,
+.report-top h4,
+.source-health-top h4,
+.info-tile h3,
+.hero h1 {
+  color: var(--fg-premium-title);
+  font-weight: 600;
+}
+
+.subtitle,
+.overview-summary,
+.live-status,
+.resident-answer-card p,
+.chart-note,
+.source-health-top p,
+.source-health-meta,
+.report-description,
+.report-time,
+.reliability-note {
+  color: var(--fg-premium-body);
+}
+
+.live-status,
+.chart-note,
+.report-time,
+.source-health-top p,
+.source-health-meta {
+  color: var(--fg-premium-muted);
+}
+
+.hero h1 {
+  font-size: clamp(3rem, 4vw, 4.15rem);
+}
+
+.hero-signal-title {
+  font-size: clamp(2.1rem, 2.8vw, 3rem);
+  color: #5b21b6 !important;
+}
+
+.overview-summary {
+  display: none;
+}
+
+.resident-overview-grid {
+  align-items: stretch;
+  grid-template-areas: "left next";
+  grid-template-columns: minmax(0, 1.34fr) minmax(0, 0.92fr);
+}
+
+.resident-overview-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  grid-area: left;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.analytics-row {
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.source-state-chip {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(207, 224, 242, 0.95);
+  border-radius: 999px;
+  color: var(--fg-premium-muted);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8px 12px;
+}
+
+.source-state-chip.live {
+  color: #1f6a43;
+}
+
+.source-state-chip.warn {
+  color: #9a5d00;
+}
+
+.source-state-chip.neutral {
+  color: var(--fg-premium-muted);
+}
+
+.source-state-chip::before {
+  border-radius: 999px;
+  content: "";
+  display: inline-block;
+  height: 7px;
+  margin-right: 8px;
+  width: 7px;
+}
+
+.source-state-chip.live::before {
+  background: #4daf71;
+}
+
+.source-state-chip.warn::before {
+  background: #d9a441;
+}
+
+.source-state-chip.neutral::before {
+  background: #94a3b8;
+}
+
+.refresh-button {
+  box-shadow: none;
+  font-weight: 600;
+}
+
+.risk-pill,
+.risk-pill.low,
+.risk-pill.moderate,
+.risk-pill.high {
+  animation: none !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 14px !important;
+}
+
+.resident-answer-card,
+.info-tile,
+.history-grid .info-tile,
+.rainfall-summary-grid .info-tile,
+.report-card,
+.source-health-item,
+.community-report-item,
+.evidence-review-item,
+.relevance-source-row,
+.audit-score-row {
+  backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.78) !important;
+  border: 1px solid var(--fg-premium-border) !important;
+  box-shadow: var(--fg-premium-shadow) !important;
+  padding: 1.25rem !important;
+}
+
+.resident-answer-card.concern-card,
+.resident-answer-card.trust-card,
+.resident-answer-card.why-card,
+.resident-answer-card.next-card,
+.frontpage-actions .action-list li,
+.frontpage-reports .report-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 248, 255, 0.86)) !important;
+}
+
+.resident-answer-card.next-card {
+  border-left: 1px solid var(--fg-premium-border) !important;
+  grid-area: next;
+}
+
+.resident-answer-card.concern-card h3 {
+  color: var(--fg-premium-title);
+  font-size: 1.45rem;
+  font-weight: 600;
+}
+
+.resident-answer-card.trust-card h3,
+.resident-answer-card.next-card h3,
+.resident-answer-card.why-card h3,
+.info-tile h3 {
+  font-weight: 600;
+}
+
+.resident-answer-list li,
+.factor-list li,
+.action-list li {
+  color: var(--fg-premium-body);
+}
+
+.resident-empty-state {
+  color: #1f6a43;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.overview-meta-strip {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.overview-meta-strip span {
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(207, 224, 242, 0.92);
+  border-radius: 999px;
+  color: var(--fg-premium-muted);
+  font-size: 0.79rem;
+  font-weight: 600;
+  padding: 7px 10px;
+}
+
+.why-matters-strip span,
+.nearest-station-list span {
+  box-shadow: none;
+  color: var(--fg-premium-body);
+}
+
+.signal-chart-card .chart-box {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(242, 248, 255, 0.84)) !important;
+  border: 1px solid rgba(207, 224, 242, 0.92);
+  border-radius: 14px;
+  box-shadow: none !important;
+  padding: 1rem;
+}
+
+.map-panel {
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .resident-overview-grid {
+    grid-template-areas:
+      "left"
+      "next";
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
+/* =====================================================================
+   FloodGuard overview refactor follow-up
+   - Match lower-half layout to the sketched arrangement
+   - Deep purple monitored-region title
+   - Smaller, calmer six-kpi tiles
+   ===================================================================== */
+
+.overview-main-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.hero-signal-title {
+  color: #5b21b6 !important;
+}
+
+.signal-kpi-grid .info-tile {
+  min-height: 64px;
+  padding: 0.9rem 1rem !important;
+}
+
+.signal-kpi-grid .info-tile h3 {
+  color: #23395d;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.28;
+}
+
+.signal-kpi-grid .info-tile .section-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+}
+
+.overview-top-grid {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.overview-middle-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-column: 1 / -1;
+}
+
+.overview-top-grid > *,
+.overview-middle-grid > *,
+.overview-full-banner > * {
+  min-width: 0;
+}
+
+.overview-sidebar-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  grid-column: span 4;
+}
+
+.overview-top-grid .card,
+.overview-middle-grid .card {
+  height: 100%;
+}
+
+.overview-top-grid .action-list {
+  display: grid;
+  gap: var(--space-sm);
+  list-style: none;
+  padding-left: 0;
+}
+
+.overview-top-grid .action-list li {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(242, 248, 255, 0.9));
+  border: 1px solid var(--fg-premium-border);
+  border-left: 4px solid #3b82f6;
+  border-radius: 12px;
+  margin-bottom: 0;
+  padding: 0.95rem 1rem;
+}
+
+.overview-middle-grid .signal-chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.overview-middle-grid .signal-chart-card .chart-box {
+  flex: 1 1 auto;
+}
+
+.overview-full-banner {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.ml-banner-card .compact-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.source-banner-card .source-health-list {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.source-banner-card .source-health-item,
+.ml-banner-card .info-tile {
+  height: 100%;
+}
+
+.analytics-row .chart-box {
+  height: 274px;
+  padding: 0.55rem 0.7rem 0.75rem;
+}
+
+.analytics-row .signal-breakdown-card .chart-box {
+  height: 192px;
+}
+
+.analytics-row .signal-chart-card {
+  padding: 1.25rem !important;
+}
+
+@media (max-width: 1180px) {
+  .overview-sidebar-column,
+  .overview-main-column {
+    grid-column: span 12;
+  }
+
+  .source-banner-card .source-health-list,
+  .ml-banner-card .compact-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .overview-top-grid,
+  .overview-middle-grid,
+  .source-banner-card .source-health-list,
+  .ml-banner-card .compact-metric-grid {
+    grid-template-columns: 1fr;
+  }
 }

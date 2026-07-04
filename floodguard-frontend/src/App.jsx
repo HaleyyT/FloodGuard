@@ -3,12 +3,13 @@ import "./App.css";
 import {
   ResponsiveContainer,
   BarChart,
+  LineChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Bar,
-  Cell,
+  Line,
   ReferenceLine,
 } from "recharts";
 
@@ -300,30 +301,69 @@ function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards)
 }
 
 function buildRainfallTrend(signals) {
-  return (signals.rainfallSeries?.points ?? []).map((point, index, points) => {
+  const dailyBuckets = new Map();
+  const rollingWindowDays = 7;
+
+  for (const point of signals.rainfallSeries?.points ?? []) {
     const timestamp = new Date(point.time);
+    const rainfallMm = Number(point.rainfallMm);
+
+    if (Number.isNaN(timestamp.getTime()) || !Number.isFinite(rainfallMm)) continue;
+
+    const dayKey = timestamp.toISOString().slice(0, 10);
+    const existingBucket = dailyBuckets.get(dayKey);
+
+    if (existingBucket) {
+      existingBucket.rainfall += rainfallMm;
+      existingBucket.lastTimestamp = timestamp;
+    } else {
+      dailyBuckets.set(dayKey, {
+        rainfall: rainfallMm,
+        lastTimestamp: timestamp,
+      });
+    }
+  }
+
+  const sortedDayKeys = Array.from(dailyBuckets.keys()).sort();
+  const latestDayKey = sortedDayKeys.at(-1);
+
+  if (!latestDayKey) return [];
+
+  const latestDay = new Date(`${latestDayKey}T00:00:00`);
+  const dailyTrend = [];
+
+  for (let offset = rollingWindowDays - 1; offset >= 0; offset -= 1) {
+    const day = new Date(latestDay);
+    day.setDate(latestDay.getDate() - offset);
+
+    const dayKey = day.toISOString().slice(0, 10);
+    const bucket = dailyBuckets.get(dayKey);
+    const displayDate = bucket?.lastTimestamp ?? day;
+
+    dailyTrend.push({
+      dayKey,
+      time: displayDate.toLocaleDateString("en-AU", {
+        day: "numeric",
+        month: "short",
+      }),
+      timestamp: displayDate.toLocaleDateString("en-AU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+      rainfall: Number((bucket?.rainfall ?? 0).toFixed(1)),
+    });
+  }
+
+  return dailyTrend.map((point, index, points) => {
     const previousPoint = index > 0 ? points[index - 1] : null;
     const change =
-      previousPoint && typeof previousPoint.rainfallMm === "number"
-        ? Number((point.rainfallMm - previousPoint.rainfallMm).toFixed(1))
+      previousPoint && typeof previousPoint.rainfall === "number"
+        ? Number((point.rainfall - previousPoint.rainfall).toFixed(1))
         : null;
 
     return {
-      time: timestamp.toLocaleDateString("en-AU", {
-        day: "numeric",
-        month: "short",
-      }),
-      shortTime: timestamp.toLocaleTimeString("en-AU", {
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-      timestamp: timestamp.toLocaleString("en-AU", {
-        day: "numeric",
-        month: "short",
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-      rainfall: point.rainfallMm,
+      ...point,
       change,
     };
   });
@@ -466,6 +506,15 @@ function formatRefreshNote(refreshMetadata) {
   return null;
 }
 
+function buildHeaderSourceState(sourceStatus, liveStatus) {
+  if (liveStatus?.isRefreshing) return { label: "Refreshing", tone: "neutral" };
+  if (liveStatus?.errorMessage || sourceStatus !== "api") {
+    return { label: "Fallback mode", tone: "warn" };
+  }
+  if (liveStatus?.lastUpdated) return { label: "Live feed", tone: "live" };
+  return { label: "Sync pending", tone: "neutral" };
+}
+
 function formatSourceAge(ageHours) {
   if (ageHours === null || ageHours === undefined) return "age unknown";
   if (ageHours < 1) return "under 1h old";
@@ -537,12 +586,12 @@ function buildOfficialWarning(signals) {
   };
 }
 
-function DataEvidencePanel({ sources, maxItems = null }) {
+function DataEvidencePanel({ sources, maxItems = null, className = "" }) {
   const rows = buildDataEvidenceRows(sources);
   const visibleRows = maxItems ? rows.slice(0, maxItems) : rows;
 
   return (
-    <section className="card">
+    <section className={`card ${className}`.trim()}>
       <div className="section-header compact">
         <div>
           <p className="section-label">Data evidence</p>
@@ -586,6 +635,82 @@ function OverviewSupportGrid({ data, report, experiment, riskLevel }) {
           experiment={experiment}
           riskLevel={riskLevel}
         />
+      </div>
+    </section>
+  );
+}
+
+function CompactMlSnapshotPanel({ report, experiment, riskLevel, className = "" }) {
+  const comparisonReady = experiment?.readiness?.readyForComparison ?? false;
+  const trainingRows = report?.realExport?.rows ?? experiment?.rowCount ?? 0;
+  const elevatedRows = report?.realExport?.elevatedRows ?? experiment?.classBalance?.elevatedCount ?? 0;
+  const bestModel = report?.bestPrototypeModel ?? "Waiting";
+  const modeLabel = humanizeMlMode(report?.mode);
+  const liveAuthority = report?.liveDecisionAuthority === "rule_engine" ? "Rule engine" : "FloodGuard rules";
+
+  return (
+    <section className={`card compact-ml-card ${className}`.trim()}>
+      <div className="section-header compact">
+        <div>
+          <p className="section-label">ML prototype layer</p>
+          <h3>Shadow-mode snapshot</h3>
+        </div>
+        <span className="source-badge not-connected">Comparison only</span>
+      </div>
+
+      <div className="compact-metric-grid">
+        <InfoTile label="Status" value={modeLabel} />
+        <InfoTile label="Best model" value={bestModel} />
+        <InfoTile label="Training rows" value={String(trainingRows)} />
+        <InfoTile label="Elevated rows" value={String(elevatedRows)} />
+      </div>
+
+      <p className="reliability-note">
+        Live alert authority remains with the {liveAuthority.toLowerCase()}; ML is displayed for calibration and reviewer transparency only.
+      </p>
+      <p className="report-form-message">
+        Current rule signal: {riskLevel}. {comparisonReady ? "Model comparison is ready for inspection." : "More labelled flood examples are needed before operational promotion."}
+      </p>
+    </section>
+  );
+}
+
+function OverviewDashboard({ data, report, experiment }) {
+  return (
+    <section className="dashboard-grid overview-workspace" aria-label="FloodGuard operational overview">
+      <div className="primary-ops-column overview-main-column">
+        <OverviewPanel data={data} />
+
+        <div className="overview-top-grid">
+          <ActionsPanel actions={data.recommendedActions} />
+          <RiverStatusPanel
+            areaName={data.areaName}
+            riverSummary={data.riverSummary}
+          />
+        </div>
+      </div>
+
+      <aside className="context-sidebar-column overview-sidebar-column" aria-label="Local context and evidence">
+        <MapPanel areaName={data.areaName} />
+        <ReportsPanel reports={data.reports.slice(0, 3)} />
+      </aside>
+
+      <div className="overview-middle-grid analytics-row">
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
+        <SignalBreakdownChart riskSignals={data.riskSignals} />
+      </div>
+
+      <div className="overview-full-banner">
+        <CompactMlSnapshotPanel
+          experiment={experiment}
+          report={report}
+          riskLevel={data.riskLevel}
+          className="ml-banner-card"
+        />
+      </div>
+
+      <div className="overview-full-banner">
+        <DataEvidencePanel className="source-banner-card" maxItems={4} sources={data.sourceHealth} />
       </div>
     </section>
   );
@@ -724,6 +849,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     areaName,
     location: signals.location.name,
     riskLevel: riskAssessment.riskLevel,
+    riskScore: riskAssessment.score,
     summary: riskAssessment.summary,
     riverSummary,
     rainfallTrend: buildRainfallTrend(signals),
@@ -739,6 +865,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     officialSignals: {
       // These top-line values stay short so the first screen communicates reliability before users inspect raw data.
       warningStatus: dataStatus,
+      warningLevel: officialWarning.level,
       dataReliability: reliabilitySummary.label,
       dataReliabilityNote: [reliabilitySummary.note, refreshNote].filter(Boolean).join(" "),
       areaSignalFit: formatAreaSignalFit(signals.areaRelevance),
@@ -1331,11 +1458,9 @@ function RainfallChart({ rainfallTrend }) {
   );
   const latestRainfall =
     rainfallTrend.length > 0 ? Number(rainfallTrend[rainfallTrend.length - 1].rainfall ?? 0) : 0;
-  const uniqueDays = new Set(rainfallTrend.map((point) => point.time)).size;
-  const xAxisKey = uniqueDays <= 1 ? "shortTime" : "time";
 
   return (
-    <section className="card signal-chart-card">
+    <section className="card signal-chart-card signal-breakdown-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Signal visualisation</p>
@@ -1349,30 +1474,33 @@ function RainfallChart({ rainfallTrend }) {
       </div>
       <div className="chart-box">
         <ResponsiveContainer width="100%" height={255}>
-          <BarChart
+          <LineChart
             data={rainfallTrend}
-            barCategoryGap="22%"
-            margin={{ top: 8, right: 10, left: -16, bottom: 0 }}
+            margin={{ top: 12, right: 16, left: 6, bottom: 6 }}
           >
             <defs>
-              <linearGradient id="rainfallFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2d8cf0" stopOpacity={0.95} />
-                <stop offset="100%" stopColor="#8ec5ff" stopOpacity={0.55} />
+              <linearGradient id="rainfallLineGlow" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2d8cf0" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="#2d8cf0" stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
             <XAxis
-              dataKey={xAxisKey}
+              dataKey="time"
               tickLine={false}
               axisLine={false}
+              interval="preserveStartEnd"
               tickMargin={8}
-              minTickGap={22}
+              minTickGap={28}
+              padding={{ left: 10, right: 10 }}
+              tick={{ fontSize: 11, fill: "#5b6c84" }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              width={36}
+              width={44}
               tickFormatter={(value) => `${value} mm`}
+              tick={{ fontSize: 11, fill: "#5b6c84" }}
             />
             <Tooltip
               cursor={{ fill: "rgba(45, 140, 240, 0.08)" }}
@@ -1382,19 +1510,25 @@ function RainfallChart({ rainfallTrend }) {
               }
             />
             <ReferenceLine y={0} stroke="#b8cde5" />
-            <Bar dataKey="rainfall" radius={[8, 8, 2, 2]} maxBarSize={28}>
-              {rainfallTrend.map((point, index) => (
-                <Cell
-                  key={`${point.timestamp}-${index}`}
-                  fill={point.rainfall === peakRainfall && peakRainfall > 0 ? "#0f6dcb" : "url(#rainfallFill)"}
-                />
-              ))}
-            </Bar>
-          </BarChart>
+            <ReferenceLine
+              y={peakRainfall}
+              stroke="#0f6dcb"
+              strokeDasharray="4 4"
+              ifOverflow="extendDomain"
+            />
+            <Line
+              dataKey="rainfall"
+              type="monotone"
+              stroke="#2d8cf0"
+              strokeWidth={3}
+              dot={{ r: 4, strokeWidth: 2, stroke: "#ffffff", fill: "#2d8cf0" }}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "#ffffff", fill: "#0f6dcb" }}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
       <p className="chart-note">
-        Bars show each observed rainfall reading in millimetres, with the darkest bar marking the local peak and the summary tiles showing the latest and cumulative rain observed in this window.
+        The line traces rainfall day by day in millimetres, with the dashed marker showing the local peak and the summary tiles showing the latest and cumulative rain observed across the displayed days.
       </p>
     </section>
   );
@@ -1441,6 +1575,16 @@ function WarningStatusPanel({ warning }) {
 
 // #decision evidence risk chart
 function SignalBreakdownChart({ riskSignals }) {
+  const chartLabelMap = {
+    Rainfall: "Rainfall",
+    Weather: "Weather",
+    River: "River",
+    Wetness: "Wetness",
+    Public: "Public",
+    Confidence: "Confidence",
+    "Input Coverage": "Coverage",
+  };
+
   return (
     <section className="card signal-chart-card">
       <div className="section-header compact">
@@ -1450,13 +1594,32 @@ function SignalBreakdownChart({ riskSignals }) {
         </div>
       </div>
       <div className="chart-box">
-        <ResponsiveContainer width="100%" height={255}>
-          <BarChart data={riskSignals}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={riskSignals}
+            barCategoryGap="18%"
+            margin={{ top: 8, right: 10, left: 6, bottom: 14 }}
+          >
+            <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              height={42}
+              tickMargin={10}
+              interval={0}
+              padding={{ left: 8, right: 8 }}
+              tickFormatter={(value) => chartLabelMap[value] ?? value}
+              tick={{ fontSize: 11, fill: "#5b6c84" }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              width={36}
+              tick={{ fontSize: 11, fill: "#5b6c84" }}
+            />
             <Tooltip />
-            <Bar dataKey="value" fill="#3c8de3" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="value" fill="#3c8de3" radius={[8, 8, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -1571,8 +1734,9 @@ function Header() {
 }
 
 // #regional pilot selector
-function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
+function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange, sourceStatus }) {
   const selectedArea = areas.find((area) => area.id === selectedAreaId);
+  const sourceState = buildHeaderSourceState(sourceStatus, liveStatus);
 
   return (
     <section className="area-selector card">
@@ -1580,11 +1744,9 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
         <p className="section-label">Regional pilot area</p>
         <h3>{selectedArea?.catchment || "Parramatta River"}</h3>
         <p className="live-status">
-          {liveStatus.errorMessage
-            ? "Using local fallback while the live API reconnects"
-            : liveStatus.lastUpdated
-            ? `Live data updated ${new Date(liveStatus.lastUpdated).toLocaleTimeString("en-AU")}`
-            : "Waiting for live area data"}
+          {liveStatus.lastUpdated
+            ? `Updated ${new Date(liveStatus.lastUpdated).toLocaleTimeString("en-AU")}`
+            : "Waiting for latest reading"}
         </p>
       </div>
 
@@ -1602,14 +1764,17 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange }) {
             </button>
           ))}
         </div>
-        <button
-          className="refresh-button"
-          disabled={liveStatus.isRefreshing}
-          onClick={liveStatus.refresh}
-          type="button"
-        >
-          {liveStatus.isRefreshing ? "Refreshing" : "Refresh now"}
-        </button>
+        <div className="header-actions">
+          <span className={`source-state-chip ${sourceState.tone}`}>{sourceState.label}</span>
+          <button
+            className="refresh-button"
+            disabled={liveStatus.isRefreshing}
+            onClick={liveStatus.refresh}
+            type="button"
+          >
+            {liveStatus.isRefreshing ? "Refreshing" : "Refresh now"}
+          </button>
+        </div>
       </div>
     </section>
   );
@@ -1657,70 +1822,71 @@ function AreaDataGuard({ areaName, liveStatus }) {
 function OverviewPanel({ data }) {
   const riskSummary = buildRiskSummaryModel(data);
   const residentOverview = buildResidentOverviewModel(data);
+  const riskTone = riskSummary.riskLevel.toLowerCase();
 
   return (
-    <section className="overview-panel card">
-      <div className="section-header">
+    <section className={`overview-panel card hero-signal-card risk-${riskTone}`}>
+      <div className="section-header hero-signal-header">
         <div>
           <p className="section-label">Monitored region</p>
-          <h2>{data.location}</h2>
+          <h2 className="hero-signal-title">{data.location}</h2>
         </div>
         <span className={`risk-pill ${riskSummary.riskLevel.toLowerCase()}`}>
           {riskSummary.riskLevel} Risk
         </span>
       </div>
 
-      <p className="overview-summary">{riskSummary.summary}</p>
-
       <div className="resident-overview-grid">
-        <div className="resident-answer-card">
-          <p className="section-label">What is the current local concern?</p>
-          <h3>{residentOverview.currentConcern}</h3>
-          <p>{residentOverview.concernSummary}</p>
+        <div className="resident-overview-left-column">
+          <div className="resident-answer-card concern-card">
+            <p className="section-label">What is the current local concern?</p>
+            <h3>
+              {typeof riskSummary.riskScore === "number"
+                ? `${residentOverview.currentConcern} | Risk score: ${riskSummary.riskScore}/100`
+                : residentOverview.currentConcern}
+            </h3>
+            <p>{residentOverview.concernSummary}</p>
+          </div>
+          <div className="resident-answer-card trust-card">
+            <p className="section-label">Can I trust the evidence?</p>
+            <h3>{residentOverview.trustLabel}</h3>
+            <p>{residentOverview.trustNote}</p>
+          </div>
+          <div className="resident-answer-card why-card">
+            <p className="section-label">Why was this concern assigned?</p>
+            {residentOverview.whyAssigned.length > 0 ? (
+              <ul className="factor-list history-list resident-answer-list">
+                {residentOverview.whyAssigned.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="resident-empty-state">{residentOverview.whyAssignedEmptyState}</p>
+            )}
+          </div>
         </div>
-        <div className="resident-answer-card">
-          <p className="section-label">Can I trust the evidence?</p>
-          <h3>{residentOverview.trustLabel}</h3>
-          <p>{residentOverview.trustNote}</p>
-        </div>
-        <div className="resident-answer-card">
-          <p className="section-label">Why was this concern assigned?</p>
-          <ul className="factor-list history-list resident-answer-list">
-            {residentOverview.whyAssigned.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="resident-answer-card">
+        <div className="resident-answer-card next-card">
           <p className="section-label">What should I check next?</p>
-          <ul className="factor-list history-list resident-answer-list">
-            {residentOverview.whatNext.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+          {residentOverview.whatNext.length > 0 ? (
+            <ul className="factor-list history-list resident-answer-list">
+              {residentOverview.whatNext.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="resident-empty-state">✓ {residentOverview.nextStepEmptyState}</p>
+          )}
         </div>
       </div>
 
-      <div className="overview-grid">
+      <div className="overview-grid signal-kpi-grid">
         <InfoTile
-          label="Data Reliability"
-          value={data.officialSignals.dataReliability}
-        />
-        <InfoTile
-          label="Area Signal Fit"
-          value={data.officialSignals.areaSignalFit}
+          label="Official warnings"
+          value={data.officialSignals.warningLevel}
         />
         <InfoTile
           label="Source Freshness"
           value={data.officialSignals.sourceFreshness}
-        />
-        <InfoTile
-          label="Spatial Radius"
-          value={data.officialSignals.spatialRadius}
-        />
-        <InfoTile
-          label="Nearest Station"
-          value={data.officialSignals.nearestStation}
         />
         <InfoTile
           label="Rainfall (24h)"
@@ -1731,19 +1897,14 @@ function OverviewPanel({ data }) {
           value={data.officialSignals.waterTrend}
         />
         <InfoTile
-          label="Latest Feed Update"
-          value={data.officialSignals.forecastOutlook}
+          label="Nearest Station"
+          value={data.officialSignals.nearestStation}
+        />
+        <InfoTile
+          label="Area Signal Fit"
+          value={data.officialSignals.areaSignalFit}
         />
       </div>
-      <p className="reliability-note">{data.officialSignals.dataReliabilityNote}</p>
-      <p className="reliability-note">Confidence: {riskSummary.confidenceLabel}</p>
-      {residentOverview.whyThisMatters.length > 0 ? (
-        <div className="why-matters-strip">
-          {residentOverview.whyThisMatters.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </div>
-      ) : null}
       {riskSummary.warnings.length > 0 ? (
         <ul className="factor-list history-list audit-warning-list">
           {riskSummary.warnings.slice(0, 2).map((warning) => (
@@ -1763,10 +1924,6 @@ function FrontPageSummary({ data }) {
         <ActionsPanel actions={data.recommendedActions} />
       </div>
 
-      <div className="frontpage-rainfall">
-        <RainfallChart rainfallTrend={data.rainfallTrend} />
-      </div>
-
       <div className="frontpage-river">
         <RiverStatusPanel
           areaName={data.areaName}
@@ -1774,12 +1931,16 @@ function FrontPageSummary({ data }) {
         />
       </div>
 
-      <div className="frontpage-reports">
-        <ReportsPanel reports={data.reports.slice(0, 3)} />
+      <div className="frontpage-rainfall">
+        <RainfallChart rainfallTrend={data.rainfallTrend} />
       </div>
 
       <div className="frontpage-map">
         <MapPanel areaName={data.areaName} />
+      </div>
+
+      <div className="frontpage-reports">
+        <ReportsPanel reports={data.reports.slice(0, 3)} />
       </div>
     </section>
   );
@@ -2658,6 +2819,7 @@ export default function App() {
       <Header />
       <AreaSelector
         areas={areas}
+        sourceStatus={sourceStatus}
         selectedAreaId={selectedAreaId}
         liveStatus={liveStatus}
         onAreaChange={setSelectedAreaId}
@@ -2671,13 +2833,10 @@ export default function App() {
       {hasSelectedAreaSignals && activeView === "overview" && (
         <>
           <NotificationBanner notifications={notifications} />
-          <OverviewPanel data={dashboardData} />
-          <FrontPageSummary data={dashboardData} />
-          <OverviewSupportGrid
+          <OverviewDashboard
             data={dashboardData}
             experiment={modelExperiment}
             report={mlReport}
-            riskLevel={dashboardData.riskLevel}
           />
         </>
       )}
