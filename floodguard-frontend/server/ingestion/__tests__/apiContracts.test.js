@@ -66,12 +66,21 @@ function mockRegionalSignals() {
     freshness: { staleSourceCount: 0, fallbackSourceCount: 0, failedSourceCount: 0 },
     dataQuality: { missing: [], coverageScore: 100 },
     riskAssessment: {
+      contractVersion: "risk-intelligence-v2",
       concernLevel: "Moderate",
       score: 52,
       hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
       evidenceConfidence: "high",
       officialWarningContext: "not_configured",
       recommendationType: "monitor_and_check_official_sources",
+      decisionSummary: {
+        primaryConcernDriver: "Short-window rainfall is elevated at 5 mm in the last hour.",
+        primaryReliabilityMessage:
+          "Official warning feed is not connected yet, so FloodGuard cannot verify warning context automatically.",
+        recommendedUserFocus: "Check official NSW SES and BoM advice.",
+        whyThisMatters:
+          "FloodGuard sees conditions worth monitoring closely, especially alongside official updates.",
+      },
       decisionRecommendation: {
         recommendationType: "monitor_and_check_official_sources",
         nextSteps: [
@@ -95,10 +104,19 @@ function mockRegionalSignals() {
       },
       excludedSignals: [],
       decisionAudit: {
+        contractVersion: "risk-intelligence-v2",
         hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
         evidenceConfidence: "high",
         officialWarningContext: "not_configured",
         recommendationType: "monitor_and_check_official_sources",
+        decisionSummary: {
+          primaryConcernDriver: "Short-window rainfall is elevated at 5 mm in the last hour.",
+          primaryReliabilityMessage:
+            "Official warning feed is not connected yet, so FloodGuard cannot verify warning context automatically.",
+          recommendedUserFocus: "Check official NSW SES and BoM advice.",
+          whyThisMatters:
+            "FloodGuard sees conditions worth monitoring closely, especially alongside official updates.",
+        },
         decisionRecommendation: {
           recommendationType: "monitor_and_check_official_sources",
           nextSteps: [
@@ -493,6 +511,7 @@ test("ingestion observability endpoint explains degraded source status explicitl
 test("risk endpoint returns features, pressure scores, and excluded signals contract", async () => {
   const { body } = await requestJson("/api/risk/parramatta", dependencies());
   assert.equal(body.concernLevel, "Moderate");
+  assert.equal(body.contractVersion, "risk-intelligence-v2");
   assert.equal(typeof body.features.rainfall1hMm, "number");
   assert.equal(typeof body.pressureScores.rainfallPressure, "number");
   assert.ok(Array.isArray(body.excludedSignals));
@@ -501,7 +520,11 @@ test("risk endpoint returns features, pressure scores, and excluded signals cont
   assert.equal(body.evidenceConfidence, "high");
   assert.equal(body.officialWarningContext, "not_configured");
   assert.equal(body.recommendationType, "monitor_and_check_official_sources");
+  assert.ok(body.decisionSummary.primaryConcernDriver.length > 0);
+  assert.ok(body.decisionSummary.primaryReliabilityMessage.length > 0);
+  assert.ok(body.decisionSummary.recommendedUserFocus.includes("NSW SES"));
   assert.ok(Array.isArray(body.decisionRecommendation.nextSteps));
+  assert.equal(body.decisionAudit.contractVersion, "risk-intelligence-v2");
   assert.equal(body.decisionAudit.hazardPressure.rainfall, "watch");
   assert.equal(body.decisionAudit.evidenceConfidence, "high");
   assert.equal(body.decisionAudit.officialWarningContext, "not_configured");
