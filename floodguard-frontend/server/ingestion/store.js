@@ -55,6 +55,23 @@ export function buildAreaHistoryRecord(areaSignals) {
     riskSignals: areaSignals.riskAssessment.signals,
     riskFeatures: areaSignals.riskAssessment.features,
     decisionReliability: areaSignals.riskAssessment.decisionAudit?.reliability ?? null,
+    decisionAuditSnapshot: {
+      hazardPressure: areaSignals.riskAssessment.decisionAudit?.hazardPressure ?? null,
+      evidenceConfidence: areaSignals.riskAssessment.decisionAudit?.evidenceConfidence ?? null,
+      officialWarningContext: areaSignals.riskAssessment.decisionAudit?.officialWarningContext ?? null,
+      recommendationType: areaSignals.riskAssessment.decisionAudit?.recommendationType ?? null,
+      recommendationNote:
+        areaSignals.riskAssessment.decisionAudit?.decisionRecommendation?.note ?? null,
+      whatIncreasedConcern:
+        areaSignals.riskAssessment.decisionAudit?.whatIncreasedConcern ?? [],
+      whatReducedConcern:
+        areaSignals.riskAssessment.decisionAudit?.whatReducedConcern ?? [],
+      excludedEvidence:
+        areaSignals.riskAssessment.decisionAudit?.excludedEvidence ?? [],
+      sourceLimitations:
+        areaSignals.riskAssessment.decisionAudit?.sourceLimitations ?? [],
+      checkNext: areaSignals.riskAssessment.decisionAudit?.checkNext ?? [],
+    },
     publicSignalSummary: areaSignals.publicSignalSummary,
     spatialRelevance: {
       status: areaSignals.spatialRelevance?.status ?? "unknown",
