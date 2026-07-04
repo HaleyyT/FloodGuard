@@ -82,6 +82,8 @@ class ReplayEventsTests(unittest.TestCase):
         self.assertEqual(summary["degradedRows"], 1)
         self.assertEqual(summary["agreementRate"], 1.0)
         self.assertIn("flood_watch", summary["warningStates"])
+        self.assertEqual(summary["evidenceConfidenceStates"], [])
+        self.assertEqual(summary["recommendationTypes"], [])
 
     def test_summarise_window_keeps_low_scenario_clean_when_sources_and_ml_agree(self) -> None:
         area_rows = pd.DataFrame(
@@ -231,6 +233,7 @@ class ReplayEventsTests(unittest.TestCase):
             dataset_path = PROJECT_ROOT / "data" / "floodguard_training_dataset.csv"
             sqlite_path = temp_path / "history.sqlite"
             report_path = temp_path / "replay.md"
+            summary_json_path = temp_path / "replay.json"
 
             original_dataset = dataset_path.read_text(encoding="utf-8")
             try:
@@ -245,22 +248,33 @@ class ReplayEventsTests(unittest.TestCase):
                     encoding="utf-8",
                 )
 
-                result = run_replay("parramatta", sqlite_path, report_path)
+                result = run_replay("parramatta", sqlite_path, report_path, summary_json_path)
 
                 self.assertEqual(result["datasetRowCount"], 1)
                 self.assertTrue(sqlite_path.exists())
                 self.assertTrue(report_path.exists())
+                self.assertTrue(summary_json_path.exists())
 
                 with sqlite3.connect(sqlite_path) as connection:
                     table_count = connection.execute(
                         "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'risk_assessments'"
                     ).fetchone()[0]
+                    decision_audit_table_count = connection.execute(
+                        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'decision_audits'"
+                    ).fetchone()[0]
                     risk_count = connection.execute(
                         "SELECT COUNT(*) FROM risk_assessments WHERE area_id = 'parramatta'"
                     ).fetchone()[0]
+                    audit_count = connection.execute(
+                        "SELECT COUNT(*) FROM decision_audits WHERE area_id = 'parramatta'"
+                    ).fetchone()[0]
                 self.assertEqual(table_count, 1)
+                self.assertEqual(decision_audit_table_count, 1)
                 self.assertGreaterEqual(risk_count, 1)
+                self.assertGreaterEqual(audit_count, 1)
                 self.assertIn("FloodGuard Historical Replay", report_path.read_text(encoding="utf-8"))
+                self.assertIn("Evidence-confidence states", report_path.read_text(encoding="utf-8"))
+                self.assertIn("Historical replay is available", summary_json_path.read_text(encoding="utf-8"))
             finally:
                 dataset_path.write_text(original_dataset, encoding="utf-8")
 

@@ -48,7 +48,21 @@ function mockAreaSignals(overrides = {}) {
       score: 58,
       signals: {},
       features: {},
-      decisionAudit: { reliability: { score: 84, level: "High" } },
+      decisionAudit: {
+        reliability: { score: 84, level: "High" },
+        hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
+        evidenceConfidence: "high",
+        officialWarningContext: "no_current_warning",
+        recommendationType: "monitor_and_check_official_sources",
+        decisionRecommendation: {
+          note: "Conditions warrant monitoring and checking official sources.",
+        },
+        whatIncreasedConcern: ["Short-window rainfall is elevated."],
+        whatReducedConcern: ["River trend is stable."],
+        excludedEvidence: ["Weather context was excluded because it is stale."],
+        sourceLimitations: ["Official warning feed is not connected yet."],
+        checkNext: ["Check official NSW SES and BoM advice."],
+      },
     },
     publicSignalSummary: {},
     spatialRelevance: {},
@@ -91,6 +105,9 @@ test("history record preserves reading metadata for stored source snapshots", ()
   assert.equal(record.sourceReadings[0].value, 12.4);
   assert.equal(record.sourceReadings[0].sourceStrength, "primary_live_gauge");
   assert.equal(record.sourceReadings[0].dataMode, "live");
+  assert.equal(record.decisionAuditSnapshot.hazardPressure.rainfall, "watch");
+  assert.equal(record.decisionAuditSnapshot.evidenceConfidence, "high");
+  assert.ok(record.decisionAuditSnapshot.checkNext[0].includes("NSW SES"));
 });
 
 test("appendAreaHistory deduplicates identical snapshots", async () => {

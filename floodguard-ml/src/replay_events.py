@@ -35,6 +35,7 @@ FRONTEND_ROOT = REPO_ROOT / "floodguard-frontend"
 HISTORY_DIR = FRONTEND_ROOT / "server/storage/history"
 SQLITE_PATH = REPO_ROOT / "floodguard-data/floodguard_history.sqlite"
 REPORT_PATH = REPORTS_DIR / "history_replay_report.md"
+SUMMARY_JSON_PATH = REPORTS_DIR / "history_replay_summary.json"
 ML_REPORT_PATH = REPORTS_DIR / "real_export_metrics.json"
 
 
@@ -414,6 +415,22 @@ def ensure_tables(connection: sqlite3.Connection) -> None:
           confidence_band TEXT,
           confidence_reason TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS decision_audits (
+          snapshot_id TEXT,
+          area_id TEXT,
+          observed_at TEXT,
+          evidence_confidence TEXT,
+          official_warning_context TEXT,
+          recommendation_type TEXT,
+          recommendation_note TEXT,
+          hazard_pressure_json TEXT,
+          increased_concern_json TEXT,
+          reduced_concern_json TEXT,
+          excluded_evidence_json TEXT,
+          source_limitations_json TEXT,
+          check_next_json TEXT
+        );
         """
     )
 
@@ -438,6 +455,7 @@ def write_replay_sqlite(
             DELETE FROM warnings;
             DELETE FROM labels;
             DELETE FROM model_predictions;
+            DELETE FROM decision_audits;
             """
         )
 
@@ -590,6 +608,28 @@ def write_replay_sqlite(
                     ),
                 )
 
+            decision_audit = record.get("decisionAuditSnapshot") or {}
+            connection.execute(
+                """
+                INSERT INTO decision_audits VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    key,
+                    area_id,
+                    observed_at,
+                    decision_audit.get("evidenceConfidence"),
+                    decision_audit.get("officialWarningContext"),
+                    decision_audit.get("recommendationType"),
+                    decision_audit.get("recommendationNote"),
+                    json.dumps(decision_audit.get("hazardPressure")),
+                    json.dumps(decision_audit.get("whatIncreasedConcern", [])),
+                    json.dumps(decision_audit.get("whatReducedConcern", [])),
+                    json.dumps(decision_audit.get("excludedEvidence", [])),
+                    json.dumps(decision_audit.get("sourceLimitations", [])),
+                    json.dumps(decision_audit.get("checkNext", [])),
+                ),
+            )
+
         connection.commit()
     return sqlite_path
 
@@ -612,8 +652,18 @@ def within_window(dataframe, area_id: str, start_time: str | None, end_time: str
     return area_rows
 
 
-def summarise_window(area_rows, source_rows, scored_predictions: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def summarise_window(
+    area_rows,
+    source_rows,
+    scored_predictions: dict[str, dict[str, Any]],
+    decision_audit_rows=None,
+) -> dict[str, Any]:
     """Produce the compact replay comparison needed for calibration and review discussions."""
+
+    if decision_audit_rows is None:
+        import pandas as pd
+
+        decision_audit_rows = pd.DataFrame()
 
     if area_rows.empty:
         return {
@@ -625,6 +675,8 @@ def summarise_window(area_rows, source_rows, scored_predictions: dict[str, dict[
             "degradedRows": 0,
             "latestObservedAt": None,
             "sourceModes": [],
+            "evidenceConfidenceStates": [],
+            "recommendationTypes": [],
         }
 
     prediction_rows = []
@@ -659,6 +711,18 @@ def summarise_window(area_rows, source_rows, scored_predictions: dict[str, dict[
             for row in source_rows.to_dict("records")
         }
     )
+    evidence_values = (
+        decision_audit_rows["evidence_confidence"].dropna().tolist()
+        if "evidence_confidence" in decision_audit_rows.columns
+        else []
+    )
+    recommendation_values = (
+        decision_audit_rows["recommendation_type"].dropna().tolist()
+        if "recommendation_type" in decision_audit_rows.columns
+        else []
+    )
+    evidence_confidence_states = sorted({str(value) for value in evidence_values if str(value).strip()})
+    recommendation_types = sorted({str(value) for value in recommendation_values if str(value).strip()})
     return {
         "rowCount": int(len(area_rows)),
         "ruleConcern": best_rule_level(area_rows.to_dict("records")),
@@ -672,6 +736,8 @@ def summarise_window(area_rows, source_rows, scored_predictions: dict[str, dict[
         "degradedRows": int(len(degraded_rows)),
         "latestObservedAt": area_rows[GROUP_TIMESTAMP_COLUMN].max().isoformat(),
         "sourceModes": source_modes,
+        "evidenceConfidenceStates": evidence_confidence_states,
+        "recommendationTypes": recommendation_types,
     }
 
 
@@ -686,10 +752,13 @@ def build_replay_report(dataset, sqlite_path: Path, scored_predictions: dict[str
                 import pandas as pd
 
                 source_frame = pd.read_sql_query("SELECT * FROM source_status", connection)
+                audit_frame = pd.read_sql_query("SELECT * FROM decision_audits", connection)
             except Exception:
                 source_frame = None
+                audit_frame = None
     else:
         source_frame = None
+        audit_frame = None
 
     lines = [
         "# FloodGuard Historical Replay",
@@ -716,7 +785,17 @@ def build_replay_report(dataset, sqlite_path: Path, scored_predictions: dict[str
             import pandas as pd
 
             source_rows = pd.DataFrame(columns=["source_type", "mode", "freshness_status"])
-        summary = summarise_window(area_rows, source_rows, scored_predictions)
+        if audit_frame is not None:
+            audit_rows = audit_frame[audit_frame["area_id"] == area_id].copy()
+            if window["start_time"] is not None:
+                audit_rows = audit_rows[audit_rows["observed_at"] >= window["start_time"]]
+            if window["end_time"] is not None:
+                audit_rows = audit_rows[audit_rows["observed_at"] <= window["end_time"]]
+        else:
+            import pandas as pd
+
+            audit_rows = pd.DataFrame(columns=["evidence_confidence", "recommendation_type"])
+        summary = summarise_window(area_rows, source_rows, scored_predictions, audit_rows)
         lines.extend(
             [
                 f"## {area_id}",
@@ -728,6 +807,8 @@ def build_replay_report(dataset, sqlite_path: Path, scored_predictions: dict[str
                 f"- Shadow ML max elevated probability: `{summary['maxProbability'] if summary['maxProbability'] is not None else 'unavailable'}`",
                 f"- Rule vs ML agreement: `{summary['agreementRate'] if summary['agreementRate'] is not None else 'unavailable'}`",
                 f"- Degraded-source rows: `{summary['degradedRows']}`",
+                f"- Evidence-confidence states: `{', '.join(summary['evidenceConfidenceStates']) if summary['evidenceConfidenceStates'] else 'none recorded'}`",
+                f"- Recommendation types: `{', '.join(summary['recommendationTypes']) if summary['recommendationTypes'] else 'none recorded'}`",
                 f"- Source modes/freshness: `{', '.join(summary['sourceModes']) if summary['sourceModes'] else 'legacy history only'}`",
                 f"- Latest replayed snapshot: `{summary['latestObservedAt']}`",
                 "",
@@ -736,10 +817,63 @@ def build_replay_report(dataset, sqlite_path: Path, scored_predictions: dict[str
     return "\n".join(lines)
 
 
+def build_replay_summary(dataset, sqlite_path: Path, scored_predictions: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Write a compact JSON summary so replay can be consumed outside markdown review."""
+
+    windows = load_replay_windows(dataset)
+    summaries: list[dict[str, Any]] = []
+    if sqlite_path.exists():
+        with sqlite3.connect(sqlite_path) as connection:
+            import pandas as pd
+
+            source_frame = pd.read_sql_query("SELECT * FROM source_status", connection)
+            audit_frame = pd.read_sql_query("SELECT * FROM decision_audits", connection)
+    else:
+        import pandas as pd
+
+        source_frame = pd.DataFrame(columns=["area_id", "observed_at", "source_type", "mode", "freshness_status"])
+        audit_frame = pd.DataFrame(columns=["area_id", "observed_at", "evidence_confidence", "recommendation_type"])
+
+    for window in windows:
+        area_id = window["area"]
+        area_rows = within_window(dataset, area_id, window["start_time"], window["end_time"])
+        source_rows = source_frame[source_frame["area_id"] == area_id].copy()
+        audit_rows = audit_frame[audit_frame["area_id"] == area_id].copy()
+        if window["start_time"] is not None:
+            source_rows = source_rows[source_rows["observed_at"] >= window["start_time"]]
+            audit_rows = audit_rows[audit_rows["observed_at"] >= window["start_time"]]
+        if window["end_time"] is not None:
+            source_rows = source_rows[source_rows["observed_at"] <= window["end_time"]]
+            audit_rows = audit_rows[audit_rows["observed_at"] <= window["end_time"]]
+        summary = summarise_window(area_rows, source_rows, scored_predictions, audit_rows)
+        summaries.append(
+            {
+                "areaId": area_id,
+                "startTime": window["start_time"],
+                "endTime": window["end_time"],
+                "label": window["label"],
+                "labelSource": window["label_source"],
+                "labelStrength": window["label_strength"],
+                **summary,
+            }
+        )
+
+    return {
+        "available": True,
+        "sqlitePath": str(sqlite_path),
+        "rowCount": int(len(dataset)),
+        "windowCount": len(summaries),
+        "windows": summaries,
+        "shadowPredictionCount": len(scored_predictions),
+        "summary": "Historical replay is available for rule, warning, source-state, decision-audit, and shadow-ML comparison.",
+    }
+
+
 def run_replay(
     area_id: str | None = None,
     sqlite_path: Path = SQLITE_PATH,
     report_path: Path = REPORT_PATH,
+    summary_json_path: Path = SUMMARY_JSON_PATH,
 ) -> dict[str, Any]:
     """End-to-end historical replay entry point used by the CLI and tests."""
 
@@ -754,11 +888,14 @@ def run_replay(
     scored_predictions = score_shadow_predictions(dataset)
     sqlite_output = write_replay_sqlite(history_records, dataset, scored_predictions, sqlite_path)
     report = build_replay_report(dataset, sqlite_output, scored_predictions)
+    summary = build_replay_summary(dataset, sqlite_output, scored_predictions)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(f"{report}\n", encoding="utf-8")
+    summary_json_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return {
         "sqlitePath": str(sqlite_output),
         "reportPath": str(report_path),
+        "summaryJsonPath": str(summary_json_path),
         "historyRowCount": len(history_records),
         "datasetRowCount": int(len(dataset)),
         "shadowPredictionCount": len(scored_predictions),
