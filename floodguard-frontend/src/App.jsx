@@ -730,25 +730,23 @@ function OverviewModeSwitcher({ mode, modeMeta, onModeChange }) {
         </span>
       </div>
 
-      <p className="reliability-note">{modeMeta.description}</p>
+      <div className="overview-mode-controls">
+        <div className="overview-mode-field">
+          <label className="section-label" htmlFor="overview-mode-select">
+            View selector
+          </label>
+          <select
+            className="overview-mode-select"
+            id="overview-mode-select"
+            onChange={(event) => onModeChange(event.target.value)}
+            value={mode}
+          >
+            <option value="live">Current source state</option>
+            <option value="scenario-stress">Scenario stress-test view</option>
+          </select>
+        </div>
 
-      <div className="overview-mode-actions" role="tablist" aria-label="Overview display modes">
-        <button
-          aria-selected={mode === "live"}
-          className={mode === "live" ? "active" : ""}
-          onClick={() => onModeChange("live")}
-          type="button"
-        >
-          Current source state
-        </button>
-        <button
-          aria-selected={mode === "scenario-stress"}
-          className={mode === "scenario-stress" ? "active" : ""}
-          onClick={() => onModeChange("scenario-stress")}
-          type="button"
-        >
-          Scenario stress-test view
-        </button>
+        <p className="reliability-note">{modeMeta.description}</p>
       </div>
 
       <p className="report-form-message">

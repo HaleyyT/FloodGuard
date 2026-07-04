@@ -558,7 +558,7 @@ test("scenario stress-test mode is clearly labelled as simulated and does not lo
 
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Scenario stress-test view" }).click();
+  await page.getByLabel("View selector").selectOption("scenario-stress");
 
   await expect(
     page.getByRole("heading", { name: "Scenario stress-test view", exact: true }),
