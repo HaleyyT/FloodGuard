@@ -36,12 +36,31 @@ function buildSourceObservabilityRow(areaSignals, source) {
     (source.mode === "remote" || source.dataMode === "live" || source.dataMode === "live_summary_fallback"
       ? source.fetchedAt ?? null
       : null);
+  const lastSuccessfulLiveAgeMinutes =
+    lastSuccessfulLiveFetchAt && source.fetchedAt
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(source.fetchedAt).getTime() - new Date(lastSuccessfulLiveFetchAt).getTime()) /
+              (60 * 1000),
+          ),
+        )
+      : null;
+  const coreFloodRole = ["rainfall", "river"].includes(source.type) ? "core" : "supporting";
+  const liveClaimEligible =
+    coreFloodRole === "core" &&
+    !failureReason &&
+    source.freshnessStatus === "current" &&
+    ["remote", "live"].includes(source.mode ?? source.dataMode ?? "unknown");
 
   return {
+    contractVersion: "ingestion-observability-v2",
     source: source.label,
     sourceType: source.type,
     areaId: areaSignals.area.id,
     areaName: areaSignals.area.name,
+    coreFloodRole,
+    liveClaimEligible,
     lastFetchedAt: source.fetchedAt ?? null,
     lastObservedAt: source.observedAt ?? null,
     freshnessMinutes: source.ageMinutes ?? null,
@@ -51,6 +70,7 @@ function buildSourceObservabilityRow(areaSignals, source) {
     sourceStrength: source.sourceStrength ?? "unknown",
     failureReason,
     lastSuccessfulLiveFetchAt,
+    lastSuccessfulLiveAgeMinutes,
     limitation: source.note ?? null,
   };
 }

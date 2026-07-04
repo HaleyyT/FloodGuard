@@ -506,6 +506,7 @@ test("ingestion observability endpoint explains degraded source status explicitl
   assert.ok(Array.isArray(body.failureTaxonomy));
   assert.match(body.debugLine, /degraded honestly|live/i);
   assert.ok(Array.isArray(body.areas));
+  assert.equal(body.areas[0].sources[0].contractVersion, "ingestion-observability-v2");
 });
 
 test("risk endpoint returns features, pressure scores, and excluded signals contract", async () => {
