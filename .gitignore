@@ -38,3 +38,5 @@ floodguard-ml/tests/__pycache__/
 floodguard-data/
 docs/diagrams
 docs/images/drafts-dashboard
+floodguard-frontend/playwright-report/
+floodguard-frontend/test-results/
