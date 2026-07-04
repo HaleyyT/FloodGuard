@@ -286,9 +286,13 @@ function dependencies() {
     }),
     readAreaWarningStatus: () => ({
       area: "Parramatta, NSW",
+      source: "HazardWatch / NSW SES",
+      status: "not_configured",
       hasWarning: false,
       sourceName: "NSW SES HazardWatch",
       sourceUrl: "https://www.hazardwatch.gov.au/",
+      relevanceMethod: "area-name-catchment-and-warning-type",
+      limitations: ["Official warning source is not currently connected."],
       adapterStatus: "not_configured",
       officialText: "Official warning source is not currently connected.",
     }),
@@ -513,7 +517,11 @@ test("notifications preview endpoint returns the same stable contract", async ()
 test("warnings endpoint returns separate official warning status", async () => {
   const { body } = await requestJson("/api/warnings/parramatta", dependencies());
   assert.equal(body.area, "Parramatta, NSW");
+  assert.equal(body.source, "HazardWatch / NSW SES");
+  assert.equal(body.status, "not_configured");
   assert.equal(body.adapterStatus, "not_configured");
+  assert.equal(body.relevanceMethod, "area-name-catchment-and-warning-type");
+  assert.ok(Array.isArray(body.limitations));
   assert.equal(body.sourceName, "NSW SES HazardWatch");
 });
 
