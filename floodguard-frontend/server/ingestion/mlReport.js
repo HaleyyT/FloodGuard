@@ -79,9 +79,25 @@ function defaultReport() {
       available: false,
       summary: "Model card is unavailable.",
     },
+    labelAudit: {
+      available: false,
+      summary: "Label-audit report is unavailable.",
+    },
     calibrationSummary: {
       available: false,
       summary: "Calibration summary is unavailable.",
+    },
+    supervisionQuality: {
+      grade: "weak",
+      summary: "Independent supervision is still too weak for validated ML claims.",
+      viableForIndependentSupervision: false,
+      primaryLimitation: "Independent event labels are unavailable or too weak.",
+      eventLabelCoverage: 0,
+      eventPositiveCount: 0,
+      reviewedRowCount: 0,
+      strongOrModerateLabelCount: 0,
+      eventLabelStrengthCounts: {},
+      eventLabelReviewStatusCounts: {},
     },
     targetSelection: {
       available: false,
@@ -213,6 +229,25 @@ function buildCalibrationSummary(markdown) {
   };
 }
 
+function buildLabelAuditSummary(markdown, auditJson) {
+  if (!markdown && !auditJson) {
+    return defaultReport().labelAudit;
+  }
+
+  const summary =
+    auditJson?.supervisionQuality?.summary ??
+    markdown
+      ?.split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0 && !line.startsWith("#")) ??
+    "Label-audit report is available.";
+
+  return {
+    available: true,
+    summary,
+  };
+}
+
 function buildTargetSelectionSummary(report) {
   if (!report?.targetSelection) {
     return defaultReport().targetSelection;
@@ -226,6 +261,31 @@ function buildTargetSelectionSummary(report) {
       report.targetSelection.readyForIndependentSupervision ?? false,
     reason: report.targetSelection.reason ?? "Training target selection was reported.",
     eventCandidate: report.targetSelection.eventTargetCandidate ?? null,
+  };
+}
+
+function buildSupervisionQuality(report, auditJson) {
+  if (!report?.supervisionQuality && !auditJson?.supervisionQuality) {
+    return defaultReport().supervisionQuality;
+  }
+
+  const source = report?.supervisionQuality ?? auditJson?.supervisionQuality ?? {};
+  return {
+    grade: source.grade ?? "weak",
+    summary:
+      source.summary ??
+      "Independent supervision is still too weak for validated ML claims.",
+    viableForIndependentSupervision:
+      source.viableForIndependentSupervision ?? false,
+    primaryLimitation:
+      source.primaryLimitation ??
+      "Independent event labels are unavailable or too weak.",
+    eventLabelCoverage: source.eventLabelCoverage ?? 0,
+    eventPositiveCount: source.eventPositiveCount ?? 0,
+    reviewedRowCount: source.reviewedRowCount ?? 0,
+    strongOrModerateLabelCount: source.strongOrModerateLabelCount ?? 0,
+    eventLabelStrengthCounts: source.eventLabelStrengthCounts ?? {},
+    eventLabelReviewStatusCounts: source.eventLabelReviewStatusCounts ?? {},
   };
 }
 
@@ -274,12 +334,14 @@ function buildPromotionPolicy(report) {
 
 export async function readMlReport(reportsDir = defaultReportsDir) {
   try {
-    const [metrics, realExportMetrics, scenarioMetrics, modelCard, calibrationSummary, targetSelectionSummary] =
+    const [metrics, realExportMetrics, scenarioMetrics, modelCard, labelAuditMarkdown, labelAuditJson, calibrationSummary, targetSelectionSummary] =
       await Promise.all([
       readJsonIfPresent(path.join(reportsDir, "metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "real_export_metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "scenario_stress_test_metrics.json")),
       readTextIfPresent(path.join(reportsDir, "model_card.md")),
+      readTextIfPresent(path.join(reportsDir, "label_audit.md")),
+      readJsonIfPresent(path.join(reportsDir, "label_audit.json")),
       readTextIfPresent(path.join(reportsDir, "calibration_summary.md")),
       readTextIfPresent(path.join(reportsDir, "target_selection_summary.md")),
     ]);
@@ -304,13 +366,16 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
         realExportMetrics: Boolean(realExportMetrics),
         scenarioStressTestMetrics: Boolean(scenarioMetrics),
         modelCard: Boolean(modelCard),
+        labelAudit: Boolean(labelAuditMarkdown || labelAuditJson),
         calibrationSummary: Boolean(calibrationSummary),
         targetSelectionSummary: Boolean(targetSelectionSummary),
       },
       realExport: buildRealExportSummary(realExportMetrics),
       scenarioStressTest: buildScenarioSummary(scenarioMetrics),
       modelCard: buildModelCardSummary(modelCard),
+      labelAudit: buildLabelAuditSummary(labelAuditMarkdown, labelAuditJson),
       calibrationSummary: buildCalibrationSummary(calibrationSummary),
+      supervisionQuality: buildSupervisionQuality(realExportMetrics, labelAuditJson),
       targetSelection: buildTargetSelectionSummary(realExportMetrics),
       eventHoldout: buildEventHoldoutSummary(realExportMetrics),
       acceptanceGates: buildAcceptanceGates(realExportMetrics),
@@ -326,7 +391,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
     };
     report.limitations = buildLimitations(report.realExport, report.scenarioStressTest);
 
-    if (!realExportMetrics && !scenarioMetrics && !modelCard && !calibrationSummary && !targetSelectionSummary) {
+    if (!realExportMetrics && !scenarioMetrics && !modelCard && !labelAuditMarkdown && !labelAuditJson && !calibrationSummary && !targetSelectionSummary) {
       return fallback;
     }
 

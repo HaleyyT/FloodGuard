@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from audit_labels import write_label_audit_artifacts
 from build_dataset import build_scenario_dataset, build_training_dataset
 from model_registry import MODEL_REGISTRY
 from model_card import write_model_card
@@ -18,6 +19,7 @@ from utils import (
     assess_leakage_controls,
     build_feature_quality_report,
     build_dataset_summary,
+    build_supervision_quality_summary,
     build_dataset_warnings,
     choose_training_target,
     ensure_runtime_dirs,
@@ -212,6 +214,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
     dataframe = apply_training_target_selection(raw_dataframe, target_selection)
     summary = build_dataset_summary(dataframe, dataset_name)
     warnings = build_dataset_warnings(summary)
+    supervision_quality = build_supervision_quality_summary(summary, target_selection)
     split = split_dataset_for_validation(dataframe)
     split_metadata = {key: value for key, value in split.items() if key not in {"train", "test"}}
     trainable_features, _, _ = feature_columns_for_training(split["train"])
@@ -245,6 +248,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
             "summary": summary,
             "warnings": warnings,
             "targetSelection": target_selection,
+            "supervisionQuality": supervision_quality,
             "split": split_metadata,
             "validation": {
                 "primaryStrategy": split["strategy"],
@@ -300,6 +304,7 @@ def evaluate_dataset(dataset_name: str, dataset_path: Path) -> dict[str, Any]:
         "summary": summary,
         "warnings": warnings,
         "targetSelection": target_selection,
+        "supervisionQuality": supervision_quality,
         "split": split_metadata,
         "validation": {
             "primaryStrategy": split["strategy"],
@@ -352,6 +357,7 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
                 "warnings": result["warnings"],
                 "summary": result["summary"],
                 "targetSelection": result["targetSelection"],
+                "supervisionQuality": result["supervisionQuality"],
                 "eventHoldout": result["eventHoldout"],
                 "acceptanceGates": result["acceptanceGates"],
                 "promotionPolicy": result["promotionPolicy"],
@@ -411,6 +417,7 @@ def write_combined_reports(results: list[dict[str, Any]]) -> None:
     write_target_selection_summary(results)
     write_promotion_policy_summary(results)
     write_model_comparison_report(results)
+    write_label_audit_artifacts()
     write_model_card(results)
 
 

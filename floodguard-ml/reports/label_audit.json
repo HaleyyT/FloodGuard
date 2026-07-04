@@ -1,0 +1,67 @@
+{
+  "labelsSummary": {
+    "name": "labels.csv",
+    "rowCount": 3,
+    "timeSpan": {
+      "start": "2026-06-24T00:00:00+00:00",
+      "end": "2026-07-02T00:00:00+00:00"
+    },
+    "areas": [
+      "north-parramatta",
+      "parramatta",
+      "toongabbie"
+    ],
+    "labelSourceCounts": {
+      "manual_demo": 3
+    },
+    "labelStrengthCounts": {
+      "weak": 3
+    },
+    "reviewStatusCounts": {
+      "scaffold_only": 3
+    },
+    "promotionReadyCounts": {},
+    "positiveRows": 0
+  },
+  "backlogSummary": {
+    "name": "event_label_backlog.csv",
+    "rowCount": 5,
+    "timeSpan": {
+      "start": "2026-06-24T00:00:00+00:00",
+      "end": "2026-07-02T00:00:00+00:00"
+    },
+    "areas": [
+      "north-parramatta",
+      "parramatta",
+      "toongabbie"
+    ],
+    "labelSourceCounts": {
+      "manual_demo": 3,
+      "warning_derived": 1,
+      "impact_candidate": 1
+    },
+    "labelStrengthCounts": {
+      "weak": 4,
+      "moderate": 1
+    },
+    "reviewStatusCounts": {
+      "scaffold_only": 3,
+      "candidate_review": 2
+    },
+    "promotionReadyCounts": {
+      "no": 5
+    },
+    "positiveRows": 2
+  },
+  "supervisionQuality": {
+    "grade": "weak",
+    "summary": "Current labels remain scaffold-level and are useful mainly for plumbing, audit, and future calibration preparation.",
+    "viableForIndependentSupervision": false,
+    "joinedPositiveRows": 0,
+    "joinedStrongOrModerateRows": 0,
+    "joinedReviewedRows": 0,
+    "backlogRows": 5,
+    "backlogPositiveRows": 2
+  },
+  "markdownPath": "/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-ml/reports/label_audit.md"
+}

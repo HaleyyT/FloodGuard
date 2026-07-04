@@ -95,7 +95,30 @@ test("readMlReport reads available files without crashing on partial reports", a
           eventPositiveCount: 0,
           eventLabelCoverage: 1,
         },
+        supervisionQuality: {
+          grade: "weak",
+          summary: "Independent supervision remains scaffold-level only.",
+          viableForIndependentSupervision: false,
+          primaryLimitation: "Labels are placeholders rather than verified flood outcomes.",
+          eventLabelCoverage: 1,
+          eventPositiveCount: 0,
+          reviewedRowCount: 0,
+          strongOrModerateLabelCount: 0,
+          eventLabelStrengthCounts: { weak: 3000 },
+          eventLabelReviewStatusCounts: { scaffold_only: 3000 },
+        },
         warnings: ["Real export metrics remain illustrative only."],
+      })}\n`,
+      "utf8",
+    );
+    await writeFile(
+      path.join(reportsDir, "label_audit.json"),
+      `${JSON.stringify({
+        supervisionQuality: {
+          grade: "weak",
+          summary: "Independent supervision remains scaffold-level only.",
+          viableForIndependentSupervision: false,
+        },
       })}\n`,
       "utf8",
     );
@@ -112,6 +135,10 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.validationLevel, "prototype");
     assert.equal(report.modelAgreementWithRuleEngine, "unavailable");
     assert.equal(report.labelStrength, "rule_derived_or_weak");
+    assert.equal(report.labelAudit.available, true);
+    assert.equal(report.supervisionQuality.grade, "weak");
+    assert.equal(report.supervisionQuality.viableForIndependentSupervision, false);
+    assert.match(report.supervisionQuality.primaryLimitation, /placeholders/i);
     assert.equal(report.realExport.available, true);
     assert.equal(report.realExport.rows, 3000);
     assert.equal(report.realExport.elevatedRows, 18);
@@ -134,6 +161,7 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.promotionPolicy.currentStage, "shadow_mode");
     assert.equal(report.promotionPolicy.nextEligibleStage, null);
     assert.match(report.promotionPolicy.summary, /shadow_mode/i);
+    assert.equal(report.reportAvailability.labelAudit, true);
     assert.equal(report.reportAvailability.targetSelectionSummary, false);
     assert.ok(Array.isArray(report.limitations));
     assert.match(report.realExport.summary, /pipeline validation/i);

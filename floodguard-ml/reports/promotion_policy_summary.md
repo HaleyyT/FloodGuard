@@ -42,6 +42,7 @@ Acceptance gate review:
 - `remains_shadow_mode_until_validated`: pass; Live scoring stays disabled and the rule engine remains the authority.
 
 Promotion blockers:
+- Review mode blocker: Independent event supervision is not yet strong enough.
 - Review mode blocker: Event-holdout validation is not yet viable.
 - Review mode blocker: Acceptance gates still failing: non_zero_recall_on_elevated_events.
 - Advisory mode blocker: Domain expert review is still pending.
