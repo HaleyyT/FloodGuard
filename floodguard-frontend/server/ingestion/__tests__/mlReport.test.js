@@ -127,6 +127,35 @@ test("readMlReport reads available files without crashing on partial reports", a
       "# Calibration Summary\n\nPrototype calibration summary is available.\n",
       "utf8",
     );
+    await writeFile(
+      path.join(reportsDir, "history_replay_summary.json"),
+      `${JSON.stringify({
+        available: true,
+        rowCount: 998,
+        windowCount: 3,
+        shadowPredictionCount: 998,
+        summary:
+          "Historical replay is available for rule, warning, source-state, decision-audit, and shadow-ML comparison.",
+        windows: [
+          {
+            areaId: "parramatta",
+            degradedRows: 627,
+            agreementRate: 0.611,
+          },
+          {
+            areaId: "north-parramatta",
+            degradedRows: 0,
+            agreementRate: null,
+          },
+          {
+            areaId: "toongabbie",
+            degradedRows: 0,
+            agreementRate: null,
+          },
+        ],
+      })}\n`,
+      "utf8",
+    );
 
     const report = await readMlReport(reportsDir);
     assert.equal(report.mode, "shadow");
@@ -148,6 +177,16 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.realExport.hasHighExamples, false);
     assert.equal(report.predictionPreview.predictedProbability, 0.78);
     assert.equal(report.calibrationSummary.available, true);
+    assert.equal(report.historicalReplay.available, true);
+    assert.equal(report.historicalReplay.rowCount, 998);
+    assert.equal(report.historicalReplay.windowCount, 3);
+    assert.equal(report.historicalReplay.degradedRows, 627);
+    assert.equal(report.historicalReplay.highestAgreementRate, 0.611);
+    assert.deepEqual(report.historicalReplay.areasCovered, [
+      "parramatta",
+      "north-parramatta",
+      "toongabbie",
+    ]);
     assert.equal(report.targetSelection.available, true);
     assert.equal(report.targetSelection.selectedTargetKind, "rule");
     assert.equal(report.targetSelection.selectedTargetColumn, "targetRuleElevated");
@@ -162,6 +201,7 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.promotionPolicy.nextEligibleStage, null);
     assert.match(report.promotionPolicy.summary, /shadow_mode/i);
     assert.equal(report.reportAvailability.labelAudit, true);
+    assert.equal(report.reportAvailability.historyReplaySummary, true);
     assert.equal(report.reportAvailability.targetSelectionSummary, false);
     assert.ok(Array.isArray(report.limitations));
     assert.match(report.realExport.summary, /pipeline validation/i);

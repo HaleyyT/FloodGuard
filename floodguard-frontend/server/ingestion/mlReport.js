@@ -54,6 +54,7 @@ function defaultReport() {
       scenarioStressTestMetrics: false,
       modelCard: false,
       calibrationSummary: false,
+      historyReplaySummary: false,
       targetSelectionSummary: false,
     },
     realExport: {
@@ -86,6 +87,16 @@ function defaultReport() {
     calibrationSummary: {
       available: false,
       summary: "Calibration summary is unavailable.",
+    },
+    historicalReplay: {
+      available: false,
+      rowCount: 0,
+      windowCount: 0,
+      areasCovered: [],
+      degradedRows: 0,
+      highestAgreementRate: null,
+      summary: "Historical replay summary is unavailable.",
+      limitation: "Replay artifacts are unavailable.",
     },
     supervisionQuality: {
       grade: "weak",
@@ -188,10 +199,11 @@ function deriveModelAgreement(report) {
   return preview.predictedLabel === preview.actualLabel ? "agreeing" : "disagreeing";
 }
 
-function buildLimitations(realExport, scenario) {
+function buildLimitations(realExport, scenario, historicalReplay) {
   const limitations = [
     realExport?.limitation,
     scenario?.limitation,
+    historicalReplay?.limitation,
     ...(realExport?.warnings ?? []),
   ].filter(Boolean);
   return [...new Set(limitations)];
@@ -226,6 +238,36 @@ function buildCalibrationSummary(markdown) {
   return {
     available: true,
     summary: firstMeaningfulLine ?? "Prototype calibration summary is available.",
+  };
+}
+
+function buildHistoricalReplaySummary(replayJson) {
+  if (!replayJson) {
+    return defaultReport().historicalReplay;
+  }
+
+  const windows = Array.isArray(replayJson.windows) ? replayJson.windows : [];
+  const areasCovered = [...new Set(windows.map((window) => window.areaId).filter(Boolean))];
+  const degradedRows = windows.reduce(
+    (sum, window) => sum + (typeof window.degradedRows === "number" ? window.degradedRows : 0),
+    0,
+  );
+  const agreementRates = windows
+    .map((window) => window.agreementRate)
+    .filter((value) => typeof value === "number");
+
+  return {
+    available: true,
+    rowCount: replayJson.rowCount ?? 0,
+    windowCount: replayJson.windowCount ?? windows.length,
+    areasCovered,
+    degradedRows,
+    highestAgreementRate: agreementRates.length > 0 ? Math.max(...agreementRates) : null,
+    summary:
+      replayJson.summary ??
+      "Historical replay is available for rule, warning, source-state, and shadow-ML comparison.",
+    limitation:
+      "Replay reflects the current stored history and label backlog, so it supports review more strongly than validated event-level claims.",
   };
 }
 
@@ -334,7 +376,7 @@ function buildPromotionPolicy(report) {
 
 export async function readMlReport(reportsDir = defaultReportsDir) {
   try {
-    const [metrics, realExportMetrics, scenarioMetrics, modelCard, labelAuditMarkdown, labelAuditJson, calibrationSummary, targetSelectionSummary] =
+    const [metrics, realExportMetrics, scenarioMetrics, modelCard, labelAuditMarkdown, labelAuditJson, calibrationSummary, replaySummary, targetSelectionSummary] =
       await Promise.all([
       readJsonIfPresent(path.join(reportsDir, "metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "real_export_metrics.json")),
@@ -343,6 +385,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       readTextIfPresent(path.join(reportsDir, "label_audit.md")),
       readJsonIfPresent(path.join(reportsDir, "label_audit.json")),
       readTextIfPresent(path.join(reportsDir, "calibration_summary.md")),
+      readJsonIfPresent(path.join(reportsDir, "history_replay_summary.json")),
       readTextIfPresent(path.join(reportsDir, "target_selection_summary.md")),
     ]);
 
@@ -368,6 +411,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
         modelCard: Boolean(modelCard),
         labelAudit: Boolean(labelAuditMarkdown || labelAuditJson),
         calibrationSummary: Boolean(calibrationSummary),
+        historyReplaySummary: Boolean(replaySummary),
         targetSelectionSummary: Boolean(targetSelectionSummary),
       },
       realExport: buildRealExportSummary(realExportMetrics),
@@ -375,6 +419,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       modelCard: buildModelCardSummary(modelCard),
       labelAudit: buildLabelAuditSummary(labelAuditMarkdown, labelAuditJson),
       calibrationSummary: buildCalibrationSummary(calibrationSummary),
+      historicalReplay: buildHistoricalReplaySummary(replaySummary),
       supervisionQuality: buildSupervisionQuality(realExportMetrics, labelAuditJson),
       targetSelection: buildTargetSelectionSummary(realExportMetrics),
       eventHoldout: buildEventHoldoutSummary(realExportMetrics),
@@ -389,9 +434,13 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       modelAgreementWithRuleEngine: deriveModelAgreement(realExportMetrics),
       labelStrength: deriveLabelStrength(realExportMetrics),
     };
-    report.limitations = buildLimitations(report.realExport, report.scenarioStressTest);
+    report.limitations = buildLimitations(
+      report.realExport,
+      report.scenarioStressTest,
+      report.historicalReplay,
+    );
 
-    if (!realExportMetrics && !scenarioMetrics && !modelCard && !labelAuditMarkdown && !labelAuditJson && !calibrationSummary && !targetSelectionSummary) {
+    if (!realExportMetrics && !scenarioMetrics && !modelCard && !labelAuditMarkdown && !labelAuditJson && !calibrationSummary && !replaySummary && !targetSelectionSummary) {
       return fallback;
     }
 
