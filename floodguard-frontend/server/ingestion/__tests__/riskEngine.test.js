@@ -133,7 +133,13 @@ test("produces moderate risk when short-window rainfall is elevated", () => {
   assert.equal(result.decisionAudit.hazardPressure.rainfall, "watch");
   assert.equal(result.decisionAudit.hazardPressure.river, "stable");
   assert.equal(result.decisionAudit.evidenceConfidence, "high");
+  assert.equal(result.contractVersion, "risk-intelligence-v2");
+  assert.equal(result.decisionAudit.contractVersion, "risk-intelligence-v2");
   assert.equal(result.decisionAudit.recommendationType, "monitor_and_check_official_sources");
+  assert.ok(result.decisionSummary.primaryConcernDriver.length > 0);
+  assert.ok(result.decisionSummary.primaryReliabilityMessage.length > 0);
+  assert.ok(result.decisionSummary.recommendedUserFocus.includes("NSW SES"));
+  assert.ok(result.decisionSummary.whyThisMatters.length > 0);
   assert.ok(result.decisionAudit.whatIncreasedConcern.length > 0);
   assert.ok(result.decisionAudit.whatReducedConcern.length > 0);
   assert.ok(result.decisionAudit.checkNext.some((step) => /NSW SES|BoM/i.test(step)));

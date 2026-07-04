@@ -363,14 +363,32 @@ function buildDecisionAudit(signals, riskSignals, score, concernLevel) {
       : "Monitor local rainfall and river trends.",
     "Prepare to act according to official emergency advice.",
   ];
+  const decisionSummary = {
+    primaryConcernDriver:
+      increasedConcern[0] ??
+      reducedConcern[0] ??
+      "Current concern is being driven by combined rainfall, river, and reliability context.",
+    primaryReliabilityMessage:
+      sourceLimitations[0] ??
+      `Evidence confidence is ${evidenceConfidence}, based on current source freshness and coverage.`,
+    recommendedUserFocus: checkNext[0] ?? "Check official NSW SES and BoM advice.",
+    whyThisMatters:
+      concernLevel === "High"
+        ? "FloodGuard sees elevated local pressure, but official emergency advice remains primary."
+        : concernLevel === "Moderate"
+          ? "FloodGuard sees conditions worth monitoring closely, especially alongside official updates."
+          : "FloodGuard currently sees lower local pressure, but still tracks changing rainfall and river conditions.",
+  };
 
   return {
+    contractVersion: "risk-intelligence-v2",
     concernLevel,
     score,
     hazardPressure,
     evidenceConfidence,
     officialWarningContext,
     recommendationType,
+    decisionSummary,
     decisionRecommendation: {
       recommendationType,
       nextSteps: checkNext,
@@ -683,12 +701,14 @@ export function assessRisk(signals) {
   const decisionAudit = buildDecisionAudit(signals, riskSignals, score, concernLevel);
 
   return {
+    contractVersion: decisionAudit.contractVersion,
     concernLevel,
     score,
     hazardPressure: decisionAudit.hazardPressure,
     evidenceConfidence: decisionAudit.evidenceConfidence,
     officialWarningContext: decisionAudit.officialWarningContext,
     recommendationType: decisionAudit.recommendationType,
+    decisionSummary: decisionAudit.decisionSummary,
     decisionRecommendation: decisionAudit.decisionRecommendation,
     summary:
       concernLevel === "High"
