@@ -1,6 +1,6 @@
 # FloodGuard Progress Report
 
-_Last updated: 2026-07-05 (supervision verification, warning observability, replay integration, and risk-intelligence contract update)_
+_Last updated: 2026-07-05 (event-window history querying and label-review contract upgrade)_
 
 ## Purpose
 
@@ -40,17 +40,17 @@ These percentages are intentionally honest and reflect implemented code, tests, 
 
 | Area | Progress | Why |
 |---|---:|---|
-| Core prototype / backend framework | **90%** | ingestion, health, cache, source registry, explainable risk, notifications, replay storage, and API contracts are now strongly integrated |
+| Core prototype / backend framework | **91%** | ingestion, health, cache, source registry, explainable risk, notifications, replay storage, queryable history windows, and API contracts are now strongly integrated |
 | Reliability / trust architecture | **94%** | one of the strongest parts of FloodGuard; live vs cached vs stale vs missing vs fallback is handled clearly and now more deeply observable |
 | Frontend dashboard / evidence UX | **88%** | strong overview, evidence, warning, map, signals, and ML panels exist; the front page now explains concern, trust, next steps, and simulated demo scenarios more clearly |
 | Official warning layer | **74%** | architecture, adapter states, relevance filtering, failure categories, and warning observability are implemented more strongly, though full live operational maturity is still not there |
-| Historical data foundation | **80%** | snapshot history, deduplication, replay SQLite output, decision-audit storage, and queryable replay artifacts now exist, though the long-term store is still prototype-grade |
+| Historical data foundation | **83%** | snapshot history, deduplication, replay SQLite output, decision-audit storage, queryable event-window history, and review-oriented summary contracts now exist, though the long-term store is still prototype-grade |
 | Rule engine / explainable concern logic | **87%** | feature engineering and risk reasoning are strong, and the backend now exposes a cleaner risk-intelligence explanation contract alongside the detailed audit |
-| Testing / regression protection | **91%** | backend, ML, replay, failure-injection, and browser smoke coverage are strong and now include richer warning/replay/reporting contracts |
-| ML engineering / shadow pipeline | **84%** | Python training, model comparison, validation controls, target selection, calibration, replay summaries, and promotion reporting are implemented well |
-| Validated ML / real predictive credibility | **38%** | still limited by weak independent labels and sparse real elevated supervision, but replay, calibration, and supervision auditing are now much better prepared for real validation work |
-| Overall project toward credible prototype goal | **88%** | FloodGuard is already a strong reliability-aware prototype with stronger replay/reporting depth and clearer backend trust contracts |
-| Overall project toward final long-term vision | **73%** | still missing stronger labels, expert-calibrated live warning maturity, and truly validated event supervision, but the architecture is much closer to that destination |
+| Testing / regression protection | **92%** | backend, ML, replay, failure-injection, and browser smoke coverage are strong and now include richer history-window and supervision-reporting contracts |
+| ML engineering / shadow pipeline | **86%** | Python training, model comparison, validation controls, target selection, calibration, replay summaries, promotion reporting, and label-review auditing are implemented well |
+| Validated ML / real predictive credibility | **41%** | still limited by weak independent labels and sparse real elevated supervision, but event-backlog review signals and evidence-linked supervision auditing are now more concrete and actionable |
+| Overall project toward credible prototype goal | **89%** | FloodGuard is already a strong reliability-aware prototype with stronger replay/reporting depth, queryable review windows, and clearer backend trust contracts |
+| Overall project toward final long-term vision | **75%** | still missing stronger labels, expert-calibrated live warning maturity, and truly validated event supervision, but the architecture and review workflow are materially closer to that destination |
 
 ---
 
@@ -91,6 +91,10 @@ Newer work completed since the earlier progress snapshot includes:
 - `/api/ml/report` integration for historical replay summary so replay evidence now sits beside calibration, promotion policy, and supervision reporting;
 - a versioned risk-intelligence contract with a compact `decisionSummary` layer for future non-UI consumers;
 - richer ingestion-observability rows that now show source role, live-claim eligibility, and age since last successful live fetch.
+- `/api/history` support for explicit start/end event windows plus an opt-in review summary contract, while preserving the old array response the dashboard already uses.
+- backend history summaries that now count concern levels, official-warning context, degraded-record rate, and latest decision state for calibration/replay review.
+- a stronger event-label backlog contract with independence level, review priority, join status, and evidence-link placeholders.
+- richer label-audit outputs and `/api/ml/report` supervision summaries that now distinguish evidence-linked backlog rows from fully joined reviewed supervision.
 
 What matters about this:
 
@@ -98,6 +102,7 @@ What matters about this:
 - the frontend is much stronger at exposing evidence, trends, trust, and next-step guidance;
 - the project now has a clearer professional story around safety, expert review, and what ML can honestly claim today;
 - the ML layer is now much better at saying not only what model was trained, but also what supervision target was trustworthy enough to use;
+- the historical layer is now easier to query in the same event-window shape that calibration, replay review, and future expert validation will need;
 - the dashboard is now better at helping a non-technical user understand both the current local concern and how much confidence they should place in the visible evidence;
 - the dashboard is also better at demonstrating behaviour under simulated stress-test conditions without weakening the honesty of the live/degraded source story;
 - the project still remains rule-based and prototype-grade in the places where it should be described carefully.
