@@ -32,6 +32,9 @@ class AuditLabelsTests(unittest.TestCase):
                         "label_strength": "moderate",
                         "review_status": "candidate_review",
                         "promotion_ready": "no",
+                        "independence_level": "moderate",
+                        "review_priority": "high",
+                        "join_status": "backlog_only",
                         "evidence_link": "",
                         "notes": "Test",
                     }
@@ -43,6 +46,7 @@ class AuditLabelsTests(unittest.TestCase):
         self.assertEqual(int(backlog.loc[0, "label_class"]), 1)
         self.assertEqual(backlog.loc[0, "label_source"], "warning_derived")
         self.assertEqual(backlog.loc[0, "review_status"], "candidate_review")
+        self.assertEqual(backlog.loc[0, "join_status"], "backlog_only")
         self.assertTrue(pd.notna(backlog.loc[0, "start_time"]))
 
     def test_summarise_label_frame_counts_positive_backlog_rows(self) -> None:
@@ -57,6 +61,11 @@ class AuditLabelsTests(unittest.TestCase):
                     "label_source": "manual_demo",
                     "label_strength": "weak",
                     "review_status": "scaffold_only",
+                    "promotion_ready": "no",
+                    "independence_level": "low",
+                    "review_priority": "low",
+                    "join_status": "joined_to_labels",
+                    "evidence_link": "",
                 },
                 {
                     "area": "toongabbie",
@@ -67,6 +76,11 @@ class AuditLabelsTests(unittest.TestCase):
                     "label_source": "impact_candidate",
                     "label_strength": "weak",
                     "review_status": "candidate_review",
+                    "promotion_ready": "yes",
+                    "independence_level": "moderate",
+                    "review_priority": "high",
+                    "join_status": "backlog_only",
+                    "evidence_link": "https://example.test/evidence/toongabbie-impact",
                 },
             ]
         )
@@ -75,9 +89,13 @@ class AuditLabelsTests(unittest.TestCase):
 
         self.assertEqual(summary["rowCount"], 2)
         self.assertEqual(summary["positiveRows"], 1)
+        self.assertEqual(summary["independentPositiveRows"], 1)
+        self.assertEqual(summary["evidenceLinkedRows"], 1)
+        self.assertEqual(summary["promotableRows"], 1)
         self.assertIn("parramatta", summary["areas"])
         self.assertEqual(summary["labelSourceCounts"]["manual_demo"], 1)
         self.assertEqual(summary["reviewStatusCounts"]["scaffold_only"], 1)
+        self.assertEqual(summary["joinStatusCounts"]["backlog_only"], 1)
 
     def test_assess_supervision_quality_stays_weak_for_scaffold_only_labels(self) -> None:
         labels_summary = {
@@ -85,13 +103,41 @@ class AuditLabelsTests(unittest.TestCase):
             "labelStrengthCounts": {"weak": 3},
             "reviewStatusCounts": {"scaffold_only": 3},
         }
-        backlog_summary = {"rowCount": 5, "positiveRows": 2}
+        backlog_summary = {
+            "rowCount": 5,
+            "positiveRows": 2,
+            "independentPositiveRows": 0,
+            "evidenceLinkedRows": 0,
+            "promotableRows": 0,
+        }
 
         quality = assess_supervision_quality(labels_summary, backlog_summary)
 
         self.assertEqual(quality["grade"], "weak")
         self.assertFalse(quality["viableForIndependentSupervision"])
         self.assertIn("scaffold-level", quality["summary"])
+        self.assertIn("placeholder-level", quality["primaryLimitation"])
+
+    def test_assess_supervision_quality_becomes_developing_when_backlog_has_evidence_linked_events(self) -> None:
+        labels_summary = {
+            "positiveRows": 0,
+            "labelStrengthCounts": {"weak": 3},
+            "reviewStatusCounts": {"scaffold_only": 3},
+        }
+        backlog_summary = {
+            "rowCount": 6,
+            "positiveRows": 2,
+            "independentPositiveRows": 2,
+            "evidenceLinkedRows": 2,
+            "promotableRows": 1,
+        }
+
+        quality = assess_supervision_quality(labels_summary, backlog_summary)
+
+        self.assertEqual(quality["grade"], "developing")
+        self.assertFalse(quality["viableForIndependentSupervision"])
+        self.assertEqual(quality["backlogEvidenceLinkedRows"], 2)
+        self.assertIn("promoted into reviewed joined event labels", quality["primaryLimitation"])
 
 
 if __name__ == "__main__":

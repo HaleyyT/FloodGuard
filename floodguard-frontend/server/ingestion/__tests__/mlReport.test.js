@@ -114,10 +114,21 @@ test("readMlReport reads available files without crashing on partial reports", a
     await writeFile(
       path.join(reportsDir, "label_audit.json"),
       `${JSON.stringify({
+        backlogSummary: {
+          evidenceLinkedRows: 2,
+          reviewedRows: 1,
+          promotableRows: 1,
+          independentPositiveRows: 2,
+        },
         supervisionQuality: {
-          grade: "weak",
-          summary: "Independent supervision remains scaffold-level only.",
+          grade: "developing",
+          summary: "Backlog evidence is improving, but joined supervision is still too weak for validated ML claims.",
           viableForIndependentSupervision: false,
+          primaryLimitation:
+            "Backlog candidates exist, but they have not yet been promoted into reviewed joined event labels.",
+          backlogEvidenceLinkedRows: 2,
+          backlogPromotableRows: 1,
+          backlogIndependentPositiveRows: 2,
         },
       })}\n`,
       "utf8",
@@ -165,9 +176,16 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.modelAgreementWithRuleEngine, "unavailable");
     assert.equal(report.labelStrength, "rule_derived_or_weak");
     assert.equal(report.labelAudit.available, true);
-    assert.equal(report.supervisionQuality.grade, "weak");
+    assert.equal(report.labelAudit.evidenceLinkedRows, 2);
+    assert.equal(report.labelAudit.reviewedRows, 1);
+    assert.equal(report.labelAudit.promotableRows, 1);
+    assert.equal(report.labelAudit.independentPositiveRows, 2);
+    assert.equal(report.supervisionQuality.grade, "developing");
     assert.equal(report.supervisionQuality.viableForIndependentSupervision, false);
-    assert.match(report.supervisionQuality.primaryLimitation, /placeholders/i);
+    assert.equal(report.supervisionQuality.backlogEvidenceLinkedRows, 2);
+    assert.equal(report.supervisionQuality.backlogPromotableRows, 1);
+    assert.equal(report.supervisionQuality.backlogIndependentPositiveRows, 2);
+    assert.match(report.supervisionQuality.primaryLimitation, /promoted into reviewed joined event labels/i);
     assert.equal(report.realExport.available, true);
     assert.equal(report.realExport.rows, 3000);
     assert.equal(report.realExport.elevatedRows, 18);
