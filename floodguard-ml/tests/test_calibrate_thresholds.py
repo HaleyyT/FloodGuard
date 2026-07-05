@@ -13,6 +13,7 @@ sys.path.insert(0, str(SRC_DIR))
 
 from calibrate_thresholds import (  # noqa: E402
     build_threshold_grid,
+    calibration_quality_gate,
     evaluate_threshold_candidate,
     load_threshold_config,
     row_trigger_state,
@@ -92,6 +93,12 @@ class CalibrateThresholdsTests(unittest.TestCase):
         self.assertEqual(target["kind"], "rule")
         self.assertIn("only 2 event-labelled row(s) are available", target["reason"])
         self.assertEqual(target["supervisionQuality"]["grade"], "weak")
+        gate = calibration_quality_gate(target)
+        self.assertEqual(gate["targetUsed"], "rule-derived")
+        self.assertEqual(gate["thresholdStatus"], "prototype-calibrated")
+        self.assertFalse(gate["passed"])
+        self.assertEqual(gate["reviewedElevatedWindows"], 0)
+        self.assertIn("No reviewed elevated event windows", " ".join(gate["blockers"]))
 
     def test_evaluate_threshold_candidate_reports_window_detection_metrics(self) -> None:
         thresholds = {
@@ -287,12 +294,19 @@ class CalibrateThresholdsTests(unittest.TestCase):
             )
 
             self.assertEqual(result["targetKind"], "rule")
+            self.assertEqual(result["targetUsed"], "rule-derived")
+            self.assertEqual(result["thresholdStatus"], "prototype-calibrated")
+            self.assertFalse(result["labelQualityGate"]["passed"])
             self.assertTrue(report_path.exists())
             self.assertTrue(summary_path.exists())
             self.assertTrue(summary_json_path.exists())
+            self.assertIn("Label quality gate", report_path.read_text(encoding="utf-8"))
+            self.assertIn("Target used: `rule-derived`", report_path.read_text(encoding="utf-8"))
+            self.assertIn("Threshold status: `prototype-calibrated`", report_path.read_text(encoding="utf-8"))
             self.assertIn("Supervision quality", report_path.read_text(encoding="utf-8"))
             self.assertIn("## Known limitations", report_path.read_text(encoding="utf-8"))
             self.assertIn("- limited independent labels", report_path.read_text(encoding="utf-8"))
+            self.assertIn("Label quality gate passed: `False`", summary_path.read_text(encoding="utf-8"))
             self.assertIn("review-only", summary_path.read_text(encoding="utf-8"))
 
 

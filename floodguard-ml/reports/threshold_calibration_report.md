@@ -5,6 +5,8 @@ FloodGuard calibrates thresholds in a reviewable shadow workflow and does not au
 - Threshold version under review: `0.3-calibration-review`
 - Review status: `needs_domain_expert_review`
 - Calibration target kind: `rule`
+- Target used: `rule-derived`
+- Threshold status: `prototype-calibrated`
 - Calibration target reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 - Positive rows available for this target: `18`
 - Candidate threshold sets evaluated: `2187`
@@ -15,6 +17,15 @@ FloodGuard calibrates thresholds in a reviewable shadow workflow and does not au
 - no production validation
 - current sweep is strongest for replay and expert review, not for automatic promotion
 - current event labels are still scaffold or candidate-review supervision rather than verified flood outcomes
+
+## Label quality gate
+
+- Gate passed: `False`
+- Candidate event windows: `3000`
+- Reviewed event windows: `0`
+- Reviewed elevated event windows: `0`
+- Event-holdout viable: `False`
+- Blockers: `Calibration target is not reviewed-event supervision.; No reviewed event windows are available.; No reviewed elevated event windows are available.; Candidate event windows remain unreviewed or placeholder-backed.; Event-holdout validation is not viable yet.`
 
 ## Supervision quality
 

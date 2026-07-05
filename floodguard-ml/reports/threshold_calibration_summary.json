@@ -39,6 +39,24 @@
       }
     }
   },
+  "labelQualityGate": {
+    "targetUsed": "rule-derived",
+    "passed": false,
+    "candidateWindows": 3000,
+    "reviewedWindows": 0,
+    "reviewedElevatedWindows": 0,
+    "eventHoldoutViable": false,
+    "thresholdStatus": "prototype-calibrated",
+    "blockers": [
+      "Calibration target is not reviewed-event supervision.",
+      "No reviewed event windows are available.",
+      "No reviewed elevated event windows are available.",
+      "Candidate event windows remain unreviewed or placeholder-backed.",
+      "Event-holdout validation is not viable yet."
+    ]
+  },
+  "thresholdStatus": "prototype-calibrated",
+  "targetUsed": "rule-derived",
   "selectedCandidate": {
     "rainfall1hMm": 8.0,
     "rainfall3hMm": 16.0,
