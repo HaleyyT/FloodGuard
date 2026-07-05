@@ -4,6 +4,8 @@ FloodGuard calibrates thresholds in a reviewable shadow workflow and does not au
 
 - Threshold version under review: `0.3-calibration-review`
 - Review status: `needs_domain_expert_review`
+- Calibration mode: `prototype_only`
+- Calibration evidence statement: Prototype-only calibration: reviewed event windows are insufficient.
 - Calibration target kind: `rule`
 - Target used: `rule-derived`
 - Threshold status: `prototype-calibrated`

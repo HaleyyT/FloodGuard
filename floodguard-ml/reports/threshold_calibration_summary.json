@@ -1,6 +1,8 @@
 {
   "thresholdVersion": "0.3-calibration-review",
   "reviewStatus": "needs_domain_expert_review",
+  "calibrationMode": "prototype_only",
+  "calibrationEvidenceStatement": "Prototype-only calibration: reviewed event windows are insufficient.",
   "target": {
     "column": "targetRuleElevated",
     "kind": "rule",

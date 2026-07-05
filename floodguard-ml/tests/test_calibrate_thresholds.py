@@ -13,6 +13,7 @@ sys.path.insert(0, str(SRC_DIR))
 
 from calibrate_thresholds import (  # noqa: E402
     build_threshold_grid,
+    calibration_mode_statement,
     calibration_quality_gate,
     evaluate_threshold_candidate,
     load_threshold_config,
@@ -99,6 +100,9 @@ class CalibrateThresholdsTests(unittest.TestCase):
         self.assertFalse(gate["passed"])
         self.assertEqual(gate["reviewedElevatedWindows"], 0)
         self.assertIn("No reviewed elevated event windows", " ".join(gate["blockers"]))
+        calibration_mode, calibration_statement = calibration_mode_statement(target)
+        self.assertEqual(calibration_mode, "prototype_only")
+        self.assertIn("reviewed event windows are insufficient", calibration_statement)
 
     def test_evaluate_threshold_candidate_reports_window_detection_metrics(self) -> None:
         thresholds = {

@@ -1,6 +1,8 @@
 # FloodGuard Threshold Calibration Summary
 
 Threshold version `0.3-calibration-review` remains review-only.
+Calibration mode: `prototype_only`.
+Prototype-only calibration: reviewed event windows are insufficient.
 Calibration target kind: `rule`.
 Target used: `rule-derived`; threshold status: `prototype-calibrated`.
 Label quality gate passed: `False`; event holdout viable: `False`.

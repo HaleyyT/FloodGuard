@@ -155,6 +155,23 @@ def threshold_status(target: dict[str, Any]) -> str:
     return "heuristic"
 
 
+def calibration_mode_statement(target: dict[str, Any]) -> tuple[str, str]:
+    """Describe calibration maturity without implying validated thresholds."""
+
+    supervision_quality = target.get("supervisionQuality", {})
+    reviewed_windows = int(supervision_quality.get("eligibleIndependentRowCount", 0) or 0)
+    reviewed_elevated = int(supervision_quality.get("eligibleIndependentPositiveCount", 0) or 0)
+    if target.get("kind") == "event" and reviewed_windows > 0 and reviewed_elevated > 0:
+        return (
+            "evidence_backed",
+            "Evidence-backed calibration: limited but real reviewed event windows exist.",
+        )
+    return (
+        "prototype_only",
+        "Prototype-only calibration: reviewed event windows are insufficient.",
+    )
+
+
 def calibration_quality_gate(target: dict[str, Any]) -> dict[str, Any]:
     """Summarise the evidence gate that blocks stronger threshold claims."""
 
@@ -348,6 +365,7 @@ def calibration_report_text(
 
     top_rows = ranked_rows[:5]
     quality_gate = calibration_quality_gate(target)
+    calibration_mode, calibration_statement = calibration_mode_statement(target)
     lines = [
         "# FloodGuard Threshold Calibration Report",
         "",
@@ -355,6 +373,8 @@ def calibration_report_text(
         "",
         f"- Threshold version under review: `{config.get('version')}`",
         f"- Review status: `{config.get('reviewStatus')}`",
+        f"- Calibration mode: `{calibration_mode}`",
+        f"- Calibration evidence statement: {calibration_statement}",
         f"- Calibration target kind: `{target['kind']}`",
         f"- Target used: `{quality_gate['targetUsed']}`",
         f"- Threshold status: `{quality_gate['thresholdStatus']}`",
@@ -480,11 +500,14 @@ def calibration_summary_text(
 
     supervision_quality = target.get("supervisionQuality", {})
     quality_gate = calibration_quality_gate(target)
+    calibration_mode, calibration_statement = calibration_mode_statement(target)
     return "\n".join(
         [
             "# FloodGuard Threshold Calibration Summary",
             "",
             f"Threshold version `{config.get('version')}` remains review-only.",
+            f"Calibration mode: `{calibration_mode}`.",
+            calibration_statement,
             f"Calibration target kind: `{target['kind']}`.",
             f"Target used: `{quality_gate['targetUsed']}`; threshold status: `{quality_gate['thresholdStatus']}`.",
             f"Label quality gate passed: `{quality_gate['passed']}`; event holdout viable: `{quality_gate['eventHoldoutViable']}`.",
@@ -530,11 +553,14 @@ def run_calibration(
         f"{calibration_summary_text(config, target, selected_row)}\n",
         encoding="utf-8",
     )
+    calibration_mode, calibration_statement = calibration_mode_statement(target)
     write_json(
         summary_json_path,
         {
             "thresholdVersion": config.get("version"),
             "reviewStatus": config.get("reviewStatus"),
+            "calibrationMode": calibration_mode,
+            "calibrationEvidenceStatement": calibration_statement,
             "target": target,
             "labelQualityGate": quality_gate,
             "thresholdStatus": quality_gate["thresholdStatus"],
