@@ -173,6 +173,8 @@ export async function readAreaHistory(historyDir, areaId, limit = 24) {
       : {
           limit: limit?.limit ?? 24,
           sinceHours: limit?.sinceHours ?? null,
+          startTime: limit?.startTime ?? null,
+          endTime: limit?.endTime ?? null,
         };
 
   try {
@@ -184,9 +186,20 @@ export async function readAreaHistory(historyDir, areaId, limit = 24) {
       .map((line) => parseJsonLine(line))
       .filter(Boolean)
       .filter((record) => {
-        if (options.sinceHours === null) return true;
         const ingestedAtMs = new Date(record.ingestedAt).getTime();
         if (Number.isNaN(ingestedAtMs)) return false;
+
+        if (options.startTime) {
+          const startTimeMs = new Date(options.startTime).getTime();
+          if (Number.isNaN(startTimeMs) || ingestedAtMs < startTimeMs) return false;
+        }
+
+        if (options.endTime) {
+          const endTimeMs = new Date(options.endTime).getTime();
+          if (Number.isNaN(endTimeMs) || ingestedAtMs > endTimeMs) return false;
+        }
+
+        if (options.sinceHours === null) return true;
         return ingestedAtMs >= Date.now() - options.sinceHours * 60 * 60 * 1000;
       });
 
@@ -195,6 +208,60 @@ export async function readAreaHistory(historyDir, areaId, limit = 24) {
     if (error.code === "ENOENT") return [];
     throw error;
   }
+}
+
+function isDegradedHistoryRecord(record) {
+  const freshnessRows = record.sourceFreshness ?? [];
+  const freshnessDegraded = freshnessRows.some(
+    (source) => source.freshnessStatus && source.freshnessStatus !== "current",
+  );
+  if (freshnessDegraded) return true;
+
+  const readings = record.sourceReadings ?? [];
+  return readings.some((reading) => {
+    const mode = String(reading.dataMode ?? "").toLowerCase();
+    return mode.includes("cached") || mode.includes("stale") || mode.includes("fallback") || mode.includes("missing");
+  });
+}
+
+export function summariseAreaHistoryWindow(areaId, records, filters = {}) {
+  const riskLevelCounts = records.reduce((counts, record) => {
+    const key = record.riskLevel ?? "Unknown";
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  const warningContextCounts = records.reduce((counts, record) => {
+    const key = record.decisionAuditSnapshot?.officialWarningContext ?? "unknown";
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  const degradedRecordCount = records.filter((record) => isDegradedHistoryRecord(record)).length;
+  const newest = records[0] ?? null;
+  const oldest = records.at(-1) ?? null;
+
+  return {
+    areaId,
+    filters: {
+      limit: filters.limit ?? 24,
+      sinceHours: filters.sinceHours ?? null,
+      startTime: filters.startTime ?? null,
+      endTime: filters.endTime ?? null,
+    },
+    recordCount: records.length,
+    timeRange: {
+      newestIngestedAt: newest?.ingestedAt ?? null,
+      oldestIngestedAt: oldest?.ingestedAt ?? null,
+    },
+    riskLevelCounts,
+    warningContextCounts,
+    degradedRecordCount,
+    degradedRecordRate: records.length === 0 ? 0 : Number((degradedRecordCount / records.length).toFixed(3)),
+    latestRiskLevel: newest?.riskLevel ?? null,
+    latestRiskScore: newest?.riskScore ?? null,
+    latestDecisionReliability: newest?.decisionReliability ?? null,
+  };
 }
 
 function sourceCachePath(cacheDir, cacheKey) {

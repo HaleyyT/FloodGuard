@@ -4,7 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { appendAreaHistory, buildAreaHistoryRecord, readAreaHistory } from "../store.js";
+import {
+  appendAreaHistory,
+  buildAreaHistoryRecord,
+  readAreaHistory,
+  summariseAreaHistoryWindow,
+} from "../store.js";
 
 function mockAreaSignals(overrides = {}) {
   return {
@@ -152,6 +157,85 @@ test("readAreaHistory filters to the requested rolling time window", async () =>
   } finally {
     await rm(historyDir, { force: true, recursive: true });
   }
+});
+
+test("readAreaHistory filters to an explicit event-style start and end window", async () => {
+  const historyDir = await mkdtemp(path.join(os.tmpdir(), "floodguard-history-"));
+
+  try {
+    await appendAreaHistory(
+      historyDir,
+      mockAreaSignals({ ingestedAt: "2026-06-29T01:00:00.000Z" }),
+    );
+    await appendAreaHistory(
+      historyDir,
+      mockAreaSignals({ ingestedAt: "2026-06-29T03:00:00.000Z" }),
+    );
+    await appendAreaHistory(
+      historyDir,
+      mockAreaSignals({ ingestedAt: "2026-06-29T05:00:00.000Z" }),
+    );
+
+    const windowedHistory = await readAreaHistory(historyDir, "parramatta", {
+      limit: 10,
+      startTime: "2026-06-29T02:00:00.000Z",
+      endTime: "2026-06-29T04:00:00.000Z",
+    });
+
+    assert.equal(windowedHistory.length, 1);
+    assert.equal(windowedHistory[0].ingestedAt, "2026-06-29T03:00:00.000Z");
+  } finally {
+    await rm(historyDir, { force: true, recursive: true });
+  }
+});
+
+test("summariseAreaHistoryWindow reports degraded coverage and latest decision state", () => {
+  const currentRecord = buildAreaHistoryRecord(mockAreaSignals());
+  const degradedRecord = buildAreaHistoryRecord(
+    mockAreaSignals({
+      ingestedAt: "2026-06-29T02:00:00.000Z",
+      riskAssessment: {
+        concernLevel: "Low",
+        score: 18,
+        signals: {},
+        features: {},
+        decisionAudit: {
+          reliability: { score: 71, level: "Medium" },
+          officialWarningContext: "warning_source_unavailable",
+        },
+      },
+      sourceMetadata: [
+        {
+          label: "FloodSmart rainfall",
+          type: "rainfall",
+          mode: "remote",
+          dataMode: "cached_stale",
+          observedAt: "2026-06-29T01:00:00.000Z",
+          fetchedAt: "2026-06-29T02:00:00.000Z",
+          freshnessStatus: "stale",
+          sourceStrength: "primary_live_gauge",
+          source: "https://example.test/rainfall",
+        },
+      ],
+    }),
+  );
+
+  const summary = summariseAreaHistoryWindow(
+    "parramatta",
+    [currentRecord, degradedRecord],
+    { limit: 10, startTime: "2026-06-29T01:00:00.000Z", endTime: "2026-06-29T03:00:00.000Z" },
+  );
+
+  assert.equal(summary.recordCount, 2);
+  assert.equal(summary.riskLevelCounts.Moderate, 1);
+  assert.equal(summary.riskLevelCounts.Low, 1);
+  assert.equal(summary.warningContextCounts.no_current_warning, 1);
+  assert.equal(summary.warningContextCounts.warning_source_unavailable, 1);
+  assert.equal(summary.degradedRecordCount, 1);
+  assert.equal(summary.latestRiskLevel, "Moderate");
+  assert.equal(summary.latestRiskScore, 58);
+  assert.equal(summary.timeRange.newestIngestedAt, "2026-06-29T03:00:00.000Z");
+  assert.equal(summary.timeRange.oldestIngestedAt, "2026-06-29T02:00:00.000Z");
 });
 
 test("readAreaHistory skips corrupt JSONL rows instead of crashing the dashboard history view", async () => {
