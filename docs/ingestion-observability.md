@@ -17,6 +17,11 @@ This note explains how FloodGuard makes degraded ingestion states observable ins
 - last successful live fetch
 - minutes since the last successful live fetch
 
+These fields are visible through:
+
+- `/api/ingestion-observability` for structured per-source inspection;
+- `npm run check:ingestion` and `npm run check:ingestion:live` for reviewer-friendly terminal output when strict readiness fails or a degraded source is present.
+
 ## Failure taxonomy
 
 FloodGuard currently classifies degraded ingestion states using:
@@ -44,6 +49,18 @@ That is better than a vague red status because it shows whether the issue is:
 - station mapping,
 - cache fallback,
 - or configuration.
+
+## Current CLI visibility
+
+When degraded sources exist, the readiness check now prints a compact observability block such as:
+
+```text
+Degraded source observability:
+  Source status: degraded honestly — cached rainfall/river evidence is blocked from live claims.
+  Parramatta, NSW | river | failure=cache_stale | sourceMode=cached_stale | cacheMode=cached_stale | lastFetchedAt=2026-07-03T04:00:00Z | lastObservedAt=2026-07-03T02:10:00Z | freshnessMinutes=110m | liveClaimEligible=false
+```
+
+This makes the strict-vs-submission distinction easier to defend during demo, judging, or expert review because the failure is explicit rather than implied.
 
 ## Current boundary
 
