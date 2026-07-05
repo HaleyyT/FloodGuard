@@ -21,7 +21,7 @@ import pandas as pd  # noqa: E402
 
 
 class PromoteReviewedLabelsTests(unittest.TestCase):
-    def test_backlog_promotion_mask_requires_evidence_or_review_and_blocks_scenarios(self) -> None:
+    def test_backlog_promotion_mask_requires_real_evidence_or_review_and_blocks_scenarios(self) -> None:
         backlog = pd.DataFrame(
             [
                 {
@@ -59,9 +59,9 @@ class PromoteReviewedLabelsTests(unittest.TestCase):
 
         mask = backlog_promotion_mask(backlog)
 
-        self.assertEqual(mask.tolist(), [True, False, False])
+        self.assertEqual(mask.tolist(), [False, False, False])
 
-    def test_promote_reviewed_labels_upserts_evidence_backed_rows_without_claiming_review(self) -> None:
+    def test_promote_reviewed_labels_does_not_promote_placeholder_evidence_rows(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             backlog_path = temp_path / "event_label_backlog.csv"
@@ -129,20 +129,16 @@ class PromoteReviewedLabelsTests(unittest.TestCase):
             promoted_labels = pd.read_csv(labels_path)
             updated_backlog = pd.read_csv(backlog_path)
 
-        self.assertEqual(result["promotedCount"], 1)
+        self.assertEqual(result["promotedCount"], 0)
         self.assertEqual(result["reviewedEventWindows"], 0)
         self.assertEqual(result["reviewedElevatedEventWindows"], 0)
-        self.assertEqual(promoted_labels["label"].tolist(), [0, 1])
+        self.assertEqual(promoted_labels["label"].tolist(), [0])
         self.assertIn("review_notes", promoted_labels.columns)
         self.assertEqual(
-            promoted_labels.loc[promoted_labels["label"] == 1, "review_status"].iloc[0],
-            "candidate_review",
-        )
-        self.assertEqual(
             updated_backlog.loc[0, "join_status"],
-            "joined_to_labels",
+            "backlog_only",
         )
-        self.assertEqual(updated_backlog.loc[0, "promotion_ready"], "promoted")
+        self.assertEqual(updated_backlog.loc[0, "promotion_ready"], "no")
         build_dataset_mock.assert_called_once()
 
 

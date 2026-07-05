@@ -45,6 +45,8 @@ The event backlog now also tracks:
 
 This keeps backlog planning separate from joined validation rows and helps FloodGuard report what is merely a candidate versus what is actually reviewable supervision.
 
+Placeholder evidence links such as `example.test` do not count as real supervision evidence and must be replaced before a row can move beyond `candidate_review`.
+
 ## Recommended targets
 
 Primary future target:
