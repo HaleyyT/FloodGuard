@@ -1,3 +1,14 @@
+export const INGESTION_FAILURE_TAXONOMY = Object.freeze([
+  "network_timeout",
+  "source_unavailable",
+  "parser_error",
+  "timestamp_stale",
+  "station_unmapped",
+  "cache_recent",
+  "cache_stale",
+  "not_configured",
+]);
+
 function deriveFailureReason(source, areaSignals) {
   if (source.status === "not-connected" || source.mode === "not-configured") return "not_configured";
   if (source.dataMode === "cached_recent") return "cache_recent";
@@ -115,18 +126,22 @@ export function buildIngestionObservabilityReport(regionalSignals) {
     generatedAt: regionalSignals.refreshMetadata?.servedAt ?? regionalSignals.ingestedAt,
     refreshStatus: regionalSignals.refreshMetadata?.status ?? "unknown",
     debugLine: buildDebugLine(regionalSignals),
-    failureTaxonomy: [
-      "network_timeout",
-      "source_unavailable",
-      "parser_error",
-      "timestamp_stale",
-      "station_unmapped",
-      "cache_recent",
-      "cache_stale",
-      "not_configured",
-    ],
+    failureTaxonomy: [...INGESTION_FAILURE_TAXONOMY],
     degradedSourceCount: degradedSources.length,
     degradedSources,
     areas,
   };
+}
+
+export function summarizeDegradedSourcesForCli(report) {
+  return (report?.degradedSources ?? []).map((source) => {
+    const freshnessMinutes =
+      typeof source.freshnessMinutes === "number" ? `${source.freshnessMinutes}m` : "unknown";
+    return (
+      `${source.areaName} | ${source.sourceType} | failure=${source.failureReason} | ` +
+      `sourceMode=${source.sourceMode} | cacheMode=${source.cacheMode} | ` +
+      `lastFetchedAt=${source.lastFetchedAt ?? "unknown"} | lastObservedAt=${source.lastObservedAt ?? "unknown"} | ` +
+      `freshnessMinutes=${freshnessMinutes} | liveClaimEligible=${source.liveClaimEligible}`
+    );
+  });
 }
