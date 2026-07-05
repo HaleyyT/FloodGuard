@@ -9,6 +9,7 @@ export const rawDataDir = path.join(rootDir, "src/data/raw");
 export const storageDir = path.join(rootDir, "server/storage");
 export const historyDir = path.join(storageDir, "history");
 export const sourceCacheDir = path.join(storageDir, "source-cache");
+export const sourceEvidenceDir = path.join(storageDir, "source-evidence");
 export const latestSignalsSchemaVersion = 4;
 
 function booleanEnv(name, fallback = false) {

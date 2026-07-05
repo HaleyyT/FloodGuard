@@ -16,6 +16,7 @@ server/storage/*.jsonl
 server/storage/history/*.jsonl
 server/storage/history/
 server/storage/source-cache/
+server/storage/source-evidence/
 
 # Editor directories and files
 .vscode/*

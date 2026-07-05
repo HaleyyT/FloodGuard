@@ -26,18 +26,21 @@ This report audits the current label files used to improve ML supervision credib
 
 ## Event Label Backlog (`event_label_backlog.csv`)
 
-- Rows: 5
-- Time span: 2026-06-24T00:00:00+00:00 to 2026-07-02T00:00:00+00:00
+- Rows: 29
+- Time span: 2026-06-12T05:24:44.242000+00:00 to 2026-07-02T00:00:00+00:00
 - Areas covered: north-parramatta, parramatta, toongabbie
-- Label sources: {'manual_demo': 3, 'warning_derived': 1, 'impact_candidate': 1}
-- Label strengths: {'weak': 4, 'moderate': 1}
-- Label classes: {0: 3, 1: 2}
-- Review status: {'scaffold_only': 3, 'candidate_review': 2}
-- Promotion ready: {'no': 3, 'promoted': 2}
-- Independence levels: {'low': 3, 'moderate': 2}
-- Review priorities: {'low': 3, 'high': 2}
-- Join status: {'joined_to_labels': 5}
-- Positive event windows: 2
+- Label sources: {'gauge_threshold': 24, 'manual_demo': 3, 'warning_derived': 1, 'impact_candidate': 1}
+- Label strengths: {'weak': 28, 'moderate': 1}
+- Label classes: {1: 26, 0: 3}
+- Review status: {'candidate_review': 26, 'scaffold_only': 3}
+- Promotion ready: {'no': 27, 'promoted': 2}
+- Independence levels: {'moderate': 26, 'low': 3}
+- Review priorities: {'medium': 24, 'low': 3, 'high': 2}
+- Join status: {'backlog_only': 24, 'joined_to_labels': 5}
+- Evidence types: {'gauge_threshold': 24, 'unknown': 5}
+- Source status counts: {'stale': 21, 'unknown': 5, 'mixed': 3}
+- Area mapping confidence counts: {'high': 24, 'unknown': 5}
+- Positive event windows: 26
 - Independent positive backlog rows: 0
 - Evidence-linked backlog rows: 2
 - Evidence-linked backlog positive rows: 2

@@ -29,8 +29,13 @@ REVIEW_QUEUE_COLUMNS = [
     "label_strength",
     "review_status",
     "evidence_link",
+    "evidence_type",
+    "source_status",
+    "source_reference",
+    "area_mapping_confidence",
     "evidence_is_placeholder",
     "required_evidence_missing",
+    "promotion_blocked_reason",
     "review_priority",
     "recommended_next_action",
 ]
@@ -139,8 +144,29 @@ def build_event_review_queue(
             "label_strength": queue_rows["label_strength"].fillna("unknown").astype(str),
             "review_status": queue_rows["review_status"].fillna("unknown").astype(str),
             "evidence_link": queue_rows["evidence_link"].fillna("").astype(str),
+            "evidence_type": queue_rows.get("evidence_type", pd.Series(index=queue_rows.index, dtype="object"))
+            .fillna("unknown")
+            .astype(str),
+            "source_status": queue_rows.get("source_status", pd.Series(index=queue_rows.index, dtype="object"))
+            .fillna("unknown")
+            .astype(str),
+            "source_reference": queue_rows.get(
+                "source_reference", pd.Series(index=queue_rows.index, dtype="object")
+            )
+            .fillna("")
+            .astype(str),
+            "area_mapping_confidence": queue_rows.get(
+                "area_mapping_confidence", pd.Series(index=queue_rows.index, dtype="object")
+            )
+            .fillna("unknown")
+            .astype(str),
             "evidence_is_placeholder": evidence_placeholder.astype(bool),
             "required_evidence_missing": required_evidence_missing.astype(bool),
+            "promotion_blocked_reason": queue_rows.get(
+                "promotion_blocked_reason", pd.Series(index=queue_rows.index, dtype="object")
+            )
+            .fillna("")
+            .astype(str),
             "review_priority": queue_rows["review_priority"].fillna("unknown").astype(str),
             "recommended_next_action": queue_rows.apply(recommended_next_action, axis=1),
         }

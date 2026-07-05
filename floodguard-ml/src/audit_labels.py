@@ -46,6 +46,12 @@ def load_event_backlog(backlog_path: Path = EVENT_BACKLOG_DATASET) -> pd.DataFra
         "review_priority",
         "join_status",
         "evidence_link",
+        "evidence_type",
+        "source_status",
+        "source_reference",
+        "area_mapping_confidence",
+        "matched_area_reason",
+        "promotion_blocked_reason",
         "review_notes",
         "reviewer",
         "reviewed_at",
@@ -62,8 +68,12 @@ def load_event_backlog(backlog_path: Path = EVENT_BACKLOG_DATASET) -> pd.DataFra
         if column not in backlog.columns:
             backlog[column] = pd.NA
 
-    backlog["start_time"] = pd.to_datetime(backlog["start_time"], errors="coerce", utc=True)
-    backlog["end_time"] = pd.to_datetime(backlog["end_time"], errors="coerce", utc=True)
+    backlog["start_time"] = pd.to_datetime(
+        backlog["start_time"], errors="coerce", utc=True, format="mixed"
+    )
+    backlog["end_time"] = pd.to_datetime(
+        backlog["end_time"], errors="coerce", utc=True, format="mixed"
+    )
     backlog["label_class"] = pd.to_numeric(backlog["label_class"], errors="coerce")
     return backlog
 
@@ -158,6 +168,20 @@ def summarise_label_frame(frame: pd.DataFrame, name: str) -> dict:
         .value_counts(dropna=False)
         .to_dict(),
         "joinStatusCounts": frame.get("join_status", pd.Series(dtype="object"))
+        .fillna("unknown")
+        .value_counts(dropna=False)
+        .to_dict(),
+        "evidenceTypeCounts": frame.get("evidence_type", pd.Series(dtype="object"))
+        .fillna("unknown")
+        .value_counts(dropna=False)
+        .to_dict(),
+        "sourceStatusCounts": frame.get("source_status", pd.Series(dtype="object"))
+        .fillna("unknown")
+        .value_counts(dropna=False)
+        .to_dict(),
+        "areaMappingConfidenceCounts": frame.get(
+            "area_mapping_confidence", pd.Series(dtype="object")
+        )
         .fillna("unknown")
         .value_counts(dropna=False)
         .to_dict(),
@@ -277,6 +301,9 @@ def write_label_audit_report(labels_summary: dict, backlog_summary: dict, superv
         f"- Independence levels: {backlog_summary['independenceLevelCounts']}",
         f"- Review priorities: {backlog_summary['reviewPriorityCounts']}",
         f"- Join status: {backlog_summary['joinStatusCounts']}",
+        f"- Evidence types: {backlog_summary['evidenceTypeCounts']}",
+        f"- Source status counts: {backlog_summary['sourceStatusCounts']}",
+        f"- Area mapping confidence counts: {backlog_summary['areaMappingConfidenceCounts']}",
         f"- Positive event windows: {backlog_summary['positiveRows']}",
         f"- Independent positive backlog rows: {backlog_summary['independentPositiveRows']}",
         f"- Evidence-linked backlog rows: {backlog_summary['evidenceLinkedRows']}",

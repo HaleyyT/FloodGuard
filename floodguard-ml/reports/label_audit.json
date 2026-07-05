@@ -29,6 +29,9 @@
     "independenceLevelCounts": {},
     "reviewPriorityCounts": {},
     "joinStatusCounts": {},
+    "evidenceTypeCounts": {},
+    "sourceStatusCounts": {},
+    "areaMappingConfidenceCounts": {},
     "positiveRows": 2,
     "independentPositiveRows": 0,
     "evidenceLinkedRows": 2,
@@ -47,9 +50,9 @@
   },
   "backlogSummary": {
     "name": "event_label_backlog.csv",
-    "rowCount": 5,
+    "rowCount": 29,
     "timeSpan": {
-      "start": "2026-06-24T00:00:00+00:00",
+      "start": "2026-06-12T05:24:44.242000+00:00",
       "end": "2026-07-02T00:00:00+00:00"
     },
     "areas": [
@@ -58,38 +61,54 @@
       "toongabbie"
     ],
     "labelSourceCounts": {
+      "gauge_threshold": 24,
       "manual_demo": 3,
       "warning_derived": 1,
       "impact_candidate": 1
     },
     "labelStrengthCounts": {
-      "weak": 4,
+      "weak": 28,
       "moderate": 1
     },
     "labelClassCounts": {
-      "0": 3,
-      "1": 2
+      "1": 26,
+      "0": 3
     },
     "reviewStatusCounts": {
-      "scaffold_only": 3,
-      "candidate_review": 2
+      "candidate_review": 26,
+      "scaffold_only": 3
     },
     "promotionReadyCounts": {
-      "no": 3,
+      "no": 27,
       "promoted": 2
     },
     "independenceLevelCounts": {
-      "low": 3,
-      "moderate": 2
+      "moderate": 26,
+      "low": 3
     },
     "reviewPriorityCounts": {
+      "medium": 24,
       "low": 3,
       "high": 2
     },
     "joinStatusCounts": {
+      "backlog_only": 24,
       "joined_to_labels": 5
     },
-    "positiveRows": 2,
+    "evidenceTypeCounts": {
+      "gauge_threshold": 24,
+      "unknown": 5
+    },
+    "sourceStatusCounts": {
+      "stale": 21,
+      "unknown": 5,
+      "mixed": 3
+    },
+    "areaMappingConfidenceCounts": {
+      "high": 24,
+      "unknown": 5
+    },
+    "positiveRows": 26,
     "independentPositiveRows": 0,
     "evidenceLinkedRows": 2,
     "evidenceLinkedPositiveRows": 2,
@@ -115,8 +134,8 @@
     "joinedReviewedRows": 0,
     "joinedReviewableRows": 0,
     "joinedReviewablePositiveRows": 0,
-    "backlogRows": 5,
-    "backlogPositiveRows": 2,
+    "backlogRows": 29,
+    "backlogPositiveRows": 26,
     "backlogIndependentPositiveRows": 0,
     "backlogEvidenceLinkedRows": 2,
     "backlogPlaceholderEvidenceRows": 2,

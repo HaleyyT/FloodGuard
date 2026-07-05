@@ -79,8 +79,12 @@ def load_label_windows(labels_path: Path = LABELS_DATASET) -> pd.DataFrame:
             labels[column] = pd.NA
 
     labels["areaJoinKey"] = labels["area"].map(normalise_area_id)
-    labels["start_time"] = pd.to_datetime(labels["start_time"], errors="coerce", utc=True)
-    labels["end_time"] = pd.to_datetime(labels["end_time"], errors="coerce", utc=True)
+    labels["start_time"] = pd.to_datetime(
+        labels["start_time"], errors="coerce", utc=True, format="mixed"
+    )
+    labels["end_time"] = pd.to_datetime(
+        labels["end_time"], errors="coerce", utc=True, format="mixed"
+    )
     labels["label"] = pd.to_numeric(labels["label"], errors="coerce")
     return labels
 

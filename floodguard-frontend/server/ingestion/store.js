@@ -9,6 +9,12 @@ function parseJsonLine(line) {
   }
 }
 
+export async function appendJsonlRecord(filePath, record) {
+  await mkdir(dirname(filePath), { recursive: true });
+  await appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
+  return record;
+}
+
 export async function writeLatestSignals(filePath, signals) {
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, `${JSON.stringify(signals, null, 2)}\n`, "utf8");
