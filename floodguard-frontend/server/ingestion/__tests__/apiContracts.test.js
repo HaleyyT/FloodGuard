@@ -490,6 +490,33 @@ function dependencies() {
         historyReplaySummary: true,
       },
     }),
+    readHistoricalSignals: async (_areaId, options = 24) => {
+      const limit = typeof options === "number" ? options : (options.limit ?? 24);
+      const baseRecord = {
+        areaId: "parramatta",
+        riskLevel: "Moderate",
+        riskScore: 52,
+        decisionReliability: { score: 82, level: "High" },
+        decisionAuditSnapshot: { officialWarningContext: "not_configured" },
+        sourceFreshness: [{ label: "FloodSmart rainfall", freshnessStatus: "current", mode: "live" }],
+      };
+      const records = [
+        {
+          ...baseRecord,
+          ingestedAt: "2026-06-29T03:00:00.000Z",
+        },
+        {
+          ...baseRecord,
+          ingestedAt: "2026-06-29T02:00:00.000Z",
+          riskLevel: "Low",
+          riskScore: 18,
+          decisionAuditSnapshot: { officialWarningContext: "warning_source_unavailable" },
+          sourceFreshness: [{ label: "FloodSmart river", freshnessStatus: "stale", mode: "cached_stale" }],
+          sourceReadings: [{ dataMode: "cached_stale" }],
+        },
+      ];
+      return records.slice(0, limit);
+    },
   };
 }
 
@@ -663,6 +690,39 @@ test("ingestion readiness endpoint separates submission readiness from strict li
   assert.equal(live.body.checkName, "ingestion-readiness-live");
   assert.equal(live.body.result, "fail");
   assert.equal(live.body.liveOperationalReady, false);
+});
+
+test("history endpoint keeps the legacy array contract by default", async () => {
+  const { statusCode, body } = await requestJson("/api/history?area=parramatta&limit=2", dependencies());
+  assert.equal(statusCode, 200);
+  assert.ok(Array.isArray(body));
+  assert.equal(body.length, 2);
+  assert.equal(body[0].ingestedAt, "2026-06-29T03:00:00.000Z");
+});
+
+test("history endpoint can return a window summary for replay and calibration review", async () => {
+  const { statusCode, body } = await requestJson(
+    "/api/history?area=parramatta&limit=10&start=2026-06-29T01:00:00Z&end=2026-06-29T03:00:00Z&includeSummary=true",
+    dependencies(),
+  );
+  assert.equal(statusCode, 200);
+  assert.equal(body.areaId, "parramatta");
+  assert.equal(body.filters.startTime, "2026-06-29T01:00:00.000Z");
+  assert.equal(body.filters.endTime, "2026-06-29T03:00:00.000Z");
+  assert.equal(body.summary.recordCount, 2);
+  assert.equal(body.summary.degradedRecordCount, 1);
+  assert.equal(body.summary.riskLevelCounts.Moderate, 1);
+  assert.equal(body.summary.warningContextCounts.not_configured, 1);
+  assert.ok(Array.isArray(body.records));
+});
+
+test("history endpoint rejects invalid time-window filters safely", async () => {
+  const { statusCode, body } = await requestJson(
+    "/api/history?area=parramatta&start=not-a-time&includeSummary=true",
+    dependencies(),
+  );
+  assert.equal(statusCode, 400);
+  assert.match(body.error, /valid ISO timestamp/i);
 });
 
 test("signals endpoint returns weather, rainfall, river, and source metadata", async () => {

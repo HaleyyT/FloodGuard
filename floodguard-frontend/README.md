@@ -152,6 +152,8 @@ Important:
 - `GET /api/signals?area=toongabbie`
 - `GET /api/signals?area=toongabbie&refresh=true`
 - `GET /api/history?area=parramatta`
+- `GET /api/history?area=parramatta&sinceHours=72`
+- `GET /api/history?area=parramatta&start=2026-06-29T00:00:00Z&end=2026-06-29T12:00:00Z&includeSummary=true`
 - `GET /api/community-reports?area=parramatta`
 - `POST /api/community-reports`
 - `GET /api/evidence-review?area=parramatta`

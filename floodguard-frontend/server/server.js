@@ -30,6 +30,7 @@ import { assessIngestionReadiness } from "./ingestion/readiness.js";
 import { readGaugeMetadata } from "./ingestion/gaugeMetadata.js";
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
 import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
+import { summariseAreaHistoryWindow } from "./ingestion/store.js";
 
 const port = Number(process.env.FLOODGUARD_API_PORT ?? 5174);
 const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
@@ -206,6 +207,18 @@ function parseCoordinate(value) {
   if (value === null) return null;
   const coordinate = Number(value);
   return Number.isFinite(coordinate) ? coordinate : null;
+}
+
+function parsePositiveInteger(value, fallback) {
+  if (value === null) return fallback;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseOptionalTimestamp(value) {
+  if (value === null) return null;
+  const timestampMs = new Date(value).getTime();
+  return Number.isNaN(timestampMs) ? null : new Date(timestampMs).toISOString();
 }
 
 function buildSourceHealth(areaSignals) {
@@ -456,7 +469,36 @@ export async function routeRequest(request, response, deps = defaultDependencies
 
   if (url.pathname === "/api/history") {
     const areaId = resolveAreaId(url);
-    const limit = Number(url.searchParams.get("limit") ?? 24);
+    const limit = parsePositiveInteger(url.searchParams.get("limit"), 24);
+    const sinceHours = parsePositiveInteger(url.searchParams.get("sinceHours"), null);
+    const startTime = parseOptionalTimestamp(url.searchParams.get("start"));
+    const endTime = parseOptionalTimestamp(url.searchParams.get("end"));
+    const includeSummary = url.searchParams.get("includeSummary") === "true";
+
+    if (limit === null) {
+      sendJson(response, 400, { error: "History limit must be a positive integer." });
+      return;
+    }
+
+    if (url.searchParams.has("sinceHours") && sinceHours === null) {
+      sendJson(response, 400, { error: "sinceHours must be a positive integer when provided." });
+      return;
+    }
+
+    if (url.searchParams.has("start") && startTime === null) {
+      sendJson(response, 400, { error: "start must be a valid ISO timestamp when provided." });
+      return;
+    }
+
+    if (url.searchParams.has("end") && endTime === null) {
+      sendJson(response, 400, { error: "end must be a valid ISO timestamp when provided." });
+      return;
+    }
+
+    if (startTime && endTime && new Date(startTime).getTime() > new Date(endTime).getTime()) {
+      sendJson(response, 400, { error: "start must be earlier than or equal to end." });
+      return;
+    }
 
     if (!deps.selectAreaSignals(regionalSignals, areaId)) {
       sendJson(response, 404, {
@@ -466,7 +508,25 @@ export async function routeRequest(request, response, deps = defaultDependencies
       return;
     }
 
-    sendJson(response, 200, await deps.readHistoricalSignals(areaId, limit));
+    const historyOptions = {
+      limit,
+      sinceHours,
+      startTime,
+      endTime,
+    };
+    const records = await deps.readHistoricalSignals(areaId, historyOptions);
+
+    if (!includeSummary) {
+      sendJson(response, 200, records);
+      return;
+    }
+
+    sendJson(response, 200, {
+      areaId,
+      filters: historyOptions,
+      summary: summariseAreaHistoryWindow(areaId, records, historyOptions),
+      records,
+    });
     return;
   }
 

@@ -741,8 +741,8 @@ export function areaExists(areaId) {
   return Boolean(getAreaConfig(areaId));
 }
 
-export async function readHistoricalSignals(areaId = defaultAreaId, limit = 24) {
-  return readAreaHistory(historyDir, areaId, limit);
+export async function readHistoricalSignals(areaId = defaultAreaId, options = 24) {
+  return readAreaHistory(historyDir, areaId, options);
 }
 
 function presentWarningLevel(level) {
