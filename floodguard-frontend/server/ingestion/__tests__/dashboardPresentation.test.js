@@ -126,7 +126,7 @@ test("humanised UI labels soften technical terminology", () => {
   assert.equal(humanizeSourceMode("cached_stale"), "Older cached reading");
   assert.equal(humanizeSourceMode("not-configured"), "Not connected yet");
   assert.equal(humanizeMlMode("shadow"), "ML comparison only");
-  assert.equal(humanizeTrainingTarget("rule"), "Rule-derived ML target");
+  assert.equal(humanizeTrainingTarget("rule"), "Rule-derived training target");
 });
 
 test("notification banner model separates official warnings from app-generated and data-quality notices", () => {

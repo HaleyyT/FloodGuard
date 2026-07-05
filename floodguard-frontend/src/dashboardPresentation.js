@@ -38,7 +38,7 @@ export function humanizeMlMode(mode) {
 
 export function humanizeTrainingTarget(kind) {
   if (kind === "event") return "Event-based target";
-  return "Rule-derived ML target";
+  return "Rule-derived training target";
 }
 
 function sourceReliabilityLabel(kind) {

@@ -538,9 +538,9 @@ function formatObservedAt(value) {
 
 function formatWarningAdapterStatus(status) {
   if (status === "live" || status === "connected") return "Official warning available";
-  if (status === "not_configured") return "Not connected";
+  if (status === "not_configured") return "Not connected yet";
   if (status === "source_unavailable") return "Source unavailable";
-  if (status === "stale") return "Stale warning feed";
+  if (status === "stale") return "Older warning update";
   if (status === "no_relevant_warning") return "No relevant official warning";
   if (status === "parser_error") return "Warning parser error";
   return "Warning status unknown";
@@ -580,6 +580,12 @@ function buildOfficialWarning(signals) {
         ? "Official warning wording is preserved separately from FloodGuard's local risk score."
         : warningSummary.parseStatus === "parser_error"
           ? "FloodGuard kept the official warning layer separate because the configured payload could not be parsed safely."
+        : adapterStatus === "stale"
+          ? "FloodGuard reached the official warning source, but the latest warning update is older than the live window. Check NSW SES directly before acting."
+          : adapterStatus === "source_unavailable"
+            ? "FloodGuard could not safely refresh the official warning source, so check NSW SES directly for the latest advice."
+            : adapterStatus === "no_relevant_warning"
+              ? "No current official warning matched this area in the latest source check. FloodGuard still keeps official warning status separate from its own local concern."
         : warningSource?.note ||
           "FloodGuard's sensor-derived local risk remains separate from NSW SES / HazardWatch warning status.",
     headlines: (warningSummary.warnings ?? []).map((warning) => warning.headline),
