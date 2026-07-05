@@ -7,7 +7,7 @@ They are shown alongside FloodGuard-generated concern, not merged into it.
 ## Selected warning source
 
 - Primary target source: `NSW SES / HazardWatch`
-- Current integration posture: contract-first adapter with honest degraded states
+- Current integration posture: public HazardWatch page adapter with honest degraded states
 - Current live maturity: partial, not production-validated
 
 ## Supported warning states
@@ -62,6 +62,8 @@ If the warning source is degraded, FloodGuard surfaces that honestly:
 - `no_relevant_warning`: the source responded, but no relevant warning matched the area
 
 These states affect warning observability only. They do not rewrite FloodGuard's rule concern and they do not change ML mode.
+
+FloodGuard now configures the warning adapter against the public HazardWatch page by default and extracts embedded alert data from the rendered page contract. This removes the permanent `not_configured` state for normal local runs, but it does not upgrade the layer to production maturity.
 
 ## Separation from FloodGuard concern
 

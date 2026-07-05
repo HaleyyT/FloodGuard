@@ -4,6 +4,8 @@
 
 FloodGuard currently targets **HazardWatch / NSW SES official warnings** as the primary public warning layer.
 
+The default adapter now reads the public HazardWatch homepage and extracts its embedded alert payload, so the warning layer is configured by default even when no custom `FLOODGUARD_WARNINGS_URL` is supplied.
+
 This source is kept separate from FloodGuard's rule-based concern score and ML shadow-mode outputs.
 
 ## Adapter states
@@ -61,3 +63,11 @@ This keeps the warning layer explicit about:
 - why that state was assigned in plain language and what transport/parser failure category applies;
 - how relevance was decided for Parramatta, North Parramatta, and Toongabbie;
 - what limitation should be shown instead of pretending the warning layer is stronger than it really is.
+
+## Current live posture
+
+FloodGuard is now connected to the public HazardWatch warning page by default, but it still treats that layer conservatively:
+
+- the source is read from embedded page data rather than a dedicated official JSON feed;
+- timestamps may be stale even when the page is reachable;
+- the warning layer remains separate from FloodGuard's own concern score and does not override ML shadow mode.
