@@ -315,6 +315,8 @@ function dependencies() {
       sourceMode: "missing",
       freshnessMinutes: null,
       failureCategory: null,
+      failureReason: "warning_source_not_configured",
+      evidenceUrl: null,
       limitations: ["Official warning source is not currently connected."],
       adapterStatus: "not_configured",
       officialText: "Official warning source is not currently connected.",
@@ -400,6 +402,8 @@ function dependencies() {
       eventHoldoutViable: false,
       mlPromotionBlockedReason:
         "Backlog candidates exist, but they have not yet been promoted into reviewed joined event labels.",
+      placeholderEvidenceCount: 2,
+      reviewQueueCount: 2,
       models: ["majority_baseline", "logistic_regression", "random_forest"],
       liveDecisionAuthority: "rule_engine",
       summary: "FloodGuard ML is implemented as a prototype shadow-mode comparison layer.",
@@ -499,6 +503,9 @@ function dependencies() {
         reviewedRows: 0,
         reviewableRows: 0,
         reviewablePositiveRows: 0,
+      },
+      labelAudit: {
+        placeholderEvidenceRows: 2,
       },
       reportAvailability: {
         historyReplaySummary: true,
@@ -607,10 +614,24 @@ test("warnings endpoint returns separate official warning status", async () => {
   assert.equal(body.relevanceMethod, "area-name-catchment-and-warning-type");
   assert.equal(body.sourceMode, "missing");
   assert.equal(body.failureCategory, null);
+  assert.equal(body.failureReason, "warning_source_not_configured");
+  assert.equal(body.evidenceUrl, null);
   assert.equal(body.freshnessMinutes, null);
   assert.match(body.statusReason, /configured/i);
   assert.ok(Array.isArray(body.limitations));
   assert.equal(body.sourceName, "NSW SES HazardWatch");
+});
+
+test("official warning status stays separate from FloodGuard risk concern and ML status", async () => {
+  const warning = await requestJson("/api/warnings/parramatta", dependencies());
+  const risk = await requestJson("/api/risk/parramatta", dependencies());
+  const ml = await requestJson("/api/ml/report", dependencies());
+
+  assert.equal(warning.body.status, "not_configured");
+  assert.equal(risk.body.concernLevel, "Moderate");
+  assert.equal(risk.body.officialWarningContext, "not_configured");
+  assert.equal(ml.body.mode, "shadow");
+  assert.equal(ml.body.liveDecisionAuthority, "rule_engine");
 });
 
 test("ml readiness endpoint reports honest training readiness state", async () => {
@@ -671,6 +692,8 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.equal(body.reviewedEventWindows, 0);
   assert.equal(body.reviewedElevatedEventWindows, 0);
   assert.equal(body.eventHoldoutViable, false);
+  assert.equal(body.placeholderEvidenceCount, 2);
+  assert.equal(body.reviewQueueCount, 2);
   assert.equal(body.eventSupervision.viable, false);
   assert.equal(body.eventSupervision.blocked, true);
   assert.match(body.eventSupervision.reason, /reviewed joined event labels|independent/i);

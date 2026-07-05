@@ -53,6 +53,8 @@ function defaultReport() {
     eventHoldoutViable: false,
     mlPromotionBlockedReason:
       "Independent event supervision is unavailable, so ML remains shadow mode.",
+    placeholderEvidenceCount: 0,
+    reviewQueueCount: 0,
     reportAvailability: {
       metrics: false,
       realExportMetrics: false,
@@ -90,6 +92,8 @@ function defaultReport() {
       summary: "Label-audit report is unavailable.",
       evidenceLinkedRows: 0,
       evidenceLinkedPositiveRows: 0,
+      placeholderEvidenceRows: 0,
+      placeholderEvidencePositiveRows: 0,
       reviewedRows: 0,
       reviewedPositiveRows: 0,
       promotableRows: 0,
@@ -147,6 +151,15 @@ function defaultReport() {
       reviewablePositiveRows: 0,
     },
   };
+}
+
+function countQueueRows(csvText) {
+  if (!csvText) return 0;
+  const lines = csvText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return Math.max(0, lines.length - 1);
 }
 
 async function readJsonIfPresent(filePath) {
@@ -317,6 +330,8 @@ function buildLabelAuditSummary(markdown, auditJson) {
       summary,
       evidenceLinkedRows: auditJson?.backlogSummary?.evidenceLinkedRows ?? 0,
       evidenceLinkedPositiveRows: auditJson?.backlogSummary?.evidenceLinkedPositiveRows ?? 0,
+      placeholderEvidenceRows: auditJson?.backlogSummary?.placeholderEvidenceRows ?? 0,
+      placeholderEvidencePositiveRows: auditJson?.backlogSummary?.placeholderEvidencePositiveRows ?? 0,
       reviewedRows: auditJson?.backlogSummary?.reviewedRows ?? 0,
       reviewedPositiveRows: auditJson?.backlogSummary?.reviewedPositiveRows ?? 0,
       promotableRows: auditJson?.backlogSummary?.promotableRows ?? 0,
@@ -376,6 +391,7 @@ function buildSupervisionQuality(report, auditJson) {
     eligibleIndependentPositiveCount: source.eligibleIndependentPositiveCount ?? 0,
     reviewedPositiveRowCount: source.reviewedPositiveRowCount ?? 0,
     backlogEvidenceLinkedRows: source.backlogEvidenceLinkedRows ?? 0,
+    backlogPlaceholderEvidenceRows: source.backlogPlaceholderEvidenceRows ?? 0,
     backlogPromotableRows: source.backlogPromotableRows ?? 0,
     backlogIndependentPositiveRows: source.backlogIndependentPositiveRows ?? 0,
     eventHoldoutCurrentlyViable: Boolean(
@@ -456,7 +472,7 @@ function buildPromotionPolicy(report) {
 
 export async function readMlReport(reportsDir = defaultReportsDir) {
   try {
-    const [metrics, realExportMetrics, scenarioMetrics, modelCard, labelAuditMarkdown, labelAuditJson, calibrationSummary, replaySummary, targetSelectionSummary] =
+    const [metrics, realExportMetrics, scenarioMetrics, modelCard, labelAuditMarkdown, labelAuditJson, calibrationSummary, replaySummary, targetSelectionSummary, reviewQueueCsv] =
       await Promise.all([
       readJsonIfPresent(path.join(reportsDir, "metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "real_export_metrics.json")),
@@ -467,6 +483,9 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       readTextIfPresent(path.join(reportsDir, "calibration_summary.md")),
       readJsonIfPresent(path.join(reportsDir, "history_replay_summary.json")),
       readTextIfPresent(path.join(reportsDir, "target_selection_summary.md")),
+      readTextIfPresent(
+        path.join(path.resolve(reportsDir, ".."), "data", "event_evidence_review_queue.csv"),
+      ),
     ]);
 
     const fallback = defaultReport();
@@ -527,6 +546,9 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
     report.eventHoldoutViable =
       report.eventHoldout.viable ?? report.supervisionQuality.eventHoldoutCurrentlyViable ?? false;
     report.mlPromotionBlockedReason = report.eventSupervision.reason;
+    report.placeholderEvidenceCount =
+      report.supervisionQuality.backlogPlaceholderEvidenceRows ?? report.labelAudit.placeholderEvidenceRows ?? 0;
+    report.reviewQueueCount = countQueueRows(reviewQueueCsv);
     report.limitations = buildLimitations(
       report.realExport,
       report.scenarioStressTest,

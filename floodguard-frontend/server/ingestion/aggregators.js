@@ -764,6 +764,37 @@ function inferHazardType(warnings = []) {
   return warnings.length > 0 ? "Other" : undefined;
 }
 
+function stableOfficialWarningEvidenceUrl(warnings = []) {
+  const firstWarningUrl = warnings
+    .map((warning) => warning.url)
+    .find((value) => typeof value === "string" && value.trim().length > 0);
+  const candidate = firstWarningUrl ?? null;
+  if (!candidate || /example\.test/i.test(candidate)) return null;
+  return candidate;
+}
+
+function warningFailureReason(adapterState, warningSource, warningSummary) {
+  if (adapterState === "source_unavailable") {
+    return warningSource?.failureCategory ?? warningSource?.note ?? "official_warning_source_unavailable";
+  }
+  if (adapterState === "parser_error") {
+    return "warning_payload_parser_error";
+  }
+  if (adapterState === "stale") {
+    return "warning_data_stale";
+  }
+  if (adapterState === "not_configured") {
+    return "warning_source_not_configured";
+  }
+  if (adapterState === "no_relevant_warning") {
+    return "no_relevant_warning_for_area";
+  }
+  if (warningSummary?.warningCount > 0) {
+    return null;
+  }
+  return null;
+}
+
 export function readAreaWarningStatus(areaSignals) {
   // Warning status is published separately so the frontend can show official emergency communication alongside FloodGuard risk, not blended into it.
   const warningSource = (areaSignals.sourceMetadata ?? []).find((source) => source.type === "warnings");
@@ -776,6 +807,8 @@ export function readAreaWarningStatus(areaSignals) {
   const lastObservedAt = warningSummary.observedAt ?? warningSource?.observedAt ?? null;
   const freshnessMinutes =
     lastObservedAt && lastFetchedAt ? minutesBetween(lastObservedAt, lastFetchedAt) : null;
+  const failureReason = warningFailureReason(adapterState, warningSource, warningSummary);
+  const evidenceUrl = stableOfficialWarningEvidenceUrl(warningSummary.warnings ?? []);
 
   if (warningSource?.status === "failed" && warningSource?.note) limitations.push(warningSource.note);
   if (warningSource?.status === "not-connected" && warningSource?.note) limitations.push(warningSource.note);
@@ -812,6 +845,8 @@ export function readAreaWarningStatus(areaSignals) {
     sourceMode: warningSource?.dataMode ?? warningSource?.mode ?? "missing",
     freshnessMinutes,
     failureCategory: warningSource?.failureCategory ?? null,
+    failureReason,
+    evidenceUrl,
     adapterState,
     adapterStatus,
     relevanceMethod: warningSummary.relevance?.filterMode ?? "area-name-catchment-and-warning-type",

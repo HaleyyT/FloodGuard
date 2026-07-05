@@ -42,9 +42,11 @@ It is not used for live alerting or official warning decisions.
 - Real export review-status counts: {'scaffold_only': 3000}
 - Real export primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes.
 - Joined evidence-linked event windows: 2
+- Joined placeholder-evidence event windows: 2
 - Joined reviewed event windows: 0
 - Joined reviewed elevated event windows: 0
 - Backlog evidence-linked rows: 2
+- Backlog placeholder-evidence rows: 2
 - Backlog reviewed rows: 0
 - Backlog promotion-ready rows: 0
 - Validated prediction depends on stronger supervision: independent flood-event labels, expert-calibrated thresholds, and event-holdout validation.
@@ -138,6 +140,7 @@ It is not used for live alerting or official warning decisions.
 - Independent event supervision is selected only when coverage and class strength are sufficient.
 - Real-export training still falls back to rule-derived supervision when event labels remain weak or sparse.
 - Joined event labels exist to prepare better supervision, but coverage and strength must be inspected before treating them as validation evidence.
+- Placeholder evidence links do not count as defensible event supervision and must be replaced before review promotion.
 - No real `High` examples are present in the current historical export.
 - Metrics are illustrative and should not be interpreted as validated flood prediction performance.
 - Time-based validation is implemented, but real independent event holdout is still weak because joined event labels are placeholders rather than verified flood outcomes.
@@ -147,6 +150,7 @@ It is not used for live alerting or official warning decisions.
 
 - Useful for validating the Python training and reporting pipeline.
 - Not suitable for serious predictive claims because the positive class is extremely sparse and labels are rule-derived.
+- Event holdout remains blocked because reviewed elevated event windows are still zero and the current candidate links are placeholder evidence only.
 
 ## Scenario Stress-Test Interpretation
 

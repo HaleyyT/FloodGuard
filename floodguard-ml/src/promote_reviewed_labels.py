@@ -14,8 +14,10 @@ from utils import (
     LABELS_DATASET,
     REPORTS_DIR,
     ensure_runtime_dirs,
-    evidence_link_present,
+    explicit_shadow_review_status,
+    expert_review_fields_complete,
     independent_event_source,
+    real_evidence_link_present,
     reviewed_event_status,
 )
 
@@ -39,13 +41,28 @@ LABEL_COLUMNS = [
 
 
 def backlog_promotion_mask(backlog: pd.DataFrame) -> pd.Series:
-    """Allow only independently sourced rows with evidence or explicit review states."""
+    """Allow only independently sourced rows with real evidence or explicit review states."""
 
     if backlog.empty:
         return pd.Series(dtype="bool")
 
-    evidence_mask = evidence_link_present(backlog.get("evidence_link", pd.Series(index=backlog.index, dtype="object")))
-    reviewed_mask = reviewed_event_status(backlog.get("review_status", pd.Series(index=backlog.index, dtype="object")))
+    real_evidence_mask = real_evidence_link_present(
+        backlog.get("evidence_link", pd.Series(index=backlog.index, dtype="object"))
+    )
+    explicit_review_mask = explicit_shadow_review_status(
+        backlog.get("review_status", pd.Series(index=backlog.index, dtype="object"))
+    )
+    expert_validated_mask = backlog.get("review_status", pd.Series(index=backlog.index, dtype="object")).fillna(
+        "unknown"
+    ).astype(str).eq("expert_validated")
+    expert_metadata_mask = expert_review_fields_complete(
+        backlog.get("reviewer", pd.Series(index=backlog.index, dtype="object")),
+        backlog.get("reviewed_at", pd.Series(index=backlog.index, dtype="object")),
+        backlog.get("review_notes", pd.Series(index=backlog.index, dtype="object")),
+    )
+    reviewed_mask = reviewed_event_status(
+        backlog.get("review_status", pd.Series(index=backlog.index, dtype="object"))
+    ) & (~expert_validated_mask | expert_metadata_mask)
     independent_mask = independent_event_source(
         backlog.get("label_source", pd.Series(index=backlog.index, dtype="object"))
     )
@@ -55,7 +72,9 @@ def backlog_promotion_mask(backlog: pd.DataFrame) -> pd.Series:
         backlog.get("label_class", pd.Series(index=backlog.index, dtype="float64")),
         errors="coerce",
     ).notna()
-    return independent_mask & joinable_mask & label_class_present & (evidence_mask | reviewed_mask)
+    return independent_mask & joinable_mask & label_class_present & (
+        real_evidence_mask | (explicit_review_mask & reviewed_mask)
+    )
 
 
 def backlog_rows_to_labels(backlog_rows: pd.DataFrame) -> pd.DataFrame:
@@ -169,7 +188,8 @@ def promote_reviewed_labels(
         "thresholdCalibrationPath": str(REPORTS_DIR / "threshold_calibration_report.md"),
         "reviewedEventWindows": int(label_audit["labelsSummary"].get("reviewedRows", 0)),
         "reviewedElevatedEventWindows": int(label_audit["labelsSummary"].get("reviewedPositiveRows", 0)),
-        "calibrationTargetKind": calibration["targetKind"],
+        "calibrationTargetKind": calibration.get("targetKind")
+        or calibration.get("target", {}).get("kind"),
     }
 
 

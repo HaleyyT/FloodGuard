@@ -10,7 +10,11 @@ from utils import (
     REPORTS_DIR,
     ensure_runtime_dirs,
     evidence_link_present,
+    explicit_shadow_review_status,
+    expert_review_fields_complete,
     independent_event_source,
+    placeholder_evidence_link,
+    real_evidence_link_present,
     reviewed_event_status,
     strong_event_strength,
     write_json,
@@ -93,12 +97,27 @@ def summarise_label_frame(frame: pd.DataFrame, name: str) -> dict:
     review_status_counts = review_status_series.fillna("unknown").value_counts(dropna=False).to_dict()
     promotion_ready_counts = promotion_ready_series.fillna("unknown").value_counts(dropna=False).to_dict()
     evidence_mask = evidence_link_present(evidence_link_series)
-    reviewed_mask = reviewed_event_status(review_status_series)
+    placeholder_evidence_mask = placeholder_evidence_link(evidence_link_series)
+    real_evidence_mask = real_evidence_link_present(evidence_link_series)
+    explicit_review_mask = explicit_shadow_review_status(review_status_series)
+    expert_metadata_mask = expert_review_fields_complete(
+        frame.get("reviewer", pd.Series(dtype="object")),
+        frame.get("reviewed_at", pd.Series(dtype="object")),
+        frame.get("review_notes", pd.Series(dtype="object")),
+    )
+    reviewed_mask = reviewed_event_status(review_status_series) & (
+        ~review_status_series.fillna("unknown").astype(str).eq("expert_validated")
+        | expert_metadata_mask
+    )
     independent_mask = independent_event_source(label_source_series)
     strong_mask = strong_event_strength(label_strength_series)
-    reviewable_mask = independent_mask & (evidence_mask | reviewed_mask)
+    reviewable_mask = independent_mask & (real_evidence_mask | reviewed_mask)
     reviewable_positive_mask = reviewable_mask & positive_mask
     evidence_linked_rows = int(evidence_mask.sum())
+    placeholder_evidence_rows = int(placeholder_evidence_mask.sum())
+    placeholder_evidence_positive_rows = int((placeholder_evidence_mask & positive_mask).sum())
+    real_evidence_rows = int(real_evidence_mask.sum())
+    real_evidence_positive_rows = int((real_evidence_mask & positive_mask).sum())
     promotable_rows = int(
         (
             promotion_ready_series
@@ -112,6 +131,7 @@ def summarise_label_frame(frame: pd.DataFrame, name: str) -> dict:
     reviewed_rows = int((reviewed_mask & reviewable_mask).sum())
     reviewed_positive_rows = int((reviewed_mask & positive_mask).sum())
     evidence_linked_positive_rows = int((evidence_mask & positive_mask).sum())
+    explicit_review_rows = int((explicit_review_mask & independent_mask).sum())
     independent_positive_rows = int(reviewable_positive_mask.sum())
     reviewable_positive_rows = int(reviewable_positive_mask.sum())
     strong_reviewable_positive_rows = int((reviewable_positive_mask & strong_mask).sum())
@@ -145,6 +165,11 @@ def summarise_label_frame(frame: pd.DataFrame, name: str) -> dict:
         "independentPositiveRows": independent_positive_rows,
         "evidenceLinkedRows": evidence_linked_rows,
         "evidenceLinkedPositiveRows": evidence_linked_positive_rows,
+        "placeholderEvidenceRows": placeholder_evidence_rows,
+        "placeholderEvidencePositiveRows": placeholder_evidence_positive_rows,
+        "realEvidenceRows": real_evidence_rows,
+        "realEvidencePositiveRows": real_evidence_positive_rows,
+        "explicitReviewRows": explicit_review_rows,
         "reviewedRows": reviewed_rows,
         "reviewedPositiveRows": reviewed_positive_rows,
         "promotableRows": promotable_rows,
@@ -164,6 +189,7 @@ def assess_supervision_quality(labels_summary: dict, backlog_summary: dict) -> d
     reviewable_positive_rows = int(labels_summary.get("reviewablePositiveRows", 0))
     backlog_independent_positives = int(backlog_summary.get("independentPositiveRows", 0))
     backlog_evidence_linked = int(backlog_summary.get("evidenceLinkedRows", 0))
+    backlog_placeholder_rows = int(backlog_summary.get("placeholderEvidenceRows", 0))
     backlog_promotable = int(backlog_summary.get("promotableRows", 0))
 
     if positive_rows > 0 and strong_or_moderate > 0 and reviewed_rows > 0 and reviewable_positive_rows > 0:
@@ -178,9 +204,11 @@ def assess_supervision_quality(labels_summary: dict, backlog_summary: dict) -> d
         primary_limitation = "Joined labels still lack enough reviewed elevated windows to support validated ML claims."
     elif backlog_independent_positives > 0 or backlog_evidence_linked > 0:
         grade = "developing"
-        summary = "Backlog evidence is improving, but independent event labels are still backlog-only rather than joined validation rows."
+        summary = "Candidate event windows exist, but the current evidence is still placeholder-level or not reviewed enough for validated ML claims."
         viable = False
-        primary_limitation = "Backlog candidates exist, but they have not yet been promoted into reviewed joined event labels."
+        primary_limitation = (
+            "Candidate event windows still rely on placeholder or unreviewed evidence, so joined labels are not yet defensible independent supervision."
+        )
     else:
         grade = "weak"
         summary = "Current labels remain scaffold-level and are useful mainly for plumbing, audit, and future calibration preparation."
@@ -201,6 +229,7 @@ def assess_supervision_quality(labels_summary: dict, backlog_summary: dict) -> d
         "backlogPositiveRows": int(backlog_summary.get("positiveRows", 0)),
         "backlogIndependentPositiveRows": backlog_independent_positives,
         "backlogEvidenceLinkedRows": backlog_evidence_linked,
+        "backlogPlaceholderEvidenceRows": backlog_placeholder_rows,
         "backlogPromotableRows": backlog_promotable,
     }
 
@@ -227,6 +256,10 @@ def write_label_audit_report(labels_summary: dict, backlog_summary: dict, superv
         f"- Independent positive joined rows: {labels_summary['independentPositiveRows']}",
         f"- Evidence-linked joined rows: {labels_summary['evidenceLinkedRows']}",
         f"- Evidence-linked joined positive rows: {labels_summary['evidenceLinkedPositiveRows']}",
+        f"- Placeholder-evidence joined rows: {labels_summary['placeholderEvidenceRows']}",
+        f"- Placeholder-evidence joined positive rows: {labels_summary['placeholderEvidencePositiveRows']}",
+        f"- Real-evidence joined rows: {labels_summary['realEvidenceRows']}",
+        f"- Real-evidence joined positive rows: {labels_summary['realEvidencePositiveRows']}",
         f"- Reviewable joined rows: {labels_summary['reviewableRows']}",
         f"- Reviewable joined positive rows: {labels_summary['reviewablePositiveRows']}",
         f"- Reviewed joined positive rows: {labels_summary['reviewedPositiveRows']}",
@@ -248,6 +281,10 @@ def write_label_audit_report(labels_summary: dict, backlog_summary: dict, superv
         f"- Independent positive backlog rows: {backlog_summary['independentPositiveRows']}",
         f"- Evidence-linked backlog rows: {backlog_summary['evidenceLinkedRows']}",
         f"- Evidence-linked backlog positive rows: {backlog_summary['evidenceLinkedPositiveRows']}",
+        f"- Placeholder-evidence backlog rows: {backlog_summary['placeholderEvidenceRows']}",
+        f"- Placeholder-evidence backlog positive rows: {backlog_summary['placeholderEvidencePositiveRows']}",
+        f"- Real-evidence backlog rows: {backlog_summary['realEvidenceRows']}",
+        f"- Real-evidence backlog positive rows: {backlog_summary['realEvidencePositiveRows']}",
         f"- Reviewed backlog rows: {backlog_summary['reviewedRows']}",
         f"- Reviewed backlog positive rows: {backlog_summary['reviewedPositiveRows']}",
         f"- Promotion-ready backlog rows: {backlog_summary['promotableRows']}",
@@ -270,9 +307,10 @@ def write_label_audit_report(labels_summary: dict, backlog_summary: dict, superv
         "",
         "## Promotion Path",
         "",
-        "- Backlog candidates become stronger only after evidence is linked, review status improves, and joined labels are refreshed.",
+        "- Backlog candidates become stronger only after real evidence is linked, review status improves, and joined labels are refreshed.",
         "- Promotion-ready backlog rows should stay explicit so event-holdout validation can depend on reviewed evidence rather than placeholders.",
-        "- Evidence links or explicit reviewed states are required before a label can count toward independent supervision claims.",
+        "- Placeholder links such as `example.test` do not count as real evidence for review or promotion.",
+        "- Real evidence links or explicit reviewed states are required before a label can count toward independent supervision claims.",
         "",
         "## Interpretation",
         "",

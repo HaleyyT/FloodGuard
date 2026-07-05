@@ -127,10 +127,44 @@ def evidence_link_present(series: pd.Series) -> pd.Series:
     return series.fillna("").astype(str).str.strip().ne("")
 
 
+def placeholder_evidence_link(series: pd.Series) -> pd.Series:
+    """Mark placeholder or obviously non-verifiable evidence links separately from real evidence."""
+
+    normalised = series.fillna("").astype(str).str.strip().str.lower()
+    return normalised.str.contains("example.test", regex=False) | normalised.str.startswith(
+        "placeholder:"
+    )
+
+
+def real_evidence_link_present(series: pd.Series) -> pd.Series:
+    """Count only non-placeholder evidence links as real review support."""
+
+    return evidence_link_present(series) & ~placeholder_evidence_link(series)
+
+
 def reviewed_event_status(series: pd.Series) -> pd.Series:
     """Recognise only explicit post-review states as reviewed event supervision."""
 
     return series.fillna("unknown").astype(str).isin(REVIEWED_EVENT_STATUSES)
+
+
+def explicit_shadow_review_status(series: pd.Series) -> pd.Series:
+    """Recognise rows that already claim a post-candidate review state."""
+
+    return series.fillna("unknown").astype(str).isin(
+        {"reviewed_for_shadow_mode", "expert_validated"}
+    )
+
+
+def expert_review_fields_complete(
+    reviewer_series: pd.Series, reviewed_at_series: pd.Series, review_notes_series: pd.Series
+) -> pd.Series:
+    """Require all reviewer metadata fields before a row can count as expert validated."""
+
+    reviewer_present = reviewer_series.fillna("").astype(str).str.strip().ne("")
+    reviewed_at_present = reviewed_at_series.fillna("").astype(str).str.strip().ne("")
+    review_notes_present = review_notes_series.fillna("").astype(str).str.strip().ne("")
+    return reviewer_present & reviewed_at_present & review_notes_present
 
 
 def strong_event_strength(series: pd.Series) -> pd.Series:

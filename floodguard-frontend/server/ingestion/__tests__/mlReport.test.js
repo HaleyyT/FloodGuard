@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import os from "node:os";
 import path from "node:path";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import test from "node:test";
 
 import { readMlReport } from "../mlReport.js";
@@ -17,6 +17,8 @@ test("readMlReport degrades safely when report files are missing", async () => {
     assert.equal(report.reviewedEventWindows, 0);
     assert.equal(report.reviewedElevatedEventWindows, 0);
     assert.equal(report.eventHoldoutViable, false);
+    assert.equal(report.placeholderEvidenceCount, 0);
+    assert.equal(report.reviewQueueCount, 0);
     assert.equal(report.realExport.available, false);
     assert.equal(report.scenarioStressTest.available, false);
     assert.ok(Array.isArray(report.models));
@@ -119,6 +121,8 @@ test("readMlReport reads available files without crashing on partial reports", a
       `${JSON.stringify({
         backlogSummary: {
           evidenceLinkedRows: 2,
+          placeholderEvidenceRows: 2,
+          placeholderEvidencePositiveRows: 2,
           reviewedRows: 1,
           promotableRows: 1,
           independentPositiveRows: 2,
@@ -132,6 +136,7 @@ test("readMlReport reads available files without crashing on partial reports", a
           primaryLimitation:
             "Backlog candidates exist, but they have not yet been promoted into reviewed joined event labels.",
           backlogEvidenceLinkedRows: 2,
+          backlogPlaceholderEvidenceRows: 2,
           backlogPromotableRows: 1,
           backlogIndependentPositiveRows: 2,
           evidenceLinkedRowCount: 2,
@@ -177,6 +182,12 @@ test("readMlReport reads available files without crashing on partial reports", a
       })}\n`,
       "utf8",
     );
+    await mkdir(path.join(reportsDir, "..", "data"), { recursive: true });
+    await writeFile(
+      path.join(reportsDir, "../data/event_evidence_review_queue.csv"),
+      "area,event_name,start_time,end_time,label,label_source,label_strength,review_status,evidence_link,evidence_is_placeholder,required_evidence_missing,review_priority,recommended_next_action\nparramatta,Candidate warning,2026-06-29T00:00:00Z,2026-06-29T12:00:00Z,1,warning_derived,moderate,candidate_review,https://example.test/link,true,true,high,Replace placeholder link.\n",
+      "utf8",
+    );
 
     const report = await readMlReport(reportsDir);
     assert.equal(report.mode, "shadow");
@@ -187,6 +198,7 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.labelStrength, "rule_derived_or_weak");
     assert.equal(report.labelAudit.available, true);
     assert.equal(report.labelAudit.evidenceLinkedRows, 2);
+    assert.equal(report.labelAudit.placeholderEvidenceRows, 2);
     assert.equal(report.labelAudit.reviewedRows, 1);
     assert.equal(report.labelAudit.promotableRows, 1);
     assert.equal(report.labelAudit.independentPositiveRows, 2);
@@ -195,6 +207,7 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.supervisionQuality.grade, "developing");
     assert.equal(report.supervisionQuality.viableForIndependentSupervision, false);
     assert.equal(report.supervisionQuality.backlogEvidenceLinkedRows, 2);
+    assert.equal(report.supervisionQuality.backlogPlaceholderEvidenceRows, 2);
     assert.equal(report.supervisionQuality.backlogPromotableRows, 1);
     assert.equal(report.supervisionQuality.backlogIndependentPositiveRows, 2);
     assert.equal(report.supervisionQuality.evidenceLinkedRowCount, 2);
@@ -211,6 +224,8 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.reviewedEventWindows, 0);
     assert.equal(report.reviewedElevatedEventWindows, 0);
     assert.equal(report.eventHoldoutViable, false);
+    assert.equal(report.placeholderEvidenceCount, 2);
+    assert.equal(report.reviewQueueCount, 1);
     assert.match(report.mlPromotionBlockedReason, /reviewed joined event labels/i);
     assert.equal(report.realExport.available, true);
     assert.equal(report.realExport.rows, 3000);

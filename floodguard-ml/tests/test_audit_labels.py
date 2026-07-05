@@ -89,12 +89,15 @@ class AuditLabelsTests(unittest.TestCase):
 
         self.assertEqual(summary["rowCount"], 2)
         self.assertEqual(summary["positiveRows"], 1)
-        self.assertEqual(summary["independentPositiveRows"], 1)
+        self.assertEqual(summary["independentPositiveRows"], 0)
         self.assertEqual(summary["evidenceLinkedRows"], 1)
         self.assertEqual(summary["evidenceLinkedPositiveRows"], 1)
-        self.assertEqual(summary["promotableRows"], 1)
-        self.assertEqual(summary["reviewableRows"], 1)
-        self.assertEqual(summary["reviewablePositiveRows"], 1)
+        self.assertEqual(summary["placeholderEvidenceRows"], 1)
+        self.assertEqual(summary["placeholderEvidencePositiveRows"], 1)
+        self.assertEqual(summary["realEvidenceRows"], 0)
+        self.assertEqual(summary["promotableRows"], 0)
+        self.assertEqual(summary["reviewableRows"], 0)
+        self.assertEqual(summary["reviewablePositiveRows"], 0)
         self.assertEqual(summary["reviewedPositiveRows"], 0)
         self.assertIn("parramatta", summary["areas"])
         self.assertEqual(summary["labelSourceCounts"]["manual_demo"], 1)
@@ -137,6 +140,7 @@ class AuditLabelsTests(unittest.TestCase):
             "positiveRows": 2,
             "independentPositiveRows": 2,
             "evidenceLinkedRows": 2,
+            "placeholderEvidenceRows": 2,
             "promotableRows": 1,
         }
 
@@ -145,7 +149,8 @@ class AuditLabelsTests(unittest.TestCase):
         self.assertEqual(quality["grade"], "developing")
         self.assertFalse(quality["viableForIndependentSupervision"])
         self.assertEqual(quality["backlogEvidenceLinkedRows"], 2)
-        self.assertIn("promoted into reviewed joined event labels", quality["primaryLimitation"])
+        self.assertEqual(quality["backlogPlaceholderEvidenceRows"], 2)
+        self.assertIn("placeholder or unreviewed evidence", quality["primaryLimitation"])
 
 
 if __name__ == "__main__":
