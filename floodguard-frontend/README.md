@@ -68,7 +68,7 @@ Recent validated reports contribute to a bounded public-signal pressure score. T
 FloodGuard surfaces reliability explicitly:
 
 - layered ingestion health through `coreFloodStatus`, `contextStatus`, `warningStatus`, and `overallStatus`
-- source mode such as live, recent cache, stale cache, demo fallback, or not connected
+- source mode such as live, recent cache, stale cache, demo fallback, source unavailable, or not connected
 - freshness checks using source observation times
 - area-fit and lightweight spatial relevance before a future PostGIS layer
 
@@ -77,6 +77,8 @@ This is one of the key design goals of the prototype.
 `npm run check:ingestion` now represents submission readiness rather than strict live availability. It passes when FloodGuard handles stale, cached, fallback, or unavailable external sources honestly without crashing or mislabelling them as live.
 
 `npm run check:ingestion:live` is stricter. It only passes when rainfall and river readings are genuinely fresh live readings.
+
+Official warnings are now connected by default through the public HazardWatch page adapter. That layer may still report `stale` or `source_unavailable`, and FloodGuard treats those states conservatively instead of implying there is no official warning context.
 
 ## Risk engine
 
@@ -126,6 +128,7 @@ Important:
 - `FLOODGUARD_RAINFALL_URL`
 - `FLOODGUARD_RIVER_URL`
 - `FLOODGUARD_WARNINGS_URL`
+- `FLOODGUARD_HAZARDWATCH`
 - `FLOODGUARD_API_HOST`
 - `FLOODGUARD_API_PORT`
 - `VITE_FLOODGUARD_API_URL`

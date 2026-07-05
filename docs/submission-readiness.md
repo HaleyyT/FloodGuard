@@ -1,22 +1,22 @@
 # FloodGuard Submission Readiness
 
-_Updated: 2026-07-01_
+_Updated: 2026-07-05_
 
 ## Day 5 objective
 
-This note records the current camera-ready state of FloodGuard after the Day 5 submission-polish pass.
+This note records the current camera-ready state of FloodGuard after the latest verification and warning-connection hardening pass.
 
 ## Verification checks run
 
-All commands below were run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/package.json:1) on July 1, 2026.
+All commands below were run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/package.json:1) on July 5, 2026.
 
 | Command | Result | Notes |
 |---|---|---|
 | `npm run lint` | pass | ESLint completed with no reported errors. |
-| `npm run test` | pass | `50/50` backend and contract tests passed. |
+| `npm run test -- --runInBand` | pass | `87/87` frontend, backend, and contract tests passed. |
 | `npm run build` | pass with warning | Production build succeeds; Vite reports a large main-chunk warning. |
-| `npm run check:ingestion` | pass with degraded external source | Submission readiness now passes when stale/cached external sources are labelled honestly and no live claim is made. |
-| `npm run check:ingestion:live` | fail | Strict live readiness still fails because current rainfall and river readings are not fresh live readings. |
+| `npm run check:ingestion -- --no-refresh` | pass with degraded external source | Submission readiness now passes when degraded external sources are labelled honestly and no false live claim is made. |
+| `npm run check:ingestion:live -- --no-refresh` | fail | Strict live readiness still fails because context and warning evidence are not fresh enough for a full live claim. |
 
 ## What is now submission-ready
 
@@ -28,25 +28,25 @@ All commands below were run from [floodguard-frontend/package.json](/Users/haley
 
 ## Current ingestion reality
 
-`npm run check:ingestion:live` currently reports:
+`npm run check:ingestion:live -- --no-refresh` currently reports:
 
-- overall ingestion health: `blocked`
-- core flood gauges: `blocked`
+- overall ingestion health: `partial`
+- core flood gauges: `pass`
 - supporting context: `warn`
-- official warnings: `missing`
+- official warnings: `warn`
 
 Observed reasons in the latest run:
 
-- FloodSmart rainfall gauge ingestion failed and only `cached_stale` rainfall data was available.
-- FloodSmart river gauge ingestion failed and only `cached_stale` river data was available.
-- Parramatta weather context was also stale in the checked run.
-- NSW SES / HazardWatch official-warning integration is still `not-configured`.
+- FloodSmart rainfall gauge ingestion was current in the checked run.
+- FloodSmart river gauge ingestion was current in the checked run.
+- Parramatta weather context was stale in the checked run.
+- NSW SES / HazardWatch warning ingestion was connected, but the latest warning timestamp was still too old for a strict live claim.
 
 What this means:
 
 - the honesty and degraded-source logic are working correctly;
 - the current run is acceptable for submission readiness because degraded-state handling is explicit;
-- the current run is not healthy enough to claim fully live flood-gauge operation;
+- the current run is not healthy enough to claim fully live all-source operation;
 - submission/demo wording must continue to describe live ingestion as architecture with degraded-state handling, not guaranteed current operation.
 
 ## Safe public claims
@@ -69,8 +69,8 @@ Avoid claims:
 
 ## Remaining weaknesses before final submission
 
-1. Live rainfall and river ingestion are still blocked in the latest verified run.
-2. Official warning integration is architected and surfaced, but not yet connected as a stable live feed.
+1. Strict live all-source readiness is still not passing in the latest verified run because weather and warning evidence remain degraded even when the core flood gauges are current.
+2. Official warning integration is connected by default, but it is not yet mature enough to count as a stable live feed in every run.
 3. Risk thresholds remain heuristic rather than event-calibrated.
 4. The current ML dataset is still rule-derived and heavily imbalanced, so ML remains comparison-only.
 5. The production build still carries a large main bundle warning.
@@ -87,4 +87,4 @@ Avoid claims:
 
 ## Day 5 conclusion
 
-FloodGuard is now in a strong submission state as a reliability-aware flood-awareness prototype. The main story is credible: explainable rule logic, explicit source-trust handling, notification safeguards, and a real Python ML shadow pipeline. The main caveat is also clear and verified: current live gauge ingestion is still degraded, so the final submission should highlight honesty and resilience rather than overclaiming current operational coverage.
+FloodGuard is now in a strong submission state as a reliability-aware flood-awareness prototype. The main story is credible: explainable rule logic, explicit source-trust handling, notification safeguards, and a real Python ML shadow pipeline. The main caveat is also clear and verified: FloodGuard can currently support submission-ready honest degraded-state handling, but it still should not be described as fully live across every supporting source or as a validated operational ML system.

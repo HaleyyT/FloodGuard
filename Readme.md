@@ -1,7 +1,7 @@
 # FloodGuard (accepted for [Coding Fest](https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html))
 
 
-FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. The live dashboard is intentionally honest about stale sources, fallback state, and unconnected official-warning feeds. 
+FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. The live dashboard is intentionally honest about stale sources, fallback state, and official-warning feeds that may be connected but still too old for a live claim.
 
 FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
 
@@ -48,7 +48,7 @@ The app checks:
 
 - whether rainfall and river gauges are current enough for a live claim
 - whether supporting context is stale or partial
-- whether official warnings are configured or still missing
+- whether official warnings are live, stale, unavailable, or still missing
 - whether recent cache is being reused because a live refresh failed
 
 This means the dashboard can say “blocked”, “partial”, or “fallback” instead of silently pretending the data is current.
@@ -89,7 +89,7 @@ FloodGuard therefore keeps:
 
 ## Limitations
 
-- Official NSW SES / HazardWatch integration is architected and surfaced, but not yet fully connected as a stable live operational feed.
+- Official NSW SES / HazardWatch integration is now connected through a default public HazardWatch adapter, but it is not yet mature enough to count as a stable live operational warning feed in every run.
 - Core live-gauge ingestion can degrade to stale cache or fallback depending on source availability.
 - Historical storage is currently JSONL-based prototype storage, not production-grade event storage.
 - Risk thresholds are heuristic and not yet calibrated against validated flood outcomes.
