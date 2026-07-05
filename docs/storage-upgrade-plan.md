@@ -63,6 +63,20 @@ WHERE area_id = 'north-parramatta'
 ORDER BY observed_at DESC;
 ```
 
+FloodGuard's HTTP API now also exposes short-term event-window review directly from JSONL history without changing the dashboard contract:
+
+- `GET /api/history?area=parramatta&sinceHours=72`
+- `GET /api/history?area=parramatta&start=2026-06-29T00:00:00Z&end=2026-06-29T12:00:00Z&includeSummary=true`
+
+The summary response is designed for replay, calibration review, and future expert inspection. It reports:
+
+- the effective time filters used for the query;
+- returned record count and oldest/newest timestamps;
+- concern-level counts across the window;
+- official-warning-context counts across the window;
+- degraded-record count and rate;
+- the latest visible risk level, score, and reliability snapshot.
+
 ## Medium-term target
 
 Once ingestion coverage and labelled events improve, FloodGuard should move toward a stronger operational layout:
