@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildIngestionObservabilityReport } from "../ingestionObservability.js";
+import {
+  buildIngestionObservabilityReport,
+  INGESTION_FAILURE_TAXONOMY,
+  summarizeDegradedSourcesForCli,
+} from "../ingestionObservability.js";
 
 test("ingestion observability report exposes degraded source taxonomy and debug line", () => {
   const report = buildIngestionObservabilityReport({
@@ -114,4 +118,49 @@ test("ingestion observability classifies parser, timeout, unmapped, and unconfig
   assert.ok(reasons.includes("station_unmapped"));
   assert.ok(reasons.includes("not_configured"));
   assert.ok(report.degradedSources.every((source) => source.contractVersion === "ingestion-observability-v2"));
+});
+
+test("ingestion observability keeps a stable failure taxonomy and printable degraded-source lines", () => {
+  const report = buildIngestionObservabilityReport({
+    ingestedAt: "2026-07-03T04:00:00Z",
+    refreshMetadata: { status: "degraded", servedAt: "2026-07-03T04:01:00Z" },
+    ingestionHealth: { overallStatus: "partial" },
+    areas: {
+      parramatta: {
+        area: { id: "parramatta", name: "Parramatta, NSW" },
+        ingestionHealth: { overallStatus: "partial" },
+        rainfallSeries: { areaRelevance: { matched: true } },
+        riverContext: { areaRelevance: { missingStations: [] }, stationCount: 1 },
+        sourceMetadata: [
+          {
+            label: "FloodSmart river",
+            type: "river",
+            mode: "cached_stale",
+            dataMode: "cached_stale",
+            fetchedAt: "2026-07-03T04:00:00Z",
+            observedAt: "2026-07-03T02:10:00Z",
+            ageMinutes: 110,
+            freshnessStatus: "stale",
+            sourceStrength: "primary_live_gauge",
+            status: "failed",
+            note: "Remote fetch failed; stale cached reading was retained.",
+          },
+        ],
+      },
+    },
+  });
+
+  assert.deepEqual(report.failureTaxonomy, [...INGESTION_FAILURE_TAXONOMY]);
+  assert.equal(report.degradedSources[0].failureReason, "cache_stale");
+  assert.equal(report.degradedSources[0].liveClaimEligible, false);
+
+  const lines = summarizeDegradedSourcesForCli(report);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /Parramatta, NSW \| river \| failure=cache_stale/);
+  assert.match(lines[0], /sourceMode=cached_stale/);
+  assert.match(lines[0], /cacheMode=cached_stale/);
+  assert.match(lines[0], /lastFetchedAt=2026-07-03T04:00:00Z/);
+  assert.match(lines[0], /lastObservedAt=2026-07-03T02:10:00Z/);
+  assert.match(lines[0], /freshnessMinutes=110m/);
+  assert.match(lines[0], /liveClaimEligible=false/);
 });

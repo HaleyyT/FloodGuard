@@ -1,4 +1,8 @@
 import { buildRegionalIngestionHealth } from "./ingestion/health.js";
+import {
+  buildIngestionObservabilityReport,
+  summarizeDegradedSourcesForCli,
+} from "./ingestion/ingestionObservability.js";
 import { assessIngestionReadiness } from "./ingestion/readiness.js";
 import { readOrRefreshRegionalSignals, runRegionalIngestion } from "./ingestion/aggregators.js";
 import { getSourceRegistry } from "./ingestion/sourceRegistry.js";
@@ -10,6 +14,7 @@ const regionalSignals = shouldRefresh
   : await readOrRefreshRegionalSignals();
 const health = regionalSignals.ingestionHealth ?? buildRegionalIngestionHealth(regionalSignals);
 const registry = getSourceRegistry(regionalSignals);
+const observability = buildIngestionObservabilityReport(regionalSignals);
 const readiness = assessIngestionReadiness({
   health,
   mode: checkMode,
@@ -26,7 +31,7 @@ console.log(`Core flood gauges: ${health.coreFloodStatus ?? "unknown"}`);
 console.log(`Supporting context: ${health.contextStatus ?? "unknown"}`);
 console.log(`Official warnings: ${health.warningStatus ?? "unknown"}`);
 if (health.summary) console.log(health.summary);
-console.log(readiness.summary);
+if (readiness.summary && readiness.summary !== health.summary) console.log(readiness.summary);
 console.log(`Areas checked: ${health.areaCount}`);
 
 for (const area of health.areas) {
@@ -61,6 +66,14 @@ if (readiness.failures.length > 0) {
   console.log("\nReadiness failures:");
   for (const failure of readiness.failures) {
     console.log(`  FAIL: ${failure}`);
+  }
+}
+
+if (observability.degradedSourceCount > 0) {
+  console.log("\nDegraded source observability:");
+  console.log(`  ${observability.debugLine}`);
+  for (const line of summarizeDegradedSourcesForCli(observability)) {
+    console.log(`  ${line}`);
   }
 }
 
