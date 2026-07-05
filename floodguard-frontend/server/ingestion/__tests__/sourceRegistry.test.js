@@ -83,3 +83,12 @@ test("source registry marks derived proxy, warning, and stale cases clearly", ()
   assert.equal(warningSource.freshnessStatus, "stale");
   assert.ok(warningSource.qualityNotes.some((note) => /stale/i.test(note)));
 });
+
+test("source registry exposes the default HazardWatch warning adapter as active ingestion", () => {
+  const registry = getSourceRegistry();
+
+  assert.equal(registry.activeIngestion.warnings.label, "NSW SES / HazardWatch warning status");
+  assert.equal(registry.activeIngestion.warnings.sourceStrength, "official_warning");
+  assert.equal(registry.activeIngestion.warnings.optional, true);
+  assert.equal(registry.activeIngestion.warnings.url, "https://www.hazardwatch.gov.au/");
+});

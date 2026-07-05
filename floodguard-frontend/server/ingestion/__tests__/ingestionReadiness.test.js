@@ -156,3 +156,63 @@ test("live readiness passes only when every core area source is fresh and live",
   assert.equal(readiness.result, "pass");
   assert.equal(readiness.liveOperationalReady, true);
 });
+
+test("submission readiness still passes when core gauges are current but official warnings are stale", () => {
+  const readiness = assessIngestionReadiness({
+    health: {
+      overallStatus: "partial",
+      coreFloodStatus: "pass",
+      contextStatus: "pass",
+      warningStatus: "warn",
+      summary: "Core live flood gauges are current. Official warning context is configured but stale.",
+      reasons: ["Official warning source is configured but does not have a fresh timestamp."],
+      areas: [
+        {
+          areaId: "parramatta",
+          areaName: "Parramatta, NSW",
+          overallStatus: "partial",
+          coreFloodStatus: "pass",
+          contextStatus: "pass",
+          warningStatus: "warn",
+          areaRelevance: {
+            matchedSignals: 5,
+            expectedSignals: 5,
+            score: 100,
+          },
+          sources: [
+            {
+              label: "FloodSmart rainfall",
+              type: "rainfall",
+              mode: "remote",
+              dataMode: "live",
+              sourceStrength: "primary_live_gauge",
+              freshnessStatus: "current",
+            },
+            {
+              label: "FloodSmart river",
+              type: "river",
+              mode: "remote",
+              dataMode: "live",
+              sourceStrength: "primary_live_gauge",
+              freshnessStatus: "current",
+            },
+            {
+              label: "NSW SES / HazardWatch warning status",
+              type: "warnings",
+              mode: "remote",
+              dataMode: "live",
+              sourceStrength: "official_warning",
+              freshnessStatus: "stale",
+            },
+          ],
+        },
+      ],
+    },
+    mode: "submission",
+    sourceRegistry: buildRegistry(),
+  });
+
+  assert.equal(readiness.result, "pass_with_degraded_external_source");
+  assert.equal(readiness.submissionBlocking, false);
+  assert.equal(readiness.liveOperationalReady, false);
+});

@@ -77,7 +77,8 @@ function isCoreFloodSource(source) {
 }
 
 function isContextSource(source) {
-  return !isCoreFloodSource(source);
+  // Warning evidence has its own dedicated health lane and should not be folded back into generic context counts.
+  return !isCoreFloodSource(source) && source.type !== "warnings";
 }
 
 function sourceIssue(source) {

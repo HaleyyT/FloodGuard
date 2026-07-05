@@ -74,6 +74,52 @@ test("reports partial overall status when gauges are current but weather is stal
   assert.equal(health.overallStatus, "partial");
 });
 
+test("reports warning-layer degradation separately when official warnings are configured but stale", () => {
+  const areaSignals = createAreaSignals([
+    {
+      label: "FloodSmart rainfall",
+      type: "rainfall",
+      mode: "remote",
+      dataMode: "live",
+      sourceStrength: "primary_live_gauge",
+      status: "ok",
+      freshnessStatus: "current",
+      ageHours: 0.2,
+      staleAfterHours: 6,
+    },
+    {
+      label: "FloodSmart river",
+      type: "river",
+      mode: "remote",
+      dataMode: "live",
+      sourceStrength: "primary_live_gauge",
+      status: "ok",
+      freshnessStatus: "current",
+      ageHours: 0.2,
+      staleAfterHours: 6,
+    },
+    {
+      label: "NSW SES / HazardWatch warning status",
+      type: "warnings",
+      mode: "remote",
+      dataMode: "live",
+      sourceStrength: "official_warning",
+      status: "ok",
+      freshnessStatus: "stale",
+      ageHours: 8,
+      staleAfterHours: 1,
+    },
+  ]);
+
+  const health = buildAreaIngestionHealth(areaSignals);
+
+  assert.equal(health.coreFloodStatus, "pass");
+  assert.equal(health.contextStatus, "pass");
+  assert.equal(health.warningStatus, "warn");
+  assert.equal(health.overallStatus, "partial");
+  assert.ok(health.warnings.some((warning) => /configured but does not have a fresh timestamp/i.test(warning)));
+});
+
 test("blocks core flood status when rainfall is stale or fallback", () => {
   const areaSignals = createAreaSignals([
     {
