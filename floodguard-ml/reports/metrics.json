@@ -126,7 +126,14 @@
           "reviewStatusCounts": {
             "scaffold_only": 3000
           }
-        }
+        },
+        "eligibleIndependentRowCount": 0,
+        "eligibleIndependentPositiveCount": 0,
+        "strongOrModerateLabelCount": 0,
+        "reviewedRowCount": 0,
+        "reviewedPositiveCount": 0,
+        "evidenceLinkedRowCount": 0,
+        "evidenceLinkedPositiveCount": 0
       },
       "supervisionQuality": {
         "grade": "weak",
@@ -142,8 +149,13 @@
         },
         "strongOrModerateLabelCount": 0,
         "reviewedRowCount": 0,
+        "reviewedPositiveRowCount": 0,
+        "evidenceLinkedRowCount": 0,
+        "evidenceLinkedPositiveRowCount": 0,
+        "eligibleIndependentRowCount": 0,
+        "eligibleIndependentPositiveCount": 0,
         "viableForIndependentSupervision": false,
-        "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
+        "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes."
       },
       "eventHoldout": {
         "available": true,
@@ -248,7 +260,7 @@
         "Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.",
         "Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.",
         "Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable.",
-        "Training target selection: Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision."
+        "Training target selection: Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision."
       ],
       "summary": {
         "datasetName": "scenario_stress_test",
@@ -334,7 +346,7 @@
         "selectedLabelAvailabilityColumn": null,
         "selectedTargetKind": "rule",
         "readyForIndependentSupervision": false,
-        "reason": "Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.",
+        "reason": "Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision.",
         "eligibleRowCount": 84,
         "positiveCount": 48,
         "sourceCounts": {
@@ -347,7 +359,12 @@
             "synthetic": 84
           },
           "reviewStatusCounts": {}
-        }
+        },
+        "eligibleIndependentRowCount": 0,
+        "eligibleIndependentPositiveCount": 0,
+        "strongOrModerateLabelCount": 0,
+        "reviewedRowCount": 0,
+        "evidenceLinkedRowCount": 0
       },
       "supervisionQuality": {
         "grade": "weak",
@@ -361,8 +378,13 @@
         "eventLabelReviewStatusCounts": {},
         "strongOrModerateLabelCount": 0,
         "reviewedRowCount": 0,
+        "reviewedPositiveRowCount": 0,
+        "evidenceLinkedRowCount": 0,
+        "evidenceLinkedPositiveRowCount": 0,
+        "eligibleIndependentRowCount": 0,
+        "eligibleIndependentPositiveCount": 0,
         "viableForIndependentSupervision": false,
-        "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
+        "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes."
       },
       "eventHoldout": {
         "available": true,

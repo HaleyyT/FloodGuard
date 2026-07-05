@@ -15,6 +15,11 @@ Event-target candidate review:
 - Labelled rows: 3000
 - Elevated examples: 0
 - Strength counts: {'weak': 3000}
+- Review-status counts: {'scaffold_only': 3000}
+- Evidence-linked joined rows: 0
+- Evidence-linked joined elevated rows: 0
+- Reviewed joined rows: 0
+- Reviewed joined elevated rows: 0
 
 ## Scenario Stress Test
 
@@ -23,12 +28,17 @@ Event-target candidate review:
 - Eligible rows for selected target: 84
 - Elevated examples in selected target: 48
 - Ready for independent supervision: `False`
-- Reason: Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.
+- Reason: Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision.
 
 Event-target candidate review:
 - Labelled rows: 84
 - Elevated examples: 48
 - Strength counts: {'synthetic': 84}
+- Review-status counts: {}
+- Evidence-linked joined rows: 0
+- Evidence-linked joined elevated rows: 0
+- Reviewed joined rows: 0
+- Reviewed joined elevated rows: 0
 
 ## Interpretation
 

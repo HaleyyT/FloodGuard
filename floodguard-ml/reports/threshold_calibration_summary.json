@@ -20,8 +20,13 @@
       },
       "strongOrModerateLabelCount": 0,
       "reviewedRowCount": 0,
+      "reviewedPositiveRowCount": 0,
+      "evidenceLinkedRowCount": 0,
+      "evidenceLinkedPositiveRowCount": 0,
+      "eligibleIndependentRowCount": 0,
+      "eligibleIndependentPositiveCount": 0,
       "viableForIndependentSupervision": false,
-      "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
+      "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes."
     },
     "eventTargetCandidate": {
       "eligibleRowCount": 3000,

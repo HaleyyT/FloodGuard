@@ -14,6 +14,9 @@ test("readMlReport degrades safely when report files are missing", async () => {
     assert.equal(report.mode, "shadow");
     assert.equal(report.liveScoringEnabled, false);
     assert.equal(report.readyForValidatedML, false);
+    assert.equal(report.reviewedEventWindows, 0);
+    assert.equal(report.reviewedElevatedEventWindows, 0);
+    assert.equal(report.eventHoldoutViable, false);
     assert.equal(report.realExport.available, false);
     assert.equal(report.scenarioStressTest.available, false);
     assert.ok(Array.isArray(report.models));
@@ -119,6 +122,8 @@ test("readMlReport reads available files without crashing on partial reports", a
           reviewedRows: 1,
           promotableRows: 1,
           independentPositiveRows: 2,
+          reviewableRows: 2,
+          reviewablePositiveRows: 2,
         },
         supervisionQuality: {
           grade: "developing",
@@ -129,6 +134,11 @@ test("readMlReport reads available files without crashing on partial reports", a
           backlogEvidenceLinkedRows: 2,
           backlogPromotableRows: 1,
           backlogIndependentPositiveRows: 2,
+          evidenceLinkedRowCount: 2,
+          evidenceLinkedPositiveRowCount: 2,
+          eligibleIndependentRowCount: 2,
+          eligibleIndependentPositiveCount: 2,
+          reviewedPositiveRowCount: 0,
         },
       })}\n`,
       "utf8",
@@ -180,12 +190,28 @@ test("readMlReport reads available files without crashing on partial reports", a
     assert.equal(report.labelAudit.reviewedRows, 1);
     assert.equal(report.labelAudit.promotableRows, 1);
     assert.equal(report.labelAudit.independentPositiveRows, 2);
+    assert.equal(report.labelAudit.reviewableRows, 2);
+    assert.equal(report.labelAudit.reviewablePositiveRows, 2);
     assert.equal(report.supervisionQuality.grade, "developing");
     assert.equal(report.supervisionQuality.viableForIndependentSupervision, false);
     assert.equal(report.supervisionQuality.backlogEvidenceLinkedRows, 2);
     assert.equal(report.supervisionQuality.backlogPromotableRows, 1);
     assert.equal(report.supervisionQuality.backlogIndependentPositiveRows, 2);
+    assert.equal(report.supervisionQuality.evidenceLinkedRowCount, 2);
+    assert.equal(report.supervisionQuality.evidenceLinkedPositiveRowCount, 2);
+    assert.equal(report.supervisionQuality.eligibleIndependentRowCount, 2);
+    assert.equal(report.supervisionQuality.eligibleIndependentPositiveCount, 2);
+    assert.equal(report.supervisionQuality.reviewedPositiveRowCount, 0);
     assert.match(report.supervisionQuality.primaryLimitation, /promoted into reviewed joined event labels/i);
+    assert.equal(report.eventSupervision.viable, false);
+    assert.equal(report.eventSupervision.blocked, true);
+    assert.equal(report.eventSupervision.evidenceLinkedRows, 2);
+    assert.equal(report.eventSupervision.reviewablePositiveRows, 2);
+    assert.match(report.eventSupervision.reason, /reviewed joined event labels/i);
+    assert.equal(report.reviewedEventWindows, 0);
+    assert.equal(report.reviewedElevatedEventWindows, 0);
+    assert.equal(report.eventHoldoutViable, false);
+    assert.match(report.mlPromotionBlockedReason, /reviewed joined event labels/i);
     assert.equal(report.realExport.available, true);
     assert.equal(report.realExport.rows, 3000);
     assert.equal(report.realExport.elevatedRows, 18);

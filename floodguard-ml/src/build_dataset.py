@@ -53,24 +53,30 @@ def load_feature_export(feature_path: Path = FEATURE_EXPORT_DATASET) -> pd.DataF
 def load_label_windows(labels_path: Path = LABELS_DATASET) -> pd.DataFrame:
     """Load time-window labels or return an empty frame when none are available yet."""
 
+    columns = [
+        "area",
+        "start_time",
+        "end_time",
+        "label",
+        "label_source",
+        "label_strength",
+        "review_status",
+        "evidence_link",
+        "review_notes",
+        "reviewer",
+        "reviewed_at",
+        "notes",
+    ]
     if not labels_path.exists():
-        return pd.DataFrame(
-            columns=[
-                "area",
-                "start_time",
-                "end_time",
-                "label",
-                "label_source",
-                "label_strength",
-                "review_status",
-                "evidence_link",
-                "notes",
-            ]
-        )
+        return pd.DataFrame(columns=columns)
 
     labels = pd.read_csv(labels_path)
     if labels.empty:
-        return labels
+        return pd.DataFrame(columns=columns)
+
+    for column in columns:
+        if column not in labels.columns:
+            labels[column] = pd.NA
 
     labels["areaJoinKey"] = labels["area"].map(normalise_area_id)
     labels["start_time"] = pd.to_datetime(labels["start_time"], errors="coerce", utc=True)

@@ -21,6 +21,7 @@ def write_model_card(results: list[dict]) -> None:
         else {}
     )
     backlog_summary = label_audit.get("backlogSummary", {})
+    labels_summary = label_audit.get("labelsSummary", {})
 
     lines = [
         "# FloodGuard Prototype ML Model Card",
@@ -66,6 +67,9 @@ def write_model_card(results: list[dict]) -> None:
         f"- Real export viable for independent supervision: `{real_result.get('supervisionQuality', {}).get('viableForIndependentSupervision', False)}`",
         f"- Real export review-status counts: {real_result['summary'].get('eventLabelReviewStatusCounts', {})}",
         f"- Real export primary limitation: {real_result.get('supervisionQuality', {}).get('primaryLimitation', 'unavailable')}",
+        f"- Joined evidence-linked event windows: {labels_summary.get('evidenceLinkedRows', 0)}",
+        f"- Joined reviewed event windows: {labels_summary.get('reviewedRows', 0)}",
+        f"- Joined reviewed elevated event windows: {labels_summary.get('reviewedPositiveRows', 0)}",
         f"- Backlog evidence-linked rows: {backlog_summary.get('evidenceLinkedRows', 0)}",
         f"- Backlog reviewed rows: {backlog_summary.get('reviewedRows', 0)}",
         f"- Backlog promotion-ready rows: {backlog_summary.get('promotableRows', 0)}",

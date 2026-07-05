@@ -605,6 +605,11 @@ def write_target_selection_summary(results: list[dict[str, Any]]) -> None:
             lines.append(f"- Labelled rows: {candidate['eligibleRowCount']}")
             lines.append(f"- Elevated examples: {candidate['positiveCount']}")
             lines.append(f"- Strength counts: {candidate.get('strengthCounts', {})}")
+            lines.append(f"- Review-status counts: {candidate.get('reviewStatusCounts', {})}")
+            lines.append(f"- Evidence-linked joined rows: {selection.get('evidenceLinkedRowCount', 0)}")
+            lines.append(f"- Evidence-linked joined elevated rows: {selection.get('evidenceLinkedPositiveCount', 0)}")
+            lines.append(f"- Reviewed joined rows: {selection.get('reviewedRowCount', 0)}")
+            lines.append(f"- Reviewed joined elevated rows: {selection.get('reviewedPositiveCount', 0)}")
             lines.append("")
 
     lines.extend(
@@ -726,7 +731,9 @@ def write_model_comparison_report(results: list[dict[str, Any]]) -> None:
     (REPORTS_DIR / "model_comparison.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def main() -> None:
+def run_evaluation() -> list[dict[str, Any]]:
+    """Rebuild the datasets and reports for the current shadow-mode evaluation state."""
+
     ensure_runtime_dirs()
     build_training_dataset()
     build_scenario_dataset(SCENARIO_DATASET)
@@ -735,6 +742,11 @@ def main() -> None:
         evaluate_dataset("scenario_stress_test", SCENARIO_DATASET),
     ]
     write_combined_reports(dataset_results)
+    return dataset_results
+
+
+def main() -> None:
+    dataset_results = run_evaluation()
     print("FloodGuard Day 3 ML pipeline complete.")
     print(f"Reports: {REPORTS_DIR}")
     print(f"Models: {MODELS_DIR}")

@@ -39,7 +39,7 @@ Warnings:
 - Primary evaluation fell back from time-based validation to `area_holdout_north-parramatta`.
 - Event-holdout validation is not yet viable because independent elevated event labels are missing or too sparse.
 - Leakage-prone columns are present in the dataset but excluded from training: riskScore, ruleConcernLevel, targetElevatedConcern, targetRuleElevated, targetEventElevated, labelSource, ruleLabelSource, eventLabelSource, eventLabelStrength, eventLabelNotes, eventLabelAvailable.
-- Training target selection: Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.
+- Training target selection: Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision.
 
 ## Interpretation
 

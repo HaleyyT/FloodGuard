@@ -319,6 +319,8 @@ def calibration_report_text(
             f"- Viable for independent supervision: `{supervision_quality.get('viableForIndependentSupervision', False)}`",
             f"- Summary: {supervision_quality.get('summary', 'unavailable')}",
             f"- Primary limitation: {supervision_quality.get('primaryLimitation', 'unavailable')}",
+            f"- Evidence-backed or reviewed event rows: `{supervision_quality.get('eligibleIndependentRowCount', 0)}`",
+            f"- Evidence-backed or reviewed elevated event rows: `{supervision_quality.get('eligibleIndependentPositiveCount', 0)}`",
             "",
         ]
     )
@@ -333,6 +335,10 @@ def calibration_report_text(
                 f"- Candidate elevated examples: `{candidate.get('positiveCount', 0)}`",
                 f"- Strength counts: `{candidate.get('strengthCounts', {})}`",
                 f"- Review status counts: `{candidate.get('reviewStatusCounts', {})}`",
+                f"- Evidence-linked rows: `{candidate.get('evidenceLinkedRowCount', 0)}`",
+                f"- Reviewed rows: `{candidate.get('reviewedRowCount', 0)}`",
+                f"- Eligible independent rows: `{candidate.get('eligibleIndependentRowCount', 0)}`",
+                f"- Eligible independent positives: `{candidate.get('eligibleIndependentPositiveCount', 0)}`",
                 "",
             ]
         )
@@ -388,6 +394,7 @@ def calibration_report_text(
                 "",
                 "This sweep currently ranks threshold sets against rule-derived reference targets because no elevated independent event windows are joined yet.",
                 "That means the workbench is valuable for replay plumbing, degraded-source review, and expert discussion, but it is not evidence that a new threshold set is validated.",
+                "Until FloodGuard has evidence-backed reviewed event windows, calibration should be described as prototype-only rather than evidence-backed.",
                 "",
             ]
         )
@@ -408,6 +415,7 @@ def calibration_summary_text(
             f"Threshold version `{config.get('version')}` remains review-only.",
             f"Calibration target kind: `{target['kind']}`.",
             f"Supervision grade: `{supervision_quality.get('grade', 'unknown')}`.",
+            f"Evidence-backed reviewed event rows: `{supervision_quality.get('eligibleIndependentRowCount', 0)}`; elevated: `{supervision_quality.get('eligibleIndependentPositiveCount', 0)}`.",
             f"Recommended action: keep current thresholds for live prototype use while using sweep results for expert review.",
             f"Best review candidate recall: `{selected_row['recall']}`; false positive rate: `{selected_row['falsePositiveRate']}`.",
             "",

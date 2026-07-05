@@ -124,7 +124,14 @@
       "reviewStatusCounts": {
         "scaffold_only": 3000
       }
-    }
+    },
+    "eligibleIndependentRowCount": 0,
+    "eligibleIndependentPositiveCount": 0,
+    "strongOrModerateLabelCount": 0,
+    "reviewedRowCount": 0,
+    "reviewedPositiveCount": 0,
+    "evidenceLinkedRowCount": 0,
+    "evidenceLinkedPositiveCount": 0
   },
   "supervisionQuality": {
     "grade": "weak",
@@ -140,8 +147,13 @@
     },
     "strongOrModerateLabelCount": 0,
     "reviewedRowCount": 0,
+    "reviewedPositiveRowCount": 0,
+    "evidenceLinkedRowCount": 0,
+    "evidenceLinkedPositiveRowCount": 0,
+    "eligibleIndependentRowCount": 0,
+    "eligibleIndependentPositiveCount": 0,
     "viableForIndependentSupervision": false,
-    "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
+    "primaryLimitation": "Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes."
   },
   "split": {
     "strategy": "area_holdout_north-parramatta",

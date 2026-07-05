@@ -1,7 +1,7 @@
 {
   "labelsSummary": {
     "name": "labels.csv",
-    "rowCount": 3,
+    "rowCount": 5,
     "timeSpan": {
       "start": "2026-06-24T00:00:00+00:00",
       "end": "2026-07-02T00:00:00+00:00"
@@ -12,24 +12,33 @@
       "toongabbie"
     ],
     "labelSourceCounts": {
-      "manual_demo": 3
+      "manual_demo": 3,
+      "warning_derived": 1,
+      "impact_candidate": 1
     },
     "labelStrengthCounts": {
-      "weak": 3
+      "weak": 4,
+      "moderate": 1
     },
     "labelClassCounts": {},
     "reviewStatusCounts": {
-      "scaffold_only": 3
+      "scaffold_only": 3,
+      "candidate_review": 2
     },
     "promotionReadyCounts": {},
     "independenceLevelCounts": {},
     "reviewPriorityCounts": {},
     "joinStatusCounts": {},
-    "positiveRows": 0,
-    "independentPositiveRows": 0,
-    "evidenceLinkedRows": 0,
+    "positiveRows": 2,
+    "independentPositiveRows": 2,
+    "evidenceLinkedRows": 2,
+    "evidenceLinkedPositiveRows": 2,
     "reviewedRows": 0,
-    "promotableRows": 0
+    "reviewedPositiveRows": 0,
+    "promotableRows": 0,
+    "reviewableRows": 2,
+    "reviewablePositiveRows": 2,
+    "strongReviewablePositiveRows": 1
   },
   "backlogSummary": {
     "name": "event_label_backlog.csv",
@@ -61,7 +70,8 @@
       "candidate_review": 2
     },
     "promotionReadyCounts": {
-      "no": 5
+      "no": 3,
+      "promoted": 2
     },
     "independenceLevelCounts": {
       "low": 3,
@@ -72,23 +82,29 @@
       "high": 2
     },
     "joinStatusCounts": {
-      "joined_to_labels": 3,
-      "backlog_only": 2
+      "joined_to_labels": 5
     },
     "positiveRows": 2,
     "independentPositiveRows": 2,
     "evidenceLinkedRows": 2,
+    "evidenceLinkedPositiveRows": 2,
     "reviewedRows": 0,
-    "promotableRows": 0
+    "reviewedPositiveRows": 0,
+    "promotableRows": 0,
+    "reviewableRows": 2,
+    "reviewablePositiveRows": 2,
+    "strongReviewablePositiveRows": 1
   },
   "supervisionQuality": {
     "grade": "developing",
-    "summary": "Backlog evidence is improving, but independent event labels are still backlog-only rather than joined validation rows.",
+    "summary": "Independent label scaffolding exists, but coverage or review quality is still too weak for validated ML claims.",
     "viableForIndependentSupervision": false,
-    "primaryLimitation": "Backlog candidates exist, but they have not yet been promoted into reviewed joined event labels.",
-    "joinedPositiveRows": 0,
-    "joinedStrongOrModerateRows": 0,
+    "primaryLimitation": "Joined labels still lack enough reviewed elevated windows to support validated ML claims.",
+    "joinedPositiveRows": 2,
+    "joinedStrongOrModerateRows": 1,
     "joinedReviewedRows": 0,
+    "joinedReviewableRows": 2,
+    "joinedReviewablePositiveRows": 2,
     "backlogRows": 5,
     "backlogPositiveRows": 2,
     "backlogIndependentPositiveRows": 2,

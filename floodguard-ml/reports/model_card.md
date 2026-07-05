@@ -33,14 +33,17 @@ It is not used for live alerting or official warning decisions.
 - `scenario_generated` labels are for ML plumbing and stress testing only, never real-world validation.
 - Real export target selection reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 - Real export supervision-quality summary: FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.
-- Scenario target selection reason: Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.
+- Scenario target selection reason: Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision.
 
 ## Supervision Quality
 
 - Real export grade: `weak`
 - Real export viable for independent supervision: `False`
 - Real export review-status counts: {'scaffold_only': 3000}
-- Real export primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes.
+- Real export primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes.
+- Joined evidence-linked event windows: 2
+- Joined reviewed event windows: 0
+- Joined reviewed elevated event windows: 0
 - Backlog evidence-linked rows: 2
 - Backlog reviewed rows: 0
 - Backlog promotion-ready rows: 0

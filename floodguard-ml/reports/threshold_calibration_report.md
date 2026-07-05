@@ -21,7 +21,9 @@ FloodGuard calibrates thresholds in a reviewable shadow workflow and does not au
 - Grade: `weak`
 - Viable for independent supervision: `False`
 - Summary: FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.
-- Primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes.
+- Primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes.
+- Evidence-backed or reviewed event rows: `0`
+- Evidence-backed or reviewed elevated event rows: `0`
 
 ## Event-label candidate review
 
@@ -29,6 +31,10 @@ FloodGuard calibrates thresholds in a reviewable shadow workflow and does not au
 - Candidate elevated examples: `0`
 - Strength counts: `{'weak': 3000}`
 - Review status counts: `{'scaffold_only': 3000}`
+- Evidence-linked rows: `0`
+- Reviewed rows: `0`
+- Eligible independent rows: `0`
+- Eligible independent positives: `0`
 
 ## Current candidate recommendation
 
@@ -109,4 +115,5 @@ In practice, FloodGuard should keep the current conservative thresholds, improve
 
 This sweep currently ranks threshold sets against rule-derived reference targets because no elevated independent event windows are joined yet.
 That means the workbench is valuable for replay plumbing, degraded-source review, and expert discussion, but it is not evidence that a new threshold set is validated.
+Until FloodGuard has evidence-backed reviewed event windows, calibration should be described as prototype-only rather than evidence-backed.
 

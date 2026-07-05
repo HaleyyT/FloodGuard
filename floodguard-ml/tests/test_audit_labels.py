@@ -91,7 +91,11 @@ class AuditLabelsTests(unittest.TestCase):
         self.assertEqual(summary["positiveRows"], 1)
         self.assertEqual(summary["independentPositiveRows"], 1)
         self.assertEqual(summary["evidenceLinkedRows"], 1)
+        self.assertEqual(summary["evidenceLinkedPositiveRows"], 1)
         self.assertEqual(summary["promotableRows"], 1)
+        self.assertEqual(summary["reviewableRows"], 1)
+        self.assertEqual(summary["reviewablePositiveRows"], 1)
+        self.assertEqual(summary["reviewedPositiveRows"], 0)
         self.assertIn("parramatta", summary["areas"])
         self.assertEqual(summary["labelSourceCounts"]["manual_demo"], 1)
         self.assertEqual(summary["reviewStatusCounts"]["scaffold_only"], 1)
@@ -102,6 +106,8 @@ class AuditLabelsTests(unittest.TestCase):
             "positiveRows": 0,
             "labelStrengthCounts": {"weak": 3},
             "reviewStatusCounts": {"scaffold_only": 3},
+            "reviewableRows": 0,
+            "reviewablePositiveRows": 0,
         }
         backlog_summary = {
             "rowCount": 5,
@@ -123,6 +129,8 @@ class AuditLabelsTests(unittest.TestCase):
             "positiveRows": 0,
             "labelStrengthCounts": {"weak": 3},
             "reviewStatusCounts": {"scaffold_only": 3},
+            "reviewableRows": 0,
+            "reviewablePositiveRows": 0,
         }
         backlog_summary = {
             "rowCount": 6,

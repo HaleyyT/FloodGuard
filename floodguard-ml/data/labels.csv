@@ -1,4 +1,6 @@
-area,start_time,end_time,label,label_source,label_strength,review_status,evidence_link,notes
-parramatta,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,scaffold_only,,"Placeholder non-event window for label-join plumbing only; not independent flood validation."
-north-parramatta,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,scaffold_only,,"Placeholder non-event window for label-join plumbing only; not independent flood validation."
-toongabbie,2026-06-24T00:00:00Z,2026-07-02T00:00:00Z,0,manual_demo,weak,scaffold_only,,"Placeholder non-event window for label-join plumbing only; not independent flood validation."
+area,start_time,end_time,label,label_source,label_strength,review_status,evidence_link,review_notes,reviewer,reviewed_at,notes
+north-parramatta,2026-06-24 00:00:00+00:00,2026-07-02 00:00:00+00:00,0,manual_demo,weak,scaffold_only,,,,,Placeholder non-event window for label-join plumbing only; not independent flood validation.
+parramatta,2026-06-24 00:00:00+00:00,2026-07-02 00:00:00+00:00,0,manual_demo,weak,scaffold_only,,,,,Placeholder non-event window for label-join plumbing only; not independent flood validation.
+parramatta,2026-06-29 00:00:00+00:00,2026-06-29 12:00:00+00:00,1,warning_derived,moderate,candidate_review,https://example.test/floodguard/labels/parramatta-warning-window,,,,Candidate warning-linked window reserved for future evidence review; not yet validated for model claims.
+toongabbie,2026-06-24 00:00:00+00:00,2026-07-02 00:00:00+00:00,0,manual_demo,weak,scaffold_only,,,,,Placeholder non-event window for label-join plumbing only; not independent flood validation.
+toongabbie,2026-06-30 00:00:00+00:00,2026-06-30 06:00:00+00:00,1,impact_candidate,weak,candidate_review,https://example.test/floodguard/labels/toongabbie-impact-window,,,,Backlog-only placeholder for future local impact verification; not used as validated supervision yet.

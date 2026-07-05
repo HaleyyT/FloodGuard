@@ -70,6 +70,9 @@ EVENT_LABEL_AVAILABLE_COLUMN = "eventLabelAvailable"
 AREA_COLUMN = "areaId"
 TARGET_SELECTION_MIN_ROWS = 30
 TARGET_SELECTION_MIN_POSITIVES = 8
+INDEPENDENT_LABEL_SOURCE_BLOCKLIST = {"manual_demo", "rule_derived", "scenario_generated"}
+REVIEWED_EVENT_STATUSES = {"reviewed_for_shadow_mode", "expert_validated"}
+STRONG_EVENT_STRENGTHS = {"moderate", "strong"}
 
 LEAKAGE_PRONE_COLUMNS = [
     "riskScore",
@@ -116,6 +119,30 @@ NUMERIC_FEATURES = [
     feature for feature in FEATURE_COLUMNS if feature not in {"areaId"}
 ]
 CATEGORICAL_FEATURES = ["areaId"]
+
+
+def evidence_link_present(series: pd.Series) -> pd.Series:
+    """Treat non-empty evidence links as explicit support for independent-label review."""
+
+    return series.fillna("").astype(str).str.strip().ne("")
+
+
+def reviewed_event_status(series: pd.Series) -> pd.Series:
+    """Recognise only explicit post-review states as reviewed event supervision."""
+
+    return series.fillna("unknown").astype(str).isin(REVIEWED_EVENT_STATUSES)
+
+
+def strong_event_strength(series: pd.Series) -> pd.Series:
+    """Restrict stronger independent supervision to moderate/strong event-label rows."""
+
+    return series.fillna("unknown").astype(str).isin(STRONG_EVENT_STRENGTHS)
+
+
+def independent_event_source(series: pd.Series) -> pd.Series:
+    """Exclude rule/demo/scenario rows from independent-event supervision claims."""
+
+    return ~series.fillna("unknown").astype(str).isin(INDEPENDENT_LABEL_SOURCE_BLOCKLIST)
 
 
 def ensure_runtime_dirs() -> None:
@@ -338,10 +365,13 @@ def build_supervision_quality_summary(
     event_label_row_count = int(summary.get("eventLabelRowCount", 0))
     coverage = float(summary.get("eventLabelCoverage", 0.0))
     ready = bool(target_selection.get("readyForIndependentSupervision"))
-    strong_or_moderate = int(strengths.get("strong", 0)) + int(strengths.get("moderate", 0))
-    reviewed_rows = int(review_statuses.get("reviewed_for_shadow_mode", 0)) + int(
-        review_statuses.get("expert_validated", 0)
-    )
+    strong_or_moderate = int(target_selection.get("strongOrModerateLabelCount", 0))
+    reviewed_rows = int(target_selection.get("reviewedRowCount", 0))
+    reviewed_positive_rows = int(target_selection.get("reviewedPositiveCount", 0))
+    evidence_linked_rows = int(target_selection.get("evidenceLinkedRowCount", 0))
+    evidence_linked_positive_rows = int(target_selection.get("evidenceLinkedPositiveCount", 0))
+    eligible_review_rows = int(target_selection.get("eligibleIndependentRowCount", 0))
+    eligible_positive_rows = int(target_selection.get("eligibleIndependentPositiveCount", 0))
 
     if ready:
         grade = "reviewable"
@@ -350,14 +380,14 @@ def build_supervision_quality_summary(
             "but still not for operational promotion."
         )
         primary_limitation = "Event-holdout validation and domain review are still required."
-    elif event_positive_count > 0 and strong_or_moderate > 0:
+    elif eligible_positive_rows > 0 and (strong_or_moderate > 0 or reviewed_rows > 0):
         grade = "developing"
         summary_text = (
-            "FloodGuard has some independent event supervision signals, but coverage or review quality "
-            "is still too limited for validated ML claims."
+            "FloodGuard has some evidence-backed or explicitly reviewed independent event supervision signals, "
+            "but coverage or review quality is still too limited for validated ML claims."
         )
         primary_limitation = (
-            "Event labels exist, but they are not yet strong or reviewed enough to replace rule-derived supervision."
+            "Event labels exist, but there are still too few evidence-backed reviewed elevated windows to replace rule-derived supervision."
         )
     else:
         grade = "weak"
@@ -366,7 +396,7 @@ def build_supervision_quality_summary(
             "tracking, and future calibration preparation."
         )
         primary_limitation = (
-            "Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes."
+            "Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes."
         )
 
     return {
@@ -379,6 +409,11 @@ def build_supervision_quality_summary(
         "eventLabelReviewStatusCounts": review_statuses,
         "strongOrModerateLabelCount": strong_or_moderate,
         "reviewedRowCount": reviewed_rows,
+        "reviewedPositiveRowCount": reviewed_positive_rows,
+        "evidenceLinkedRowCount": evidence_linked_rows,
+        "evidenceLinkedPositiveRowCount": evidence_linked_positive_rows,
+        "eligibleIndependentRowCount": eligible_review_rows,
+        "eligibleIndependentPositiveCount": eligible_positive_rows,
         "viableForIndependentSupervision": ready,
         "primaryLimitation": primary_limitation,
     }
@@ -420,6 +455,7 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
         }
 
     event_positive_count = int((labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1).sum())
+    event_positive_mask = labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1
     strength_counts = (
         labelled[EVENT_LABEL_STRENGTH_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict()
         if EVENT_LABEL_STRENGTH_COLUMN in labelled.columns
@@ -430,10 +466,36 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
         if EVENT_LABEL_REVIEW_STATUS_COLUMN in labelled.columns
         else {}
     )
-    all_weak = set(strength_counts.keys()).issubset({"weak", "unknown"})
-    only_unreviewed = set(review_status_counts.keys()).issubset(
-        {"scaffold_only", "candidate_review", "unknown"}
+    evidence_link_mask = (
+        evidence_link_present(labelled[EVENT_LABEL_EVIDENCE_LINK_COLUMN])
+        if EVENT_LABEL_EVIDENCE_LINK_COLUMN in labelled.columns
+        else pd.Series(False, index=labelled.index)
     )
+    reviewed_mask = (
+        reviewed_event_status(labelled[EVENT_LABEL_REVIEW_STATUS_COLUMN])
+        if EVENT_LABEL_REVIEW_STATUS_COLUMN in labelled.columns
+        else pd.Series(False, index=labelled.index)
+    )
+    strong_mask = (
+        strong_event_strength(labelled[EVENT_LABEL_STRENGTH_COLUMN])
+        if EVENT_LABEL_STRENGTH_COLUMN in labelled.columns
+        else pd.Series(False, index=labelled.index)
+    )
+    independent_mask = (
+        independent_event_source(labelled[EVENT_LABEL_SOURCE_COLUMN])
+        if EVENT_LABEL_SOURCE_COLUMN in labelled.columns
+        else pd.Series(False, index=labelled.index)
+    )
+    eligible_mask = independent_mask & (evidence_link_mask | reviewed_mask)
+    eligible_labelled = labelled[eligible_mask].copy()
+    eligible_positive_count = int(
+        (eligible_labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1).sum()
+    )
+    strong_or_moderate_count = int((eligible_mask & strong_mask).sum())
+    reviewed_row_count = int(reviewed_mask[eligible_mask].sum())
+    evidence_link_count = int(evidence_link_mask[eligible_mask].sum())
+    reviewed_positive_count = int((reviewed_mask & event_positive_mask).sum())
+    evidence_linked_positive_count = int((evidence_link_mask & event_positive_mask).sum())
 
     if len(labelled) < TARGET_SELECTION_MIN_ROWS:
         return {
@@ -445,6 +507,13 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
                 "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
                 "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
             },
+            "eligibleIndependentRowCount": int(len(eligible_labelled)),
+            "eligibleIndependentPositiveCount": eligible_positive_count,
+            "strongOrModerateLabelCount": strong_or_moderate_count,
+            "reviewedRowCount": reviewed_row_count,
+            "reviewedPositiveCount": reviewed_positive_count,
+            "evidenceLinkedRowCount": evidence_link_count,
+            "evidenceLinkedPositiveCount": evidence_linked_positive_count,
         }
 
     if event_positive_count < TARGET_SELECTION_MIN_POSITIVES:
@@ -457,30 +526,81 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
                 "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
                 "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
             },
+            "eligibleIndependentRowCount": int(len(eligible_labelled)),
+            "eligibleIndependentPositiveCount": eligible_positive_count,
+            "strongOrModerateLabelCount": strong_or_moderate_count,
+            "reviewedRowCount": reviewed_row_count,
+            "reviewedPositiveCount": reviewed_positive_count,
+            "evidenceLinkedRowCount": evidence_link_count,
+            "evidenceLinkedPositiveCount": evidence_linked_positive_count,
         }
 
-    if all_weak:
+    if eligible_labelled.empty:
         return {
             **base_selection,
-            "reason": "Fallback to rule-derived target because all event-labelled rows are still weak-strength placeholders.",
+            "reason": "Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision.",
             "eventTargetCandidate": {
                 "eligibleRowCount": int(len(labelled)),
                 "positiveCount": event_positive_count,
                 "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
                 "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
             },
+            "eligibleIndependentRowCount": 0,
+            "eligibleIndependentPositiveCount": 0,
+            "strongOrModerateLabelCount": 0,
+            "reviewedRowCount": 0,
+            "evidenceLinkedRowCount": 0,
         }
 
-    if only_unreviewed:
+    if strong_or_moderate_count == 0:
         return {
             **base_selection,
-            "reason": "Fallback to rule-derived target because event-labelled rows are still scaffold-only or candidate-review supervision.",
+            "reason": "Fallback to rule-derived target because evidence-backed independent event rows are still weak-strength supervision.",
             "eventTargetCandidate": {
                 "eligibleRowCount": int(len(labelled)),
                 "positiveCount": event_positive_count,
                 "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
                 "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
             },
+            "eligibleIndependentRowCount": int(len(eligible_labelled)),
+            "eligibleIndependentPositiveCount": eligible_positive_count,
+            "strongOrModerateLabelCount": strong_or_moderate_count,
+            "reviewedRowCount": reviewed_row_count,
+            "reviewedPositiveCount": reviewed_positive_count,
+            "evidenceLinkedRowCount": evidence_link_count,
+            "evidenceLinkedPositiveCount": evidence_linked_positive_count,
+        }
+    if eligible_positive_count < TARGET_SELECTION_MIN_POSITIVES:
+        return {
+            **base_selection,
+            "reason": f"Fallback to rule-derived target because evidence-backed or reviewed event-labelled rows contain only {eligible_positive_count} elevated example(s).",
+            "eventTargetCandidate": {
+                "eligibleRowCount": int(len(labelled)),
+                "positiveCount": event_positive_count,
+                "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+                "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
+            },
+            "eligibleIndependentRowCount": int(len(eligible_labelled)),
+            "eligibleIndependentPositiveCount": eligible_positive_count,
+            "strongOrModerateLabelCount": strong_or_moderate_count,
+            "reviewedRowCount": reviewed_row_count,
+            "evidenceLinkedRowCount": evidence_link_count,
+        }
+    if reviewed_row_count == 0:
+        return {
+            **base_selection,
+            "reason": "Fallback to rule-derived target because event-labelled rows are evidence-linked but have not yet been explicitly reviewed for shadow-mode supervision.",
+            "eventTargetCandidate": {
+                "eligibleRowCount": int(len(labelled)),
+                "positiveCount": event_positive_count,
+                "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
+                "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
+            },
+            "eligibleIndependentRowCount": int(len(eligible_labelled)),
+            "eligibleIndependentPositiveCount": eligible_positive_count,
+            "strongOrModerateLabelCount": strong_or_moderate_count,
+            "reviewedRowCount": 0,
+            "evidenceLinkedRowCount": evidence_link_count,
         }
 
     return {
@@ -489,12 +609,19 @@ def choose_training_target(dataframe: pd.DataFrame) -> dict[str, Any]:
         "selectedLabelAvailabilityColumn": EVENT_LABEL_AVAILABLE_COLUMN,
         "selectedTargetKind": "event",
         "readyForIndependentSupervision": True,
-        "reason": "Event-labelled rows have enough coverage and elevated examples for shadow-mode event supervision.",
-        "eligibleRowCount": int(len(labelled)),
-        "positiveCount": event_positive_count,
-        "sourceCounts": labelled[EVENT_LABEL_SOURCE_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict(),
+        "reason": "Event-labelled rows have enough evidence-backed reviewed elevated examples for shadow-mode event supervision.",
+        "eligibleRowCount": int(len(eligible_labelled)),
+        "positiveCount": eligible_positive_count,
+        "sourceCounts": eligible_labelled[EVENT_LABEL_SOURCE_COLUMN].fillna("unknown").value_counts(dropna=False).to_dict(),
         "strengthCounts": {str(key): int(value) for key, value in strength_counts.items()},
         "reviewStatusCounts": {str(key): int(value) for key, value in review_status_counts.items()},
+        "eligibleIndependentRowCount": int(len(eligible_labelled)),
+        "eligibleIndependentPositiveCount": eligible_positive_count,
+        "strongOrModerateLabelCount": strong_or_moderate_count,
+        "reviewedRowCount": reviewed_row_count,
+        "reviewedPositiveCount": reviewed_positive_count,
+        "evidenceLinkedRowCount": evidence_link_count,
+        "evidenceLinkedPositiveCount": evidence_linked_positive_count,
     }
 
 

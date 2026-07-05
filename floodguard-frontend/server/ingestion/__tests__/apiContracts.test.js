@@ -395,6 +395,11 @@ function dependencies() {
       },
       modelAgreementWithRuleEngine: "agreeing",
       labelStrength: "rule_derived_or_weak",
+      reviewedEventWindows: 0,
+      reviewedElevatedEventWindows: 0,
+      eventHoldoutViable: false,
+      mlPromotionBlockedReason:
+        "Backlog candidates exist, but they have not yet been promoted into reviewed joined event labels.",
       models: ["majority_baseline", "logistic_regression", "random_forest"],
       liveDecisionAuthority: "rule_engine",
       summary: "FloodGuard ML is implemented as a prototype shadow-mode comparison layer.",
@@ -486,6 +491,15 @@ function dependencies() {
         "Rule-derived labels and severe class imbalance limit interpretation.",
         "Scenario metrics are not real-world validation.",
       ],
+      eventSupervision: {
+        viable: false,
+        blocked: true,
+        reason: "Backlog candidates exist, but they have not yet been promoted into reviewed joined event labels.",
+        evidenceLinkedRows: 2,
+        reviewedRows: 0,
+        reviewableRows: 0,
+        reviewablePositiveRows: 0,
+      },
       reportAvailability: {
         historyReplaySummary: true,
       },
@@ -654,6 +668,13 @@ test("ml report endpoint returns stable shadow-mode contract", async () => {
   assert.equal(body.eventHoldout.available, true);
   assert.equal(body.eventHoldout.viable, false);
   assert.match(body.eventHoldout.reason, /event labels|event holdout|independent/i);
+  assert.equal(body.reviewedEventWindows, 0);
+  assert.equal(body.reviewedElevatedEventWindows, 0);
+  assert.equal(body.eventHoldoutViable, false);
+  assert.equal(body.eventSupervision.viable, false);
+  assert.equal(body.eventSupervision.blocked, true);
+  assert.match(body.eventSupervision.reason, /reviewed joined event labels|independent/i);
+  assert.match(body.mlPromotionBlockedReason, /reviewed joined event labels|independent/i);
   assert.equal(body.acceptanceGates.passedAll, false);
   assert.ok(Array.isArray(body.acceptanceGates.gates));
   assert.equal(body.promotionPolicy.currentStage, "shadow_mode");

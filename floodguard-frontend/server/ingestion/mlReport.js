@@ -48,6 +48,11 @@ function defaultReport() {
     liveDecisionAuthority: "rule_engine",
     summary:
       "FloodGuard ML reports are unavailable right now. The live app remains rule-based and explainable.",
+    reviewedEventWindows: 0,
+    reviewedElevatedEventWindows: 0,
+    eventHoldoutViable: false,
+    mlPromotionBlockedReason:
+      "Independent event supervision is unavailable, so ML remains shadow mode.",
     reportAvailability: {
       metrics: false,
       realExportMetrics: false,
@@ -84,9 +89,13 @@ function defaultReport() {
       available: false,
       summary: "Label-audit report is unavailable.",
       evidenceLinkedRows: 0,
+      evidenceLinkedPositiveRows: 0,
       reviewedRows: 0,
+      reviewedPositiveRows: 0,
       promotableRows: 0,
       independentPositiveRows: 0,
+      reviewableRows: 0,
+      reviewablePositiveRows: 0,
     },
     calibrationSummary: {
       available: false,
@@ -113,6 +122,12 @@ function defaultReport() {
       strongOrModerateLabelCount: 0,
       eventLabelStrengthCounts: {},
       eventLabelReviewStatusCounts: {},
+      evidenceLinkedRowCount: 0,
+      evidenceLinkedPositiveRowCount: 0,
+      eligibleIndependentRowCount: 0,
+      eligibleIndependentPositiveCount: 0,
+      eventHoldoutCurrentlyViable: false,
+      reviewedPositiveRowCount: 0,
     },
     targetSelection: {
       available: false,
@@ -121,6 +136,15 @@ function defaultReport() {
       readyForIndependentSupervision: false,
       reason: "Target-selection summary is unavailable.",
       eventCandidate: null,
+    },
+    eventSupervision: {
+      viable: false,
+      blocked: true,
+      reason: "Independent event supervision summary is unavailable.",
+      evidenceLinkedRows: 0,
+      reviewedRows: 0,
+      reviewableRows: 0,
+      reviewablePositiveRows: 0,
     },
   };
 }
@@ -288,13 +312,17 @@ function buildLabelAuditSummary(markdown, auditJson) {
       .find((line) => line.length > 0 && !line.startsWith("#")) ??
     "Label-audit report is available.";
 
-  return {
-    available: true,
-    summary,
-    evidenceLinkedRows: auditJson?.backlogSummary?.evidenceLinkedRows ?? 0,
-    reviewedRows: auditJson?.backlogSummary?.reviewedRows ?? 0,
-    promotableRows: auditJson?.backlogSummary?.promotableRows ?? 0,
-    independentPositiveRows: auditJson?.backlogSummary?.independentPositiveRows ?? 0,
+    return {
+      available: true,
+      summary,
+      evidenceLinkedRows: auditJson?.backlogSummary?.evidenceLinkedRows ?? 0,
+      evidenceLinkedPositiveRows: auditJson?.backlogSummary?.evidenceLinkedPositiveRows ?? 0,
+      reviewedRows: auditJson?.backlogSummary?.reviewedRows ?? 0,
+      reviewedPositiveRows: auditJson?.backlogSummary?.reviewedPositiveRows ?? 0,
+      promotableRows: auditJson?.backlogSummary?.promotableRows ?? 0,
+      independentPositiveRows: auditJson?.backlogSummary?.independentPositiveRows ?? 0,
+      reviewableRows: auditJson?.backlogSummary?.reviewableRows ?? 0,
+    reviewablePositiveRows: auditJson?.backlogSummary?.reviewablePositiveRows ?? 0,
   };
 }
 
@@ -342,9 +370,44 @@ function buildSupervisionQuality(report, auditJson) {
     strongOrModerateLabelCount: source.strongOrModerateLabelCount ?? 0,
     eventLabelStrengthCounts: source.eventLabelStrengthCounts ?? {},
     eventLabelReviewStatusCounts: source.eventLabelReviewStatusCounts ?? {},
+    evidenceLinkedRowCount: source.evidenceLinkedRowCount ?? 0,
+    evidenceLinkedPositiveRowCount: source.evidenceLinkedPositiveRowCount ?? 0,
+    eligibleIndependentRowCount: source.eligibleIndependentRowCount ?? 0,
+    eligibleIndependentPositiveCount: source.eligibleIndependentPositiveCount ?? 0,
+    reviewedPositiveRowCount: source.reviewedPositiveRowCount ?? 0,
     backlogEvidenceLinkedRows: source.backlogEvidenceLinkedRows ?? 0,
     backlogPromotableRows: source.backlogPromotableRows ?? 0,
     backlogIndependentPositiveRows: source.backlogIndependentPositiveRows ?? 0,
+    eventHoldoutCurrentlyViable: Boolean(
+      source.viableForIndependentSupervision && (source.eligibleIndependentPositiveCount ?? 0) > 0,
+    ),
+  };
+}
+
+function buildEventSupervisionSummary(supervisionQuality, labelAudit, eventHoldout, promotionPolicy) {
+  const viable = Boolean(supervisionQuality?.viableForIndependentSupervision);
+  const reviewablePositiveRows =
+    supervisionQuality?.eligibleIndependentPositiveCount ??
+    labelAudit?.reviewablePositiveRows ??
+    0;
+  const blockedReason = viable
+    ? "Independent event supervision is strong enough for shadow-mode review, but ML promotion remains blocked until broader validation and expert review are complete."
+    : supervisionQuality?.primaryLimitation ??
+      eventHoldout?.reason ??
+      promotionPolicy?.summary ??
+      "Independent event supervision is not yet viable.";
+
+  return {
+    viable,
+    blocked: !viable,
+    reason: blockedReason,
+    evidenceLinkedRows:
+      supervisionQuality?.evidenceLinkedRowCount ?? labelAudit?.evidenceLinkedRows ?? 0,
+    reviewedRows:
+      supervisionQuality?.reviewedRowCount ?? labelAudit?.reviewedRows ?? 0,
+    reviewableRows:
+      supervisionQuality?.eligibleIndependentRowCount ?? labelAudit?.reviewableRows ?? 0,
+    reviewablePositiveRows,
   };
 }
 
@@ -451,6 +514,19 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       modelAgreementWithRuleEngine: deriveModelAgreement(realExportMetrics),
       labelStrength: deriveLabelStrength(realExportMetrics),
     };
+    report.eventSupervision = buildEventSupervisionSummary(
+      report.supervisionQuality,
+      report.labelAudit,
+      report.eventHoldout,
+      report.promotionPolicy,
+    );
+    report.reviewedEventWindows =
+      report.supervisionQuality.reviewedRowCount ?? report.labelAudit.reviewedRows ?? 0;
+    report.reviewedElevatedEventWindows =
+      report.supervisionQuality.reviewedPositiveRowCount ?? report.labelAudit.reviewedPositiveRows ?? 0;
+    report.eventHoldoutViable =
+      report.eventHoldout.viable ?? report.supervisionQuality.eventHoldoutCurrentlyViable ?? false;
+    report.mlPromotionBlockedReason = report.eventSupervision.reason;
     report.limitations = buildLimitations(
       report.realExport,
       report.scenarioStressTest,
