@@ -1,9 +1,47 @@
 {
   "available": true,
   "sqlitePath": "/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-data/floodguard_history.sqlite",
-  "rowCount": 1000,
-  "windowCount": 3,
+  "rowCount": 3000,
+  "windowCount": 5,
   "windows": [
+    {
+      "areaId": "north-parramatta",
+      "startTime": "2026-06-24T00:00:00+00:00",
+      "endTime": "2026-07-02T00:00:00+00:00",
+      "label": 0,
+      "labelSource": "manual_demo",
+      "labelStrength": "weak",
+      "reviewStatus": "scaffold_only",
+      "evidenceLink": NaN,
+      "evidenceQuality": "no_evidence",
+      "limitations": [
+        "No evidence link is attached to this replay window.",
+        "Window is scaffold_only and exists for plumbing or baseline context.",
+        "Replay supports review, not event-holdout validation."
+      ],
+      "rowCount": 998,
+      "ruleConcern": "Moderate",
+      "warningStates": [
+        "no_current_warning"
+      ],
+      "agreementRate": 0.612,
+      "maxProbability": 0.9855,
+      "degradedRows": 627,
+      "latestObservedAt": "2026-06-30T06:56:47.412000+00:00",
+      "sourceModes": [
+        "rainfall:local-fallback",
+        "rainfall:remote",
+        "rainfall:remote-derived",
+        "river:local-fallback",
+        "river:remote",
+        "river:unavailable",
+        "warnings:not-configured",
+        "weather:local-fallback",
+        "weather:remote"
+      ],
+      "evidenceConfidenceStates": [],
+      "recommendationTypes": []
+    },
     {
       "areaId": "parramatta",
       "startTime": "2026-06-24T00:00:00+00:00",
@@ -11,6 +49,14 @@
       "label": 0,
       "labelSource": "manual_demo",
       "labelStrength": "weak",
+      "reviewStatus": "scaffold_only",
+      "evidenceLink": NaN,
+      "evidenceQuality": "no_evidence",
+      "limitations": [
+        "No evidence link is attached to this replay window.",
+        "Window is scaffold_only and exists for plumbing or baseline context.",
+        "Replay supports review, not event-holdout validation."
+      ],
       "rowCount": 998,
       "ruleConcern": "Moderate",
       "warningStates": [
@@ -35,12 +81,20 @@
       "recommendationTypes": []
     },
     {
-      "areaId": "north-parramatta",
-      "startTime": "2026-06-24T00:00:00+00:00",
-      "endTime": "2026-07-02T00:00:00+00:00",
-      "label": 0,
-      "labelSource": "manual_demo",
-      "labelStrength": "weak",
+      "areaId": "parramatta",
+      "startTime": "2026-06-29T00:00:00+00:00",
+      "endTime": "2026-06-29T12:00:00+00:00",
+      "label": 1,
+      "labelSource": "warning_derived",
+      "labelStrength": "moderate",
+      "reviewStatus": "candidate_review",
+      "evidenceLink": "https://example.test/floodguard/labels/parramatta-warning-window",
+      "evidenceQuality": "placeholder",
+      "limitations": [
+        "Evidence link is a placeholder and cannot validate this event window.",
+        "Window is candidate_review only and must not count as reviewed supervision.",
+        "Replay supports review, not event-holdout validation."
+      ],
       "rowCount": 0,
       "ruleConcern": "unavailable",
       "warningStates": [],
@@ -59,6 +113,52 @@
       "label": 0,
       "labelSource": "manual_demo",
       "labelStrength": "weak",
+      "reviewStatus": "scaffold_only",
+      "evidenceLink": NaN,
+      "evidenceQuality": "no_evidence",
+      "limitations": [
+        "No evidence link is attached to this replay window.",
+        "Window is scaffold_only and exists for plumbing or baseline context.",
+        "Replay supports review, not event-holdout validation."
+      ],
+      "rowCount": 998,
+      "ruleConcern": "Moderate",
+      "warningStates": [
+        "no_current_warning"
+      ],
+      "agreementRate": 1.0,
+      "maxProbability": 0.9938,
+      "degradedRows": 627,
+      "latestObservedAt": "2026-06-30T06:56:47.412000+00:00",
+      "sourceModes": [
+        "rainfall:local-fallback",
+        "rainfall:remote",
+        "rainfall:remote-derived",
+        "river:local-fallback",
+        "river:remote",
+        "river:unavailable",
+        "warnings:not-configured",
+        "weather:local-fallback",
+        "weather:remote"
+      ],
+      "evidenceConfidenceStates": [],
+      "recommendationTypes": []
+    },
+    {
+      "areaId": "toongabbie",
+      "startTime": "2026-06-30T00:00:00+00:00",
+      "endTime": "2026-06-30T06:00:00+00:00",
+      "label": 1,
+      "labelSource": "impact_candidate",
+      "labelStrength": "weak",
+      "reviewStatus": "candidate_review",
+      "evidenceLink": "https://example.test/floodguard/labels/toongabbie-impact-window",
+      "evidenceQuality": "placeholder",
+      "limitations": [
+        "Evidence link is a placeholder and cannot validate this event window.",
+        "Window is candidate_review only and must not count as reviewed supervision.",
+        "Replay supports review, not event-holdout validation."
+      ],
       "rowCount": 0,
       "ruleConcern": "unavailable",
       "warningStates": [],
@@ -71,6 +171,6 @@
       "recommendationTypes": []
     }
   ],
-  "shadowPredictionCount": 998,
+  "shadowPredictionCount": 2994,
   "summary": "Historical replay is available for rule, warning, source-state, decision-audit, and shadow-ML comparison."
 }

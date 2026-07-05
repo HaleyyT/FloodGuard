@@ -35,6 +35,7 @@ FRONTEND_ROOT = REPO_ROOT / "floodguard-frontend"
 HISTORY_DIR = FRONTEND_ROOT / "server/storage/history"
 SQLITE_PATH = REPO_ROOT / "floodguard-data/floodguard_history.sqlite"
 REPORT_PATH = REPORTS_DIR / "history_replay_report.md"
+EVENT_REPORT_PATH = REPORTS_DIR / "event_replay_report.md"
 SUMMARY_JSON_PATH = REPORTS_DIR / "history_replay_summary.json"
 ML_REPORT_PATH = REPORTS_DIR / "real_export_metrics.json"
 
@@ -64,6 +65,13 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=REPORT_PATH,
         help="Where the markdown replay report should be written.",
+    )
+    parser.add_argument(
+        "--event-report",
+        dest="event_report_path",
+        type=Path,
+        default=EVENT_REPORT_PATH,
+        help="Where the event-window replay report should be written.",
     )
     return parser.parse_args()
 
@@ -231,6 +239,8 @@ def default_windows(dataframe) -> list[dict[str, Any]]:
                 "label": None,
                 "label_source": "history_range_fallback",
                 "label_strength": "unknown",
+                "review_status": "history_range_fallback",
+                "evidence_link": None,
                 "notes": "Replay window created from available history because labelled event windows are sparse.",
             }
         )
@@ -254,10 +264,47 @@ def load_replay_windows(dataframe) -> list[dict[str, Any]]:
                 "label": None if row.get("label") is None else int(row["label"]),
                 "label_source": row.get("label_source"),
                 "label_strength": row.get("label_strength"),
+                "review_status": row.get("review_status"),
+                "evidence_link": row.get("evidence_link"),
                 "notes": row.get("notes"),
             }
         )
     return windows
+
+
+def event_evidence_quality(window: dict[str, Any]) -> str:
+    """Classify replay-window evidence without promoting placeholder labels."""
+
+    review_status = str(window.get("review_status") or "unknown")
+    evidence_link = str(window.get("evidence_link") or "").strip()
+    if evidence_link.lower() in {"", "nan", "none", "<na>"}:
+        evidence_link = ""
+    if review_status in {"reviewed_for_shadow_mode", "expert_validated"}:
+        return "reviewed"
+    if "example.test" in evidence_link.lower() or evidence_link.lower().startswith("placeholder:"):
+        return "placeholder"
+    if evidence_link:
+        return "real_evidence_candidate"
+    return "no_evidence"
+
+
+def event_window_limitations(window: dict[str, Any]) -> list[str]:
+    """Keep event replay limitations local to each window."""
+
+    limitations = []
+    quality = event_evidence_quality(window)
+    review_status = str(window.get("review_status") or "unknown")
+    if quality == "placeholder":
+        limitations.append("Evidence link is a placeholder and cannot validate this event window.")
+    if quality == "no_evidence":
+        limitations.append("No evidence link is attached to this replay window.")
+    if review_status == "candidate_review":
+        limitations.append("Window is candidate_review only and must not count as reviewed supervision.")
+    if review_status == "scaffold_only":
+        limitations.append("Window is scaffold_only and exists for plumbing or baseline context.")
+    if review_status not in {"reviewed_for_shadow_mode", "expert_validated"}:
+        limitations.append("Replay supports review, not event-holdout validation.")
+    return limitations
 
 
 def load_model_bundle(report_path: Path = ML_REPORT_PATH) -> dict[str, Any] | None:
@@ -802,15 +849,19 @@ def build_replay_report(dataset, sqlite_path: Path, scored_predictions: dict[str
                 "",
                 f"- Window: `{window['start_time']}` to `{window['end_time']}`",
                 f"- Label window: `{window['label']}` from `{window['label_source']}` with strength `{window['label_strength']}`",
+                f"- Review status: `{window.get('review_status') or 'unknown'}`",
+                f"- Evidence quality: `{event_evidence_quality(window)}`",
                 f"- Rule concern peak: `{summary['ruleConcern']}` across `{summary['rowCount']}` snapshot(s)",
                 f"- Warning states seen: `{', '.join(summary['warningStates']) if summary['warningStates'] else 'none recorded'}`",
                 f"- Shadow ML max elevated probability: `{summary['maxProbability'] if summary['maxProbability'] is not None else 'unavailable'}`",
+                f"- Shadow ML status: `{'available' if summary['maxProbability'] is not None else 'unavailable'}`",
                 f"- Rule vs ML agreement: `{summary['agreementRate'] if summary['agreementRate'] is not None else 'unavailable'}`",
                 f"- Degraded-source rows: `{summary['degradedRows']}`",
                 f"- Evidence-confidence states: `{', '.join(summary['evidenceConfidenceStates']) if summary['evidenceConfidenceStates'] else 'none recorded'}`",
                 f"- Recommendation types: `{', '.join(summary['recommendationTypes']) if summary['recommendationTypes'] else 'none recorded'}`",
                 f"- Source modes/freshness: `{', '.join(summary['sourceModes']) if summary['sourceModes'] else 'legacy history only'}`",
                 f"- Latest replayed snapshot: `{summary['latestObservedAt']}`",
+                f"- Limitations: `{'; '.join(event_window_limitations(window)) if event_window_limitations(window) else 'none'}`",
                 "",
             ]
         )
@@ -854,6 +905,10 @@ def build_replay_summary(dataset, sqlite_path: Path, scored_predictions: dict[st
                 "label": window["label"],
                 "labelSource": window["label_source"],
                 "labelStrength": window["label_strength"],
+                "reviewStatus": window.get("review_status"),
+                "evidenceLink": window.get("evidence_link"),
+                "evidenceQuality": event_evidence_quality(window),
+                "limitations": event_window_limitations(window),
                 **summary,
             }
         )
@@ -874,6 +929,7 @@ def run_replay(
     sqlite_path: Path = SQLITE_PATH,
     report_path: Path = REPORT_PATH,
     summary_json_path: Path = SUMMARY_JSON_PATH,
+    event_report_path: Path = EVENT_REPORT_PATH,
 ) -> dict[str, Any]:
     """End-to-end historical replay entry point used by the CLI and tests."""
 
@@ -891,10 +947,13 @@ def run_replay(
     summary = build_replay_summary(dataset, sqlite_output, scored_predictions)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(f"{report}\n", encoding="utf-8")
+    event_report_path.parent.mkdir(parents=True, exist_ok=True)
+    event_report_path.write_text(f"{report}\n", encoding="utf-8")
     summary_json_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return {
         "sqlitePath": str(sqlite_output),
         "reportPath": str(report_path),
+        "eventReportPath": str(event_report_path),
         "summaryJsonPath": str(summary_json_path),
         "historyRowCount": len(history_records),
         "datasetRowCount": int(len(dataset)),
@@ -906,10 +965,11 @@ def main() -> None:
     """Run replay with the standard project paths."""
 
     args = parse_args()
-    result = run_replay(args.area_id, args.sqlite_path, args.report_path)
+    result = run_replay(args.area_id, args.sqlite_path, args.report_path, event_report_path=args.event_report_path)
     print(f"Replayed {result['historyRowCount']} history snapshot(s).")
     print(f"SQLite: {result['sqlitePath']}")
     print(f"Report: {result['reportPath']}")
+    print(f"Event report: {result['eventReportPath']}")
 
 
 if __name__ == "__main__":

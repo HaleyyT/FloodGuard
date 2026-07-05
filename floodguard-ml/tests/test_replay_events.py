@@ -12,7 +12,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from replay_events import build_replay_report, flatten_source_readings, run_replay, summarise_window  # noqa: E402
+from replay_events import (  # noqa: E402
+    build_replay_report,
+    event_evidence_quality,
+    event_window_limitations,
+    flatten_source_readings,
+    run_replay,
+    summarise_window,
+)
 
 import pandas as pd  # noqa: E402
 
@@ -227,12 +234,29 @@ class ReplayEventsTests(unittest.TestCase):
         self.assertEqual(summary["degradedRows"], 0)
         self.assertEqual(summary["warningStates"], ["flood_watch"])
 
+    def test_event_evidence_quality_keeps_placeholder_candidate_windows_out_of_validation(self) -> None:
+        window = {
+            "review_status": "candidate_review",
+            "evidence_link": "https://example.test/floodguard/labels/parramatta-warning-window",
+        }
+
+        self.assertEqual(event_evidence_quality(window), "placeholder")
+        limitations = event_window_limitations(window)
+        self.assertTrue(any("placeholder" in limitation for limitation in limitations))
+        self.assertTrue(any("candidate_review" in limitation for limitation in limitations))
+
+        self.assertEqual(
+            event_evidence_quality({"review_status": "scaffold_only", "evidence_link": float("nan")}),
+            "no_evidence",
+        )
+
     def test_run_replay_writes_sqlite_tables_and_markdown_report(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             dataset_path = PROJECT_ROOT / "data" / "floodguard_training_dataset.csv"
             sqlite_path = temp_path / "history.sqlite"
             report_path = temp_path / "replay.md"
+            event_report_path = temp_path / "event_replay.md"
             summary_json_path = temp_path / "replay.json"
 
             original_dataset = dataset_path.read_text(encoding="utf-8")
@@ -248,11 +272,18 @@ class ReplayEventsTests(unittest.TestCase):
                     encoding="utf-8",
                 )
 
-                result = run_replay("parramatta", sqlite_path, report_path, summary_json_path)
+                result = run_replay(
+                    "parramatta",
+                    sqlite_path,
+                    report_path,
+                    summary_json_path,
+                    event_report_path,
+                )
 
                 self.assertEqual(result["datasetRowCount"], 1)
                 self.assertTrue(sqlite_path.exists())
                 self.assertTrue(report_path.exists())
+                self.assertTrue(event_report_path.exists())
                 self.assertTrue(summary_json_path.exists())
 
                 with sqlite3.connect(sqlite_path) as connection:
@@ -274,6 +305,9 @@ class ReplayEventsTests(unittest.TestCase):
                 self.assertGreaterEqual(audit_count, 1)
                 self.assertIn("FloodGuard Historical Replay", report_path.read_text(encoding="utf-8"))
                 self.assertIn("Evidence-confidence states", report_path.read_text(encoding="utf-8"))
+                self.assertIn("Evidence quality", event_report_path.read_text(encoding="utf-8"))
+                self.assertIn("Replay supports review", event_report_path.read_text(encoding="utf-8"))
+                self.assertIn("evidenceQuality", summary_json_path.read_text(encoding="utf-8"))
                 self.assertIn("Historical replay is available", summary_json_path.read_text(encoding="utf-8"))
             finally:
                 dataset_path.write_text(original_dataset, encoding="utf-8")
