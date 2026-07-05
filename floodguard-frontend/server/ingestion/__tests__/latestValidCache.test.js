@@ -121,3 +121,71 @@ test("returns unavailable when live fetch fails and no cache exists", async () =
     delete process.env.FLOODGUARD_TEST_MISSING_CACHE_WEATHER_URL;
   }
 });
+
+test("parses embedded HazardWatch alerts from the public page html", async () => {
+  const originalFetch = global.fetch;
+  const source = {
+    label: "NSW SES / HazardWatch warning status",
+    envUrl: "FLOODGUARD_TEST_WARNINGS_URL",
+    sourceStrength: "official_warning",
+    adapter: "hazardwatch-html",
+    fallbackFile: "/does/not/exist.json",
+  };
+  process.env.FLOODGUARD_TEST_WARNINGS_URL = "https://www.hazardwatch.gov.au/";
+
+  const html = `<!DOCTYPE html>
+  <html>
+    <body>
+      <script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+        props: {
+          pageProps: {
+            alertData: {
+              alerts: [
+                {
+                  identifier: "warning-1",
+                  sent: "2026-07-05T08:00:00.000Z",
+                  agencyName: "NSW State Emergency Service",
+                  info: {
+                    web: "https://www.ses.nsw.gov.au",
+                    event: "Riverine Flood",
+                    headline: "Parramatta River flooding - Stay informed",
+                    severity: "Minor",
+                    parameter: {
+                      AffectedLocation: "Parramatta River",
+                      "AustralianWarningSystem:CallToAction": "Stay informed",
+                      "AustralianWarningSystem:WarningLevel": "Advice",
+                    },
+                    senderName: "NSW State Emergency Service",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      })}</script>
+    </body>
+  </html>`;
+
+  try {
+    global.fetch = async () => ({
+      ok: true,
+      async text() {
+        return html;
+      },
+    });
+
+    const result = await loadSource(source);
+
+    assert.equal(result.metadata.dataMode, "live");
+    assert.equal(result.metadata.status, "ok");
+    assert.equal(result.data.provider, "HazardWatch");
+    assert.equal(result.data.warnings.length, 1);
+    assert.equal(result.data.warnings[0].headline, "Parramatta River flooding - Stay informed");
+    assert.equal(result.data.warnings[0].level, "Advice");
+    assert.equal(result.data.warnings[0].area, "Parramatta River");
+    assert.equal(result.data.observedAt, "2026-07-05T08:00:00.000Z");
+  } finally {
+    global.fetch = originalFetch;
+    delete process.env.FLOODGUARD_TEST_WARNINGS_URL;
+  }
+});

@@ -150,8 +150,11 @@ export const sourceConfig = {
   warnings: {
     label: "NSW SES / HazardWatch warning status",
     envUrl: "FLOODGUARD_WARNINGS_URL",
+    roadmapEnvUrl: "FLOODGUARD_HAZARDWATCH",
+    defaultUrl: "https://www.hazardwatch.gov.au/",
     sourceStrength: "official_warning",
     optional: true,
+    adapter: "hazardwatch-html",
   },
 };
 

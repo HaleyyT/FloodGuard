@@ -27,12 +27,41 @@ async function fetchJsonFromUrl(url) {
   return response.json();
 }
 
+async function fetchTextFromUrl(url) {
+  const response = await fetch(url, {
+    headers: {
+      accept: "text/html,application/xhtml+xml",
+    },
+    signal: AbortSignal.timeout(ingestionPolicy.fetchTimeoutMs),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fetch failed with ${response.status} ${response.statusText}`);
+  }
+
+  return response.text();
+}
+
 async function fetchWithRetry(url, attempts = ingestionPolicy.retryCount + 1) {
   let lastError = null;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       return await fetchJsonFromUrl(url);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
+async function fetchTextWithRetry(url, attempts = ingestionPolicy.retryCount + 1) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fetchTextFromUrl(url);
     } catch (error) {
       lastError = error;
     }
@@ -102,6 +131,90 @@ function classifyFetchError(error) {
   return "source_unavailable";
 }
 
+function compactText(value) {
+  return String(value ?? "")
+    .replaceAll(/\s+/g, " ")
+    .trim();
+}
+
+function parseHazardWatchHtml(html, sourceUrl) {
+  const nextDataMatch = html.match(
+    /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/,
+  );
+
+  if (!nextDataMatch) {
+    throw new Error("HazardWatch warning page did not expose __NEXT_DATA__.");
+  }
+
+  const pageData = JSON.parse(nextDataMatch[1]);
+  const alerts = pageData?.props?.pageProps?.alertData?.alerts;
+
+  if (!Array.isArray(alerts)) {
+    throw new Error("HazardWatch warning page did not expose alertData.alerts.");
+  }
+
+  const warnings = alerts.map((alert) => {
+    const info = alert?.info ?? {};
+    const parameters = info?.parameter ?? {};
+    const warningLevel =
+      parameters["AustralianWarningSystem:WarningLevel"] ??
+      info?.severity ??
+      info?.urgency ??
+      alert?.status ??
+      "unknown";
+    const affectedLocation =
+      parameters.AffectedLocation ??
+      info?.areaDesc ??
+      info?.event ??
+      info?.headline ??
+      null;
+    const headline = compactText(info?.headline ?? info?.event ?? "Official warning");
+    const callToAction = compactText(parameters["AustralianWarningSystem:CallToAction"] ?? "");
+
+    return {
+      id: alert?.identifier ?? headline,
+      headline,
+      title: compactText(info?.event ?? "Official warning"),
+      level: warningLevel,
+      area: compactText(affectedLocation),
+      issuedAt: alert?.sent ?? null,
+      updatedAt: alert?.sent ?? null,
+      url: info?.web ?? sourceUrl,
+      description: compactText([info?.event, callToAction].filter(Boolean).join(" - ")),
+      areas: affectedLocation ? [compactText(affectedLocation)] : [],
+      senderName: compactText(info?.senderName ?? alert?.agencyName ?? "NSW State Emergency Service"),
+      hazardType: compactText(info?.event ?? ""),
+    };
+  });
+
+  const observedAt = warnings
+    .map((warning) => parseTimestamp(warning.issuedAt))
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? null;
+
+  return {
+    provider: "HazardWatch",
+    sourceLabel: "NSW SES / HazardWatch warning status",
+    sourceUrl,
+    observedAt,
+    warnings,
+  };
+}
+
+async function loadConfiguredRemoteSource(source, configuredUrl) {
+  if (source.adapter?.startsWith("floodsmart-")) {
+    return loadFloodSmartGaugeSource(source, configuredUrl);
+  }
+
+  if (source.adapter === "hazardwatch-html") {
+    const html = await fetchTextWithRetry(configuredUrl);
+    return parseHazardWatchHtml(html, configuredUrl);
+  }
+
+  return fetchWithRetry(configuredUrl);
+}
+
 export async function loadSource(source) {
   const configuredUrl = process.env[source.envUrl] || process.env[source.roadmapEnvUrl] || source.defaultUrl;
   const fetchedAt = new Date().toISOString();
@@ -125,9 +238,7 @@ export async function loadSource(source) {
 
   if (configuredUrl) {
     try {
-      const data = source.adapter
-        ? await loadFloodSmartGaugeSource(source, configuredUrl)
-        : await fetchWithRetry(configuredUrl);
+      const data = await loadConfiguredRemoteSource(source, configuredUrl);
       await writeSourceCache(sourceCacheDir, cacheKey, {
         data,
         metadata: cacheMetadata(source, data, fetchedAt),
