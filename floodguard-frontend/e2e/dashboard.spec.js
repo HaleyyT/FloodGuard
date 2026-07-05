@@ -42,7 +42,7 @@ function buildRainfallPoints() {
   ].map(([time, rainfallMm]) => ({ time, rainfallMm }));
 }
 
-function buildSignalFixture(areaId, { degraded = false } = {}) {
+function buildSignalFixture(areaId, { degraded = false, warningUnavailable = false } = {}) {
   const area = areaById(areaId);
   const coreFreshnessStatus = degraded ? "stale" : "current";
   const rainfallMode = degraded ? "cached_stale" : "remote";
@@ -152,14 +152,17 @@ function buildSignalFixture(areaId, { degraded = false } = {}) {
       {
         label: "NSW SES / HazardWatch",
         type: "warnings",
-        mode: "not-configured",
-        dataMode: "not-configured",
-        freshnessStatus: "not-connected",
-        status: "not-connected",
+        mode: warningUnavailable ? "remote" : "not-configured",
+        dataMode: warningUnavailable ? "remote" : "not-configured",
+        freshnessStatus: warningUnavailable ? "missing" : "not-connected",
+        status: warningUnavailable ? "failed" : "not-connected",
         sourceStrength: "official_warning_feed",
         observedAt: null,
-        fetchedAt: null,
-        note: "Official warning feed is not connected yet.",
+        fetchedAt: warningUnavailable ? "2026-07-04T03:30:00Z" : null,
+        note: warningUnavailable
+          ? "Official warning source could not be fetched safely."
+          : "Official warning feed is not connected yet.",
+        failureCategory: warningUnavailable ? "source_unavailable" : null,
         areaRelevance: [area.name.replace(", NSW", "")],
       },
     ],
@@ -202,7 +205,7 @@ function buildSignalFixture(areaId, { degraded = false } = {}) {
       overallStatus,
       coreFloodStatus: degraded ? "warn" : "pass",
       contextStatus: "pass",
-      warningStatus: "missing",
+      warningStatus: warningUnavailable ? "source_unavailable" : "missing",
       summary: degraded
         ? "Core gauges are degraded, so FloodGuard labels the current view conservatively."
         : "Core flood gauges are current for this prototype snapshot.",
@@ -356,11 +359,15 @@ async function fulfillJson(route, body) {
   });
 }
 
-async function installMockFloodguardApi(page, { degradedAreaIds = [] } = {}) {
+async function installMockFloodguardApi(
+  page,
+  { degradedAreaIds = [], warningUnavailableAreaIds = [], mlReportUnavailable = false } = {},
+) {
   await page.route(`${apiBaseUrl}/api/**`, async (route) => {
     const url = new URL(route.request().url());
     const areaId = url.searchParams.get("area") ?? "parramatta";
     const isDegraded = degradedAreaIds.includes(areaId);
+    const warningUnavailable = warningUnavailableAreaIds.includes(areaId);
 
     if (url.pathname === "/api/areas") {
       await fulfillJson(route, pilotAreas);
@@ -368,14 +375,38 @@ async function installMockFloodguardApi(page, { degradedAreaIds = [] } = {}) {
     }
 
     if (url.pathname === "/api/signals") {
-      await fulfillJson(route, buildSignalFixture(areaId, { degraded: isDegraded }));
+      await fulfillJson(route, buildSignalFixture(areaId, { degraded: isDegraded, warningUnavailable }));
       return;
     }
 
     if (url.pathname === "/api/history") {
       await fulfillJson(route, [
-        { observedAt: "2026-07-04T03:20:00Z", riskScore: 11 },
-        { observedAt: "2026-07-03T03:20:00Z", riskScore: 13 },
+        {
+          observedAt: "2026-07-04T03:20:00Z",
+          ingestedAt: "2026-07-04T03:20:00Z",
+          riskScore: 11,
+          rainfall: {
+            latestValidRainfallMm: 0,
+            sourceLabel: "FloodSmart rainfall",
+          },
+          river: {
+            primaryHeightM: 0.97,
+            primaryStationName: "Parramatta River at Riverside Theatre",
+          },
+        },
+        {
+          observedAt: "2026-07-03T03:20:00Z",
+          ingestedAt: "2026-07-03T03:20:00Z",
+          riskScore: 13,
+          rainfall: {
+            latestValidRainfallMm: 0,
+            sourceLabel: "FloodSmart rainfall",
+          },
+          river: {
+            primaryHeightM: 0.99,
+            primaryStationName: "Parramatta River at Riverside Theatre",
+          },
+        },
       ]);
       return;
     }
@@ -493,6 +524,14 @@ async function installMockFloodguardApi(page, { degradedAreaIds = [] } = {}) {
     }
 
     if (url.pathname === "/api/ml/report") {
+      if (mlReportUnavailable) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "ML report temporarily unavailable" }),
+        });
+        return;
+      }
       await fulfillJson(route, buildMlReportFixture());
       return;
     }
@@ -549,6 +588,32 @@ test("degraded source fixture keeps stale evidence visible without presenting it
   await expect(page.getByRole("heading", { name: "Source status at a glance" })).toBeVisible();
   await expect(page.getByText("Stale").first()).toBeVisible();
   await expect(page.getByText("Live gauge")).toHaveCount(0);
+});
+
+test("official warning source unavailable is visible and does not crash dashboard", async ({
+  page,
+}) => {
+  await installMockFloodguardApi(page, { warningUnavailableAreaIds: ["parramatta"] });
+
+  await page.goto("/");
+
+  await expect(page.getByText("Official warning source could not be fetched safely.")).toBeVisible();
+  await expect(page.getByText("Not connected", { exact: true })).toBeVisible();
+  await expect(page.getByText("Current concern level", { exact: true })).toBeVisible();
+  await expect(page.getByText("ML prototype layer")).toBeVisible();
+});
+
+test("missing ML report falls back to shadow-only copy without crashing", async ({ page }) => {
+  await installMockFloodguardApi(page, { mlReportUnavailable: true });
+
+  await page.goto("/");
+
+  await expect(page.getByRole("heading", { name: "Shadow-mode snapshot" })).toBeVisible();
+  await page.getByRole("button", { name: "Model" }).click();
+  await expect(page.getByRole("heading", { name: "Shadow-mode comparison" })).toBeVisible();
+  await expect(page.getByText("Historical ML evaluation is unavailable.")).toBeVisible();
+  await expect(page.getByText("Scenario stress-test report is unavailable.")).toBeVisible();
+  await expect(page.getByText("ML is shown for comparison only and does not trigger alerts.")).toBeVisible();
 });
 
 test("scenario stress-test mode is clearly labelled as simulated and does not look live", async ({
