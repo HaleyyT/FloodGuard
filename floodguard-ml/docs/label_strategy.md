@@ -31,6 +31,20 @@ FloodGuard now tracks whether a label is only scaffolding, still under review, o
 | `reviewed_for_shadow_mode` | reviewed enough to support shadow-mode event supervision, but not operational promotion |
 | `expert_validated` | strongest available status; still not equivalent to official emergency authority |
 
+## Backlog review contract
+
+The event backlog now also tracks:
+
+| Field | Meaning |
+|---|---|
+| `independence_level` | how independent the label is from FloodGuard's own rule engine |
+| `review_priority` | how urgently the row should be reviewed for calibration or holdout use |
+| `join_status` | whether the row is backlog-only, already joined into `labels.csv`, or intentionally excluded |
+| `promotion_ready` | whether the row is strong enough to be considered for the next supervision upgrade step |
+| `evidence_link` | pointer to the supporting note, warning, report, or future evidence artifact |
+
+This keeps backlog planning separate from joined validation rows and helps FloodGuard report what is merely a candidate versus what is actually reviewable supervision.
+
 ## Recommended targets
 
 Primary future target:

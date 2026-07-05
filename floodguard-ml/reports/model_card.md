@@ -41,6 +41,9 @@ It is not used for live alerting or official warning decisions.
 - Real export viable for independent supervision: `False`
 - Real export review-status counts: {'scaffold_only': 3000}
 - Real export primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than verified flood outcomes.
+- Backlog evidence-linked rows: 2
+- Backlog reviewed rows: 0
+- Backlog promotion-ready rows: 0
 - Validated prediction depends on stronger supervision: independent flood-event labels, expert-calibrated thresholds, and event-holdout validation.
 
 ## Features Used

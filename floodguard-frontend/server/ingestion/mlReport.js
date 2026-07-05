@@ -83,6 +83,10 @@ function defaultReport() {
     labelAudit: {
       available: false,
       summary: "Label-audit report is unavailable.",
+      evidenceLinkedRows: 0,
+      reviewedRows: 0,
+      promotableRows: 0,
+      independentPositiveRows: 0,
     },
     calibrationSummary: {
       available: false,
@@ -287,6 +291,10 @@ function buildLabelAuditSummary(markdown, auditJson) {
   return {
     available: true,
     summary,
+    evidenceLinkedRows: auditJson?.backlogSummary?.evidenceLinkedRows ?? 0,
+    reviewedRows: auditJson?.backlogSummary?.reviewedRows ?? 0,
+    promotableRows: auditJson?.backlogSummary?.promotableRows ?? 0,
+    independentPositiveRows: auditJson?.backlogSummary?.independentPositiveRows ?? 0,
   };
 }
 
@@ -311,7 +319,13 @@ function buildSupervisionQuality(report, auditJson) {
     return defaultReport().supervisionQuality;
   }
 
-  const source = report?.supervisionQuality ?? auditJson?.supervisionQuality ?? {};
+  const gradeRank = { weak: 0, developing: 1, reviewable: 2 };
+  const reportSource = report?.supervisionQuality ?? {};
+  const auditSource = auditJson?.supervisionQuality ?? {};
+  const source =
+    (gradeRank[auditSource.grade] ?? -1) > (gradeRank[reportSource.grade] ?? -1)
+      ? { ...reportSource, ...auditSource }
+      : { ...auditSource, ...reportSource };
   return {
     grade: source.grade ?? "weak",
     summary:
@@ -328,6 +342,9 @@ function buildSupervisionQuality(report, auditJson) {
     strongOrModerateLabelCount: source.strongOrModerateLabelCount ?? 0,
     eventLabelStrengthCounts: source.eventLabelStrengthCounts ?? {},
     eventLabelReviewStatusCounts: source.eventLabelReviewStatusCounts ?? {},
+    backlogEvidenceLinkedRows: source.backlogEvidenceLinkedRows ?? 0,
+    backlogPromotableRows: source.backlogPromotableRows ?? 0,
+    backlogIndependentPositiveRows: source.backlogIndependentPositiveRows ?? 0,
   };
 }
 
