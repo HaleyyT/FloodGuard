@@ -1,6 +1,6 @@
 # FloodGuard Final Verification
 
-_Updated: 2026-07-02_
+_Updated: 2026-07-05_
 
 ## Purpose
 
@@ -8,7 +8,7 @@ This note freezes the final verification evidence for the FloodGuard Coding Fest
 
 ## Verified commands
 
-All commands below were run from the local project workspace on July 2, 2026.
+All commands below were run from the local project workspace on July 5, 2026.
 
 ### Frontend / backend checks
 
@@ -17,11 +17,11 @@ Run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/Fl
 | Command | Result | Notes |
 |---|---|---|
 | `npm run lint` | pass | ESLint completed with no reported errors. |
-| `npm run test` | pass | `55/55` backend and contract tests passed after adding ingestion-readiness coverage. |
+| `npm run test -- --runInBand` | pass | `87/87` frontend, backend, and contract tests passed. |
 | `npm run build` | pass with warning | Production build succeeds; Vite still reports a large main chunk warning. |
 | `npm run export:ml-dataset` | pass | Exported `3000` feature rows to `floodguard-ml/data/`. |
-| `npm run check:ingestion` | pass with degraded external source | Submission readiness passes because stale/cached external sources are labelled honestly. |
-| `npm run check:ingestion:live` | fail | Strict live-source readiness still fails because rainfall and river are not currently fresh live readings. |
+| `npm run check:ingestion -- --no-refresh` | pass with degraded external source | Submission readiness passes because degraded external sources are labelled honestly while core flood gauges remain usable. |
+| `npm run check:ingestion:live -- --no-refresh` | fail | Strict live-source readiness still fails because context and warning evidence are not currently fresh enough for a full live claim. |
 
 ### Python ML checks
 
@@ -30,6 +30,7 @@ Run from [floodguard-ml/README.md](/Users/haleytran/Desktop/Projects/FloodGuard/
 | Command | Result | Notes |
 |---|---|---|
 | `python3.12 -m py_compile src/*.py` | pass | Python source compiles successfully. |
+| `python3.12 -m unittest tests/test_audit_labels.py tests/test_build_event_review_queue.py tests/test_build_dataset.py tests/test_validation_controls.py tests/test_calibrate_thresholds.py tests/test_feature_quality.py tests/test_replay_events.py tests/test_promote_reviewed_labels.py` | pass | Focused ML/review/calibration suite passed `33/33` tests. |
 | `python3.12 src/evaluate.py` | pass | Prototype ML evaluation completed and wrote reports/models artifacts. |
 | `python3.12 src/model_card.py` | pass | Model card regenerated successfully. |
 
@@ -60,9 +61,10 @@ Verified in each area:
 
 During the final readiness check:
 
-- rainfall source was available only as stale cached evidence
-- river source was available only as stale cached evidence
-- official warnings were still not connected
+- rainfall source was current
+- river source was current
+- weather context was stale
+- official warnings were connected through the public HazardWatch source but the warning timestamp was older than the live window
 
 FloodGuard handled this correctly by:
 
@@ -73,7 +75,7 @@ FloodGuard handled this correctly by:
 ## Known caveats
 
 - Strict live ingestion is not currently passing.
-- Official warning integration remains contract-aware but not fully live-operational.
+- Official warning integration is now connected by default through a public HazardWatch adapter, but it is not yet mature enough to count as fully live-operational warning evidence in every run.
 - The production build still emits a bundle-size warning.
 - The current ML dataset remains rule-derived and heavily imbalanced, so ML stays shadow mode only.
 
