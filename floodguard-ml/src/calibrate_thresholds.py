@@ -130,6 +130,65 @@ def target_metadata(dataframe) -> dict[str, Any]:
     }
 
 
+def target_used_label(target: dict[str, Any]) -> str:
+    """Expose the calibration target in reviewer language."""
+
+    kind = target.get("kind")
+    if kind == "event":
+        return "reviewed-event"
+    if kind == "rule":
+        return "rule-derived"
+    if target.get("eventTargetCandidate"):
+        return "candidate-event"
+    return "none"
+
+
+def threshold_status(target: dict[str, Any]) -> str:
+    """Describe threshold maturity without implying validation."""
+
+    supervision_quality = target.get("supervisionQuality", {})
+    reviewed_elevated = int(supervision_quality.get("eligibleIndependentPositiveCount", 0) or 0)
+    if target.get("kind") == "event" and reviewed_elevated > 0:
+        return "review-ready"
+    if target.get("kind") == "rule" and int(target.get("positiveRows", 0) or 0) > 0:
+        return "prototype-calibrated"
+    return "heuristic"
+
+
+def calibration_quality_gate(target: dict[str, Any]) -> dict[str, Any]:
+    """Summarise the evidence gate that blocks stronger threshold claims."""
+
+    supervision_quality = target.get("supervisionQuality", {})
+    candidate = target.get("eventTargetCandidate") or {}
+    candidate_windows = int(candidate.get("eligibleRowCount", 0) or 0)
+    reviewed_windows = int(supervision_quality.get("eligibleIndependentRowCount", 0) or 0)
+    reviewed_elevated = int(supervision_quality.get("eligibleIndependentPositiveCount", 0) or 0)
+    event_holdout_viable = bool(supervision_quality.get("eventHoldoutCurrentlyViable", False))
+    gate_passed = target.get("kind") == "event" and reviewed_elevated > 0 and event_holdout_viable
+    blockers = []
+    if target.get("kind") != "event":
+        blockers.append("Calibration target is not reviewed-event supervision.")
+    if reviewed_windows == 0:
+        blockers.append("No reviewed event windows are available.")
+    if reviewed_elevated == 0:
+        blockers.append("No reviewed elevated event windows are available.")
+    if candidate_windows > 0 and reviewed_windows == 0:
+        blockers.append("Candidate event windows remain unreviewed or placeholder-backed.")
+    if not event_holdout_viable:
+        blockers.append("Event-holdout validation is not viable yet.")
+
+    return {
+        "targetUsed": target_used_label(target),
+        "passed": gate_passed,
+        "candidateWindows": candidate_windows,
+        "reviewedWindows": reviewed_windows,
+        "reviewedElevatedWindows": reviewed_elevated,
+        "eventHoldoutViable": event_holdout_viable,
+        "thresholdStatus": threshold_status(target),
+        "blockers": blockers,
+    }
+
+
 def positive_windows(dataframe, target_column: str) -> list[dict[str, Any]]:
     """Collapse elevated rows into replay-style contiguous windows per area."""
 
@@ -288,6 +347,7 @@ def calibration_report_text(
     """Explain the sweep honestly, including when the current data is too weak to promote changes."""
 
     top_rows = ranked_rows[:5]
+    quality_gate = calibration_quality_gate(target)
     lines = [
         "# FloodGuard Threshold Calibration Report",
         "",
@@ -296,6 +356,8 @@ def calibration_report_text(
         f"- Threshold version under review: `{config.get('version')}`",
         f"- Review status: `{config.get('reviewStatus')}`",
         f"- Calibration target kind: `{target['kind']}`",
+        f"- Target used: `{quality_gate['targetUsed']}`",
+        f"- Threshold status: `{quality_gate['thresholdStatus']}`",
         f"- Calibration target reason: {target['reason']}",
         f"- Positive rows available for this target: `{target['positiveRows']}`",
         f"- Candidate threshold sets evaluated: `{len(ranked_rows)}`",
@@ -313,6 +375,15 @@ def calibration_report_text(
     supervision_quality = target.get("supervisionQuality", {})
     lines.extend(
         [
+            "## Label quality gate",
+            "",
+            f"- Gate passed: `{quality_gate['passed']}`",
+            f"- Candidate event windows: `{quality_gate['candidateWindows']}`",
+            f"- Reviewed event windows: `{quality_gate['reviewedWindows']}`",
+            f"- Reviewed elevated event windows: `{quality_gate['reviewedElevatedWindows']}`",
+            f"- Event-holdout viable: `{quality_gate['eventHoldoutViable']}`",
+            f"- Blockers: `{'; '.join(quality_gate['blockers']) if quality_gate['blockers'] else 'none'}`",
+            "",
             "## Supervision quality",
             "",
             f"- Grade: `{supervision_quality.get('grade', 'unknown')}`",
@@ -408,12 +479,15 @@ def calibration_summary_text(
     """Write a concise calibration summary for the dashboard/backend report reader."""
 
     supervision_quality = target.get("supervisionQuality", {})
+    quality_gate = calibration_quality_gate(target)
     return "\n".join(
         [
             "# FloodGuard Threshold Calibration Summary",
             "",
             f"Threshold version `{config.get('version')}` remains review-only.",
             f"Calibration target kind: `{target['kind']}`.",
+            f"Target used: `{quality_gate['targetUsed']}`; threshold status: `{quality_gate['thresholdStatus']}`.",
+            f"Label quality gate passed: `{quality_gate['passed']}`; event holdout viable: `{quality_gate['eventHoldoutViable']}`.",
             f"Supervision grade: `{supervision_quality.get('grade', 'unknown')}`.",
             f"Evidence-backed reviewed event rows: `{supervision_quality.get('eligibleIndependentRowCount', 0)}`; elevated: `{supervision_quality.get('eligibleIndependentPositiveCount', 0)}`.",
             f"Recommended action: keep current thresholds for live prototype use while using sweep results for expert review.",
@@ -439,6 +513,7 @@ def run_calibration(
     dataframe = load_dataset(dataset_path)
     config = load_threshold_config(config_path)
     target = target_metadata(dataframe)
+    quality_gate = calibration_quality_gate(target)
     target_column = target["column"]
     grid = build_threshold_grid(config)
     scored_rows = [
@@ -461,11 +536,17 @@ def run_calibration(
             "thresholdVersion": config.get("version"),
             "reviewStatus": config.get("reviewStatus"),
             "target": target,
+            "labelQualityGate": quality_gate,
+            "thresholdStatus": quality_gate["thresholdStatus"],
+            "targetUsed": quality_gate["targetUsed"],
             "selectedCandidate": selected_row,
         },
     )
     return {
         "targetKind": target["kind"],
+        "targetUsed": quality_gate["targetUsed"],
+        "thresholdStatus": quality_gate["thresholdStatus"],
+        "labelQualityGate": quality_gate,
         "candidateCount": len(ranked_rows),
         "selectedCandidate": selected_row,
         "sweepPath": str(sweep_path),
