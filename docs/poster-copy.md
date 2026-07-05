@@ -52,7 +52,7 @@ Important limitation:
 
 ## Honest limitations
 
-- Official warning integration is architected and visible, but not yet fully operational as a stable live feed.
+- Official warning integration is connected and visible through a public HazardWatch adapter, but it is not yet fully operational as a stable live feed.
 - Live gauge ingestion can degrade to stale cache or fallback depending on source availability.
 - Historical storage is still prototype-grade JSONL storage.
 - Risk thresholds remain heuristic and are not yet event-calibrated.

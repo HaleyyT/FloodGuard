@@ -20,10 +20,10 @@
    Explain that rainfall trend, river status, local reports, and the map are the fastest way to understand current local conditions.
 
 4. Show source diagnostics.
-   Emphasise that FloodGuard labels current, partial, stale, fallback, and not-connected states instead of hiding them.
+   Emphasise that FloodGuard labels current, partial, stale, fallback, unavailable, and not-connected states instead of hiding them.
 
 5. Show the official-warning card.
-   Explain that official warnings stay separate from FloodGuard’s own rule-based local concern score.
+   Explain that official warnings stay separate from FloodGuard’s own rule-based local concern score, and that a connected warning source can still be marked stale if its timestamp is too old for a live claim.
 
 6. Show the notification preview.
    Explain that notification logic is conservative and can suppress strong app-generated notices when evidence quality is degraded.

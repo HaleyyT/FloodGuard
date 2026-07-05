@@ -1,6 +1,6 @@
 # FloodGuard Abstract
 
-FloodGuard is a reliability-aware flood-awareness and decision-support prototype for local urban catchments. The system combines rainfall, river, weather, and community-signal evidence to generate an explainable local concern level for pilot areas in Parramatta, North Parramatta, and Toongabbie. Unlike dashboards that only aggregate data, FloodGuard also records source freshness, fallback state, provenance, and area relevance so the interface can show when evidence is current, partial, stale, or unavailable.
+FloodGuard is a reliability-aware flood-awareness and decision-support prototype for local urban catchments. The system combines rainfall, river, weather, community-signal, and separate official-warning context to generate an explainable local concern level for pilot areas in Parramatta, North Parramatta, and Toongabbie. Unlike dashboards that only aggregate data, FloodGuard also records source freshness, fallback state, provenance, and area relevance so the interface can show when evidence is current, partial, stale, or unavailable.
 
 The backend ingests public signals, normalises them into a consistent structure, and applies an explainable rule engine that combines rainfall pressure, river pressure, wetness, public-signal pressure, and confidence adjustments. The frontend presents the resulting concern level together with source diagnostics, recommended next steps, public-signal summaries, notification previews, and a decision audit that explains why the current status was assigned.
 
