@@ -87,6 +87,60 @@ test("warning status reports no_relevant_warning for current but empty warning f
   assert.match(warning.statusReason, /no relevant official warning/i);
 });
 
+test("warning status reports stale when warning timestamps are too old", () => {
+  const warning = readAreaWarningStatus(
+    areaSignals(
+      normalizeOfficialWarnings(
+        {
+          provider: "HazardWatch",
+          warnings: [
+            {
+              id: "stale-1",
+              headline: "Flood advice for Parramatta River corridor",
+              level: "advice",
+              area: "Parramatta",
+              url: "https://www.hazardwatch.gov.au/warning/stale-1",
+            },
+          ],
+          observedAt: "2026-07-02T00:00:00Z",
+        },
+        area,
+      ),
+      {
+        freshnessStatus: "stale",
+        fetchedAt: "2026-07-03T01:00:00Z",
+        observedAt: "2026-07-02T00:00:00Z",
+        dataMode: "remote",
+      },
+    ),
+  );
+
+  assert.equal(warning.status, "stale");
+  assert.equal(warning.failureReason, "warning_data_stale");
+  assert.equal(warning.evidenceUrl, "https://www.hazardwatch.gov.au/warning/stale-1");
+  assert.match(warning.statusReason, /too old/i);
+});
+
+test("warning status reports not_configured with no evidence url when source is not connected", () => {
+  const warning = readAreaWarningStatus(
+    areaSignals(
+      normalizeOfficialWarnings({ provider: "HazardWatch", warnings: [] }, area),
+      {
+        status: "not-connected",
+        freshnessStatus: "missing",
+        dataMode: "missing",
+        source: null,
+        note: "Official warning source is not currently connected.",
+      },
+    ),
+  );
+
+  assert.equal(warning.status, "not_configured");
+  assert.equal(warning.failureReason, "warning_source_not_configured");
+  assert.equal(warning.evidenceUrl, null);
+  assert.match(warning.statusReason, /configured/i);
+});
+
 test("warning normaliser matches north parramatta through suburb and catchment aliases", () => {
   const summary = normalizeOfficialWarnings(
     {
@@ -171,7 +225,9 @@ test("warning status exposes the explicit adapter contract and limitations when 
   assert.equal(warning.lastObservedAt, "2026-07-03T00:55:00Z");
   assert.equal(warning.freshnessMinutes, 5);
   assert.equal(warning.failureCategory, "network_timeout");
+  assert.equal(warning.failureReason, "network_timeout");
   assert.equal(warning.sourceMode, "remote");
+  assert.equal(warning.evidenceUrl, null);
   assert.ok(Array.isArray(warning.limitations));
   assert.match(warning.statusReason, /could not be fetched safely|degraded/i);
   assert.match(warning.limitations.join(" "), /timed out|unavailable|matched/i);
