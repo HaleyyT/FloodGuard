@@ -202,21 +202,25 @@
         }
       },
       {
-        "strategy": "event_window_holdout",
+        "strategy": "event_holdout_unavailable",
         "viable": false,
-        "reason": "Holds out the labelled elevated event window to test event generalisation.",
-        "trainRows": 12,
-        "testRows": 72,
+        "reason": "Event holdout is unavailable because reviewedEventWindows < 2; reviewedElevatedEventWindows < 1; comparison non-event or lower-concern windows are missing; labels are still only rule/demo/scenario-derived.",
+        "trainRows": 0,
+        "testRows": 0,
         "trainPositiveCount": 0,
-        "testPositiveCount": 48,
+        "testPositiveCount": 0,
         "trainTimeRange": {
-          "start": "2026-07-05T00:00:00+00:00",
-          "end": "2026-07-06T11:00:00+00:00"
+          "start": null,
+          "end": null
         },
         "testTimeRange": {
-          "start": "2026-07-01T00:00:00+00:00",
-          "end": "2026-07-04T23:00:00+00:00"
-        }
+          "start": null,
+          "end": null
+        },
+        "reviewedEventWindows": 0,
+        "reviewedElevatedEventWindows": 0,
+        "comparisonWindows": 0,
+        "independentLabelRows": 0
       }
     ]
   },
@@ -275,21 +279,25 @@
         }
       },
       {
-        "strategy": "event_window_holdout",
+        "strategy": "event_holdout_unavailable",
         "viable": false,
-        "reason": "Holds out the labelled elevated event window to test event generalisation.",
-        "trainRows": 12,
-        "testRows": 72,
+        "reason": "Event holdout is unavailable because reviewedEventWindows < 2; reviewedElevatedEventWindows < 1; comparison non-event or lower-concern windows are missing; labels are still only rule/demo/scenario-derived.",
+        "trainRows": 0,
+        "testRows": 0,
         "trainPositiveCount": 0,
-        "testPositiveCount": 48,
+        "testPositiveCount": 0,
         "trainTimeRange": {
-          "start": "2026-07-05T00:00:00+00:00",
-          "end": "2026-07-06T11:00:00+00:00"
+          "start": null,
+          "end": null
         },
         "testTimeRange": {
-          "start": "2026-07-01T00:00:00+00:00",
-          "end": "2026-07-04T23:00:00+00:00"
-        }
+          "start": null,
+          "end": null
+        },
+        "reviewedEventWindows": 0,
+        "reviewedElevatedEventWindows": 0,
+        "comparisonWindows": 0,
+        "independentLabelRows": 0
       }
     ],
     "leakageControls": {
@@ -328,12 +336,16 @@
   "eventHoldout": {
     "available": true,
     "viable": false,
-    "strategy": "event_window_holdout",
-    "reason": "Holds out the labelled elevated event window to test event generalisation.",
-    "trainRows": 12,
-    "testRows": 72,
+    "strategy": "event_holdout_unavailable",
+    "reason": "Event holdout is unavailable because reviewedEventWindows < 2; reviewedElevatedEventWindows < 1; comparison non-event or lower-concern windows are missing; labels are still only rule/demo/scenario-derived.",
+    "trainRows": 0,
+    "testRows": 0,
     "trainPositiveCount": 0,
-    "testPositiveCount": 48
+    "testPositiveCount": 0,
+    "reviewedEventWindows": 0,
+    "reviewedElevatedEventWindows": 0,
+    "comparisonWindows": 0,
+    "independentLabelRows": 0
   },
   "featureQuality": {
     "datasetName": "scenario_stress_test",

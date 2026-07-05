@@ -7,7 +7,7 @@ The rule engine remains the live authority regardless of ML status.
 
 - Current stage: `shadow_mode`
 - Next eligible stage: `not eligible yet`
-- Event holdout viable: `False` (No independent elevated event labels exist yet.)
+- Event holdout viable: `False` (Event holdout is unavailable because reviewedEventWindows < 2; reviewedElevatedEventWindows < 1; comparison non-event or lower-concern windows are missing; labels are still only rule/demo/scenario-derived.)
 - Acceptance gates passed: `False`
 - Best non-baseline model: `random_forest`
 
@@ -30,7 +30,7 @@ Promotion blockers:
 
 - Current stage: `shadow_mode`
 - Next eligible stage: `not eligible yet`
-- Event holdout viable: `False` (Holds out the labelled elevated event window to test event generalisation.)
+- Event holdout viable: `False` (Event holdout is unavailable because reviewedEventWindows < 2; reviewedElevatedEventWindows < 1; comparison non-event or lower-concern windows are missing; labels are still only rule/demo/scenario-derived.)
 - Acceptance gates passed: `False`
 - Best non-baseline model: `logistic_regression`
 

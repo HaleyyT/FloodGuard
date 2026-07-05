@@ -256,6 +256,37 @@ class ValidationControlTests(unittest.TestCase):
         self.assertEqual(selection["selectedTargetKind"], "rule")
         self.assertIn("weak-strength supervision", selection["reason"])
 
+    def test_event_holdout_reports_exact_review_gate_failure(self) -> None:
+        rows = []
+        for index in range(12):
+            label = 1 if index in {4, 8} else 0
+            rows.append(
+                make_row(
+                    f"2026-06-{1 + (index // 4):02d}T0{index % 4}:00:00Z",
+                    label,
+                    area_id="parramatta" if index % 2 == 0 else "toongabbie",
+                    event_label=label,
+                    event_available=1,
+                )
+            )
+
+        frame = pd.DataFrame(rows)
+        frame[GROUP_TIMESTAMP_COLUMN] = pd.to_datetime(frame[GROUP_TIMESTAMP_COLUMN], utc=True)
+        frame[EVENT_LABEL_STRENGTH_COLUMN] = "moderate"
+        frame[EVENT_LABEL_REVIEW_STATUS_COLUMN] = "candidate_review"
+
+        split = split_dataset_for_validation(frame)
+        event_candidate = next(
+            candidate
+            for candidate in split["candidateStrategies"]
+            if candidate["strategy"] == "event_holdout_unavailable"
+        )
+
+        self.assertFalse(event_candidate["viable"])
+        self.assertEqual(event_candidate["reviewedEventWindows"], 0)
+        self.assertEqual(event_candidate["reviewedElevatedEventWindows"], 0)
+        self.assertIn("reviewedEventWindows < 2", event_candidate["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

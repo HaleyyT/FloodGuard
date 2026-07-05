@@ -26,6 +26,10 @@ function defaultReport() {
       testRows: 0,
       trainPositiveCount: 0,
       testPositiveCount: 0,
+      reviewedEventWindows: 0,
+      reviewedElevatedEventWindows: 0,
+      comparisonWindows: 0,
+      independentLabelRows: 0,
     },
     acceptanceGates: {
       passedAll: false,
@@ -104,6 +108,7 @@ function defaultReport() {
     calibrationSummary: {
       available: false,
       summary: "Calibration summary is unavailable.",
+      calibrationMode: "prototype_only",
     },
     historicalReplay: {
       available: false,
@@ -266,19 +271,25 @@ function buildModelCardSummary(markdown) {
   };
 }
 
-function buildCalibrationSummary(markdown) {
-  if (!markdown) {
+function buildCalibrationSummary(markdown, summaryJson) {
+  if (!markdown && !summaryJson) {
     return defaultReport().calibrationSummary;
   }
 
   const firstMeaningfulLine = markdown
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line.length > 0 && !line.startsWith("#"));
+    ? markdown
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0 && !line.startsWith("#"))
+    : null;
 
   return {
     available: true,
-    summary: firstMeaningfulLine ?? "Prototype calibration summary is available.",
+    summary:
+      summaryJson?.calibrationEvidenceStatement ??
+      firstMeaningfulLine ??
+      "Prototype calibration summary is available.",
+    calibrationMode: summaryJson?.calibrationMode ?? "prototype_only",
   };
 }
 
@@ -441,6 +452,10 @@ function buildEventHoldoutSummary(report) {
     testRows: report.eventHoldout.testRows ?? 0,
     trainPositiveCount: report.eventHoldout.trainPositiveCount ?? 0,
     testPositiveCount: report.eventHoldout.testPositiveCount ?? 0,
+    reviewedEventWindows: report.eventHoldout.reviewedEventWindows ?? 0,
+    reviewedElevatedEventWindows: report.eventHoldout.reviewedElevatedEventWindows ?? 0,
+    comparisonWindows: report.eventHoldout.comparisonWindows ?? 0,
+    independentLabelRows: report.eventHoldout.independentLabelRows ?? 0,
   };
 }
 
@@ -472,7 +487,7 @@ function buildPromotionPolicy(report) {
 
 export async function readMlReport(reportsDir = defaultReportsDir) {
   try {
-    const [metrics, realExportMetrics, scenarioMetrics, modelCard, labelAuditMarkdown, labelAuditJson, calibrationSummary, replaySummary, targetSelectionSummary, reviewQueueCsv] =
+    const [metrics, realExportMetrics, scenarioMetrics, modelCard, labelAuditMarkdown, labelAuditJson, calibrationSummary, calibrationSummaryJson, replaySummary, targetSelectionSummary, reviewQueueCsv] =
       await Promise.all([
       readJsonIfPresent(path.join(reportsDir, "metrics.json")),
       readJsonIfPresent(path.join(reportsDir, "real_export_metrics.json")),
@@ -481,6 +496,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       readTextIfPresent(path.join(reportsDir, "label_audit.md")),
       readJsonIfPresent(path.join(reportsDir, "label_audit.json")),
       readTextIfPresent(path.join(reportsDir, "calibration_summary.md")),
+      readJsonIfPresent(path.join(reportsDir, "threshold_calibration_summary.json")),
       readJsonIfPresent(path.join(reportsDir, "history_replay_summary.json")),
       readTextIfPresent(path.join(reportsDir, "target_selection_summary.md")),
       readTextIfPresent(
@@ -509,7 +525,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
         scenarioStressTestMetrics: Boolean(scenarioMetrics),
         modelCard: Boolean(modelCard),
         labelAudit: Boolean(labelAuditMarkdown || labelAuditJson),
-        calibrationSummary: Boolean(calibrationSummary),
+        calibrationSummary: Boolean(calibrationSummary || calibrationSummaryJson),
         historyReplaySummary: Boolean(replaySummary),
         targetSelectionSummary: Boolean(targetSelectionSummary),
       },
@@ -517,7 +533,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       scenarioStressTest: buildScenarioSummary(scenarioMetrics),
       modelCard: buildModelCardSummary(modelCard),
       labelAudit: buildLabelAuditSummary(labelAuditMarkdown, labelAuditJson),
-      calibrationSummary: buildCalibrationSummary(calibrationSummary),
+      calibrationSummary: buildCalibrationSummary(calibrationSummary, calibrationSummaryJson),
       historicalReplay: buildHistoricalReplaySummary(replaySummary),
       supervisionQuality: buildSupervisionQuality(realExportMetrics, labelAuditJson),
       targetSelection: buildTargetSelectionSummary(realExportMetrics),
@@ -555,7 +571,7 @@ export async function readMlReport(reportsDir = defaultReportsDir) {
       report.historicalReplay,
     );
 
-    if (!realExportMetrics && !scenarioMetrics && !modelCard && !labelAuditMarkdown && !labelAuditJson && !calibrationSummary && !replaySummary && !targetSelectionSummary) {
+    if (!realExportMetrics && !scenarioMetrics && !modelCard && !labelAuditMarkdown && !labelAuditJson && !calibrationSummary && !calibrationSummaryJson && !replaySummary && !targetSelectionSummary) {
       return fallback;
     }
 

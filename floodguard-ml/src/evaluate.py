@@ -53,6 +53,10 @@ def build_event_holdout_summary(result: dict[str, Any]) -> dict[str, Any]:
             "testRows": 0,
             "trainPositiveCount": 0,
             "testPositiveCount": 0,
+            "reviewedEventWindows": 0,
+            "reviewedElevatedEventWindows": 0,
+            "comparisonWindows": 0,
+            "independentLabelRows": 0,
         }
 
     return {
@@ -64,6 +68,10 @@ def build_event_holdout_summary(result: dict[str, Any]) -> dict[str, Any]:
         "testRows": event_candidate.get("testRows", 0),
         "trainPositiveCount": event_candidate.get("trainPositiveCount", 0),
         "testPositiveCount": event_candidate.get("testPositiveCount", 0),
+        "reviewedEventWindows": event_candidate.get("reviewedEventWindows", 0),
+        "reviewedElevatedEventWindows": event_candidate.get("reviewedElevatedEventWindows", 0),
+        "comparisonWindows": event_candidate.get("comparisonWindows", 0),
+        "independentLabelRows": event_candidate.get("independentLabelRows", 0),
     }
 
 

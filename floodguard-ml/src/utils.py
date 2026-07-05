@@ -1116,18 +1116,58 @@ def build_event_holdout_candidate(usable: pd.DataFrame) -> dict[str, Any]:
         )
 
     labelled = usable[usable[EVENT_LABEL_AVAILABLE_COLUMN].fillna(0).astype(int) == 1].copy()
-    event_positive = labelled[labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1].copy()
-    if event_positive.empty:
+    review_status = (
+        labelled[EVENT_LABEL_REVIEW_STATUS_COLUMN]
+        if EVENT_LABEL_REVIEW_STATUS_COLUMN in labelled.columns
+        else pd.Series(False, index=labelled.index)
+    )
+    label_sources = (
+        labelled[EVENT_LABEL_SOURCE_COLUMN]
+        if EVENT_LABEL_SOURCE_COLUMN in labelled.columns
+        else pd.Series("unknown", index=labelled.index)
+    )
+    evidence_links = (
+        labelled[EVENT_LABEL_EVIDENCE_LINK_COLUMN]
+        if EVENT_LABEL_EVIDENCE_LINK_COLUMN in labelled.columns
+        else pd.Series("", index=labelled.index)
+    )
+    reviewed_mask = reviewed_event_status(review_status)
+    independent_mask = independent_event_source(label_sources)
+    real_evidence_mask = real_evidence_link_present(evidence_links)
+    eligible_review_mask = independent_mask & reviewed_mask & (real_evidence_mask | reviewed_mask)
+    reviewed_labelled = labelled[eligible_review_mask].copy()
+    reviewed_elevated = reviewed_labelled[
+        reviewed_labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 1
+    ].copy()
+    comparison_rows = reviewed_labelled[
+        reviewed_labelled[EVENT_TARGET_COLUMN].fillna(0).astype(int) == 0
+    ].copy()
+    blockers = []
+    if int(len(reviewed_labelled)) < 2:
+        blockers.append("reviewedEventWindows < 2")
+    if reviewed_elevated.empty:
+        blockers.append("reviewedElevatedEventWindows < 1")
+    if comparison_rows.empty:
+        blockers.append("comparison non-event or lower-concern windows are missing")
+    if int(independent_mask.sum()) == 0:
+        blockers.append("labels are still only rule/demo/scenario-derived")
+
+    if blockers:
         empty = usable.iloc[0:0].copy()
-        return summarise_split_candidate(
+        candidate = summarise_split_candidate(
             "event_holdout_unavailable",
             empty,
             empty,
-            reason="No independent elevated event labels exist yet.",
+            reason="Event holdout is unavailable because " + "; ".join(blockers) + ".",
             viable_override=False,
         )
+        candidate["reviewedEventWindows"] = int(len(reviewed_labelled))
+        candidate["reviewedElevatedEventWindows"] = int(len(reviewed_elevated))
+        candidate["comparisonWindows"] = int(len(comparison_rows))
+        candidate["independentLabelRows"] = int(independent_mask.sum())
+        return candidate
 
-    bounds = event_positive_window_bounds(usable)
+    bounds = event_positive_window_bounds(reviewed_labelled)
     holdout_start = bounds["start"]
     holdout_end = bounds["end"]
     test_df = usable[
@@ -1138,12 +1178,17 @@ def build_event_holdout_candidate(usable: pd.DataFrame) -> dict[str, Any]:
         (usable[GROUP_TIMESTAMP_COLUMN] < holdout_start)
         | (usable[GROUP_TIMESTAMP_COLUMN] > holdout_end)
     ].copy()
-    return summarise_split_candidate(
+    candidate = summarise_split_candidate(
         "event_window_holdout",
         train_df,
         test_df,
         reason="Holds out the labelled elevated event window to test event generalisation.",
     )
+    candidate["reviewedEventWindows"] = int(len(reviewed_labelled))
+    candidate["reviewedElevatedEventWindows"] = int(len(reviewed_elevated))
+    candidate["comparisonWindows"] = int(len(comparison_rows))
+    candidate["independentLabelRows"] = int(independent_mask.sum())
+    return candidate
 
 
 def event_positive_window_bounds(usable: pd.DataFrame) -> dict[str, pd.Timestamp]:
