@@ -541,6 +541,62 @@ function dependencies() {
   };
 }
 
+function dependenciesWithConfiguredStaleWarning() {
+  const base = dependencies();
+
+  return {
+    ...base,
+    buildRegionalIngestionHealth: () => ({
+      status: "warning",
+      overallStatus: "partial",
+      coreFloodStatus: "warn",
+      contextStatus: "pass",
+      warningStatus: "warn",
+      ready: true,
+      blockedAreaCount: 0,
+      warningAreaCount: 1,
+      summary: "Core flood awareness is running on degraded but usable evidence.",
+      areas: [
+        {
+          areaId: "parramatta",
+          areaName: "Parramatta, NSW",
+          overallStatus: "partial",
+          coreFloodStatus: "warn",
+          contextStatus: "pass",
+          warningStatus: "warn",
+          areaRelevance: {
+            status: "complete",
+            score: 100,
+            matchedSignals: 5,
+            expectedSignals: 5,
+            missingRiverStations: [],
+          },
+          sources: mockRegionalSignals().areas.parramatta.sourceMetadata,
+        },
+      ],
+    }),
+    readAreaWarningStatus: () => ({
+      area: "Parramatta, NSW",
+      source: "HazardWatch / NSW SES",
+      contractVersion: "warning-adapter-v2",
+      status: "stale",
+      statusReason: "Official warning source is configured but the latest timestamp is older than the live window.",
+      hasWarning: false,
+      sourceName: "NSW SES HazardWatch",
+      sourceUrl: "https://www.hazardwatch.gov.au/",
+      relevanceMethod: "area-name-catchment-and-warning-type",
+      sourceMode: "live",
+      freshnessMinutes: 1680,
+      failureCategory: null,
+      failureReason: "warning_data_stale",
+      evidenceUrl: "https://www.hazardwatch.gov.au/warning/stale-1",
+      limitations: ["Official warning timestamps are older than the configured live window."],
+      adapterStatus: "stale",
+      officialText: "Warning source is connected but the latest official timestamp is stale.",
+    }),
+  };
+}
+
 test("health endpoint exposes layered statuses and core data modes", async () => {
   const { body } = await requestJson("/api/health", dependencies());
   assert.equal(body.ingestionHealth.overallStatus, "partial");
@@ -632,6 +688,27 @@ test("official warning status stays separate from FloodGuard risk concern and ML
   assert.equal(risk.body.officialWarningContext, "not_configured");
   assert.equal(ml.body.mode, "shadow");
   assert.equal(ml.body.liveDecisionAuthority, "rule_engine");
+});
+
+test("warnings endpoint reports configured-but-stale official warning evidence honestly", async () => {
+  const { body } = await requestJson("/api/warnings/parramatta", dependenciesWithConfiguredStaleWarning());
+
+  assert.equal(body.status, "stale");
+  assert.equal(body.adapterStatus, "stale");
+  assert.equal(body.sourceMode, "live");
+  assert.equal(body.failureReason, "warning_data_stale");
+  assert.equal(body.evidenceUrl, "https://www.hazardwatch.gov.au/warning/stale-1");
+  assert.match(body.statusReason, /configured/i);
+  assert.match(body.statusReason, /older than the live window/i);
+});
+
+test("health endpoint keeps stale warnings separate from context and core flood readiness", async () => {
+  const { body } = await requestJson("/api/health", dependenciesWithConfiguredStaleWarning());
+
+  assert.equal(body.ingestionHealth.coreFloodStatus, "warn");
+  assert.equal(body.ingestionHealth.contextStatus, "pass");
+  assert.equal(body.ingestionHealth.warningStatus, "warn");
+  assert.equal(body.ingestionHealth.overallStatus, "partial");
 });
 
 test("ml readiness endpoint reports honest training readiness state", async () => {
