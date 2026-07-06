@@ -38,7 +38,7 @@ The evidence should be stable enough that another reviewer can inspect it later.
 
 ## Review workflow
 
-1. Start from `floodguard-ml/data/event_evidence_review_queue.csv`.
+1. Start from `floodguard-ml/data/event_evidence_review_queue.csv` and `floodguard-ml/reports/event_evidence_review_queue.md`.
 2. Replace placeholder or missing evidence links with real verifiable sources.
 3. Confirm the event window, area, and label are still defensible.
 4. Record review notes explaining why the label is reasonable.
