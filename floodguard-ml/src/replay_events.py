@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -83,6 +84,18 @@ def iso_timestamp(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def json_safe(value: Any) -> Any:
+    """Convert Pandas/NumPy-style NaN values into JSON-safe nulls before writing reports."""
+
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+    return value
 
 
 def snapshot_key(area_id: str, observed_at: str | None) -> str:
@@ -949,7 +962,7 @@ def run_replay(
     report_path.write_text(f"{report}\n", encoding="utf-8")
     event_report_path.parent.mkdir(parents=True, exist_ok=True)
     event_report_path.write_text(f"{report}\n", encoding="utf-8")
-    summary_json_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    summary_json_path.write_text(json.dumps(json_safe(summary), indent=2, allow_nan=False) + "\n", encoding="utf-8")
     return {
         "sqlitePath": str(sqlite_output),
         "reportPath": str(report_path),
