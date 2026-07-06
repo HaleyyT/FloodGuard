@@ -182,7 +182,7 @@ export function buildResidentOverviewModel(dashboardData) {
     decisionOutlook: buildDecisionOutlook(audit, dashboardData),
     trustLabel:
       audit?.evidenceConfidence === "high"
-        ? "Yes, core evidence is strong"
+        ? "Core evidence is strong"
         : audit?.evidenceConfidence === "partial"
           ? "Partly, some evidence is limited"
           : "Use extra caution, evidence is limited",
