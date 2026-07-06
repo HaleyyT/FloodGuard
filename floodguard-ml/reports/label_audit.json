@@ -30,6 +30,7 @@
     "reviewPriorityCounts": {},
     "joinStatusCounts": {},
     "evidenceTypeCounts": {},
+    "evidenceSupportStatusCounts": {},
     "sourceStatusCounts": {},
     "areaMappingConfidenceCounts": {},
     "positiveRows": 2,
@@ -96,8 +97,14 @@
       "joined_to_labels": 5
     },
     "evidenceTypeCounts": {
-      "gauge_threshold": 24,
-      "unknown": 5
+      "gauge_threshold": 19,
+      "unknown": 5,
+      "gauge_archive_query": 5
+    },
+    "evidenceSupportStatusCounts": {
+      "unknown": 24,
+      "mismatch": 4,
+      "confirmed": 1
     },
     "sourceStatusCounts": {
       "stale": 21,
@@ -109,19 +116,19 @@
       "unknown": 5
     },
     "positiveRows": 26,
-    "independentPositiveRows": 0,
-    "evidenceLinkedRows": 2,
-    "evidenceLinkedPositiveRows": 2,
+    "independentPositiveRows": 5,
+    "evidenceLinkedRows": 7,
+    "evidenceLinkedPositiveRows": 7,
     "placeholderEvidenceRows": 2,
     "placeholderEvidencePositiveRows": 2,
-    "realEvidenceRows": 0,
-    "realEvidencePositiveRows": 0,
+    "realEvidenceRows": 5,
+    "realEvidencePositiveRows": 5,
     "explicitReviewRows": 0,
     "reviewedRows": 0,
     "reviewedPositiveRows": 0,
     "promotableRows": 0,
-    "reviewableRows": 0,
-    "reviewablePositiveRows": 0,
+    "reviewableRows": 5,
+    "reviewablePositiveRows": 5,
     "strongReviewablePositiveRows": 0
   },
   "supervisionQuality": {
@@ -136,8 +143,8 @@
     "joinedReviewablePositiveRows": 0,
     "backlogRows": 29,
     "backlogPositiveRows": 26,
-    "backlogIndependentPositiveRows": 0,
-    "backlogEvidenceLinkedRows": 2,
+    "backlogIndependentPositiveRows": 5,
+    "backlogEvidenceLinkedRows": 7,
     "backlogPlaceholderEvidenceRows": 2,
     "backlogPromotableRows": 0
   },

@@ -11,6 +11,7 @@ This report audits the current label files used to improve ML supervision credib
 - Label strengths: {'weak': 4, 'moderate': 1}
 - Label classes: {}
 - Review status: {'scaffold_only': 3, 'candidate_review': 2}
+- Evidence support status: {}
 - Positive event windows: 2
 - Reviewed joined rows: 0
 - Independent positive joined rows: 0
@@ -33,26 +34,27 @@ This report audits the current label files used to improve ML supervision credib
 - Label strengths: {'weak': 28, 'moderate': 1}
 - Label classes: {1: 26, 0: 3}
 - Review status: {'candidate_review': 26, 'scaffold_only': 3}
+- Evidence support status: {'unknown': 24, 'mismatch': 4, 'confirmed': 1}
 - Promotion ready: {'no': 27, 'promoted': 2}
 - Independence levels: {'moderate': 26, 'low': 3}
 - Review priorities: {'medium': 24, 'low': 3, 'high': 2}
 - Join status: {'backlog_only': 24, 'joined_to_labels': 5}
-- Evidence types: {'gauge_threshold': 24, 'unknown': 5}
+- Evidence types: {'gauge_threshold': 19, 'unknown': 5, 'gauge_archive_query': 5}
 - Source status counts: {'stale': 21, 'unknown': 5, 'mixed': 3}
 - Area mapping confidence counts: {'high': 24, 'unknown': 5}
 - Positive event windows: 26
-- Independent positive backlog rows: 0
-- Evidence-linked backlog rows: 2
-- Evidence-linked backlog positive rows: 2
+- Independent positive backlog rows: 5
+- Evidence-linked backlog rows: 7
+- Evidence-linked backlog positive rows: 7
 - Placeholder-evidence backlog rows: 2
 - Placeholder-evidence backlog positive rows: 2
-- Real-evidence backlog rows: 0
-- Real-evidence backlog positive rows: 0
+- Real-evidence backlog rows: 5
+- Real-evidence backlog positive rows: 5
 - Reviewed backlog rows: 0
 - Reviewed backlog positive rows: 0
 - Promotion-ready backlog rows: 0
-- Reviewable backlog rows: 0
-- Reviewable backlog positive rows: 0
+- Reviewable backlog rows: 5
+- Reviewable backlog positive rows: 5
 
 ## Supervision Quality
 

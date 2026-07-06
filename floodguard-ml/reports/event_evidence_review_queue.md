@@ -6,9 +6,9 @@ This report highlights the current best candidate event windows for human eviden
 
 - Candidate windows in queue: 26
 - High-priority candidate windows: 2
-- Windows with real evidence links: 0
+- Windows with real evidence links: 5
 - Windows still using placeholder evidence: 2
-- Windows currently eligible to become `reviewed_for_shadow_mode`: 0
+- Windows currently eligible to become `reviewed_for_shadow_mode`: 1
 
 ## Top Candidate Windows
 
@@ -21,6 +21,7 @@ This report highlights the current best candidate event windows for human eviden
 - Review status: `candidate_review`
 - Evidence link real: `False`
 - Evidence link placeholder: `True`
+- Evidence support status: `unknown`
 - Area match status: `area_mapping_missing`
 - Time window status: `window_present`
 - Can become `reviewed_for_shadow_mode`: `False`
@@ -35,6 +36,7 @@ This report highlights the current best candidate event windows for human eviden
 - Review status: `candidate_review`
 - Evidence link real: `False`
 - Evidence link placeholder: `True`
+- Evidence support status: `unknown`
 - Area match status: `area_mapping_missing`
 - Time window status: `window_present`
 - Can become `reviewed_for_shadow_mode`: `False`
@@ -47,12 +49,13 @@ This report highlights the current best candidate event windows for human eviden
 - Supervision kind: `gauge-threshold`
 - Label strength: `weak`
 - Review status: `candidate_review`
-- Evidence link real: `False`
+- Evidence link real: `True`
 - Evidence link placeholder: `False`
-- Area match status: `direct_history_match`
+- Evidence support status: `mismatch`
+- Area match status: `high_confidence_area_match`
 - Time window status: `instant_window_review`
 - Can become `reviewed_for_shadow_mode`: `False`
-- Recommended next action: Add a real evidence link before this label can be considered for review.
+- Recommended next action: Replace or expand the evidence pack; the linked archive does not currently support this candidate window.
 
 ### North Parramatta gauge-threshold candidate window
 
@@ -61,12 +64,13 @@ This report highlights the current best candidate event windows for human eviden
 - Supervision kind: `gauge-threshold`
 - Label strength: `weak`
 - Review status: `candidate_review`
-- Evidence link real: `False`
+- Evidence link real: `True`
 - Evidence link placeholder: `False`
-- Area match status: `direct_history_match`
+- Evidence support status: `mismatch`
+- Area match status: `high_confidence_area_match`
 - Time window status: `window_present`
 - Can become `reviewed_for_shadow_mode`: `False`
-- Recommended next action: Add a real evidence link before this label can be considered for review.
+- Recommended next action: Replace or expand the evidence pack; the linked archive does not currently support this candidate window.
 
 ### North Parramatta gauge-threshold candidate window
 
@@ -75,12 +79,13 @@ This report highlights the current best candidate event windows for human eviden
 - Supervision kind: `gauge-threshold`
 - Label strength: `weak`
 - Review status: `candidate_review`
-- Evidence link real: `False`
+- Evidence link real: `True`
 - Evidence link placeholder: `False`
-- Area match status: `direct_history_match`
+- Evidence support status: `confirmed`
+- Area match status: `high_confidence_area_match`
 - Time window status: `window_present`
-- Can become `reviewed_for_shadow_mode`: `False`
-- Recommended next action: Add a real evidence link before this label can be considered for review.
+- Can become `reviewed_for_shadow_mode`: `True`
+- Recommended next action: Review the linked evidence and decide whether this can be upgraded to reviewed_for_shadow_mode.
 
 ## Interpretation
 

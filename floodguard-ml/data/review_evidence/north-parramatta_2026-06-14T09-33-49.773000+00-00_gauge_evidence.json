@@ -1,0 +1,664 @@
+{
+  "count": 73,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "time": "2026-06-14T03:35:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T03:41:29.312534Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T03:40:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T03:46:30.365325Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T03:45:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T03:51:29.619999Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T03:50:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T03:56:30.031675Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T03:55:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:01:31.027302Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:00:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:06:29.743762Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:05:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:11:29.641099Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:10:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:16:30.624407Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:15:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:21:38.011225Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:20:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:26:29.537528Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:25:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:31:30.968697Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:30:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:36:29.634813Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:35:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:41:30.894342Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:40:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:46:30.885870Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:45:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:51:30.708720Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:50:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T04:56:30.360796Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T04:55:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:01:30.748190Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:00:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:06:30.017559Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:05:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:11:29.705314Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:10:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:16:31.203063Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:15:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:21:30.683066Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:20:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:26:30.245690Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:25:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:31:30.331493Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:30:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:36:31.974235Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:35:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:41:29.056344Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:40:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:46:34.563804Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:45:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:51:29.981159Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:50:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T05:56:31.000276Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T05:55:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:01:32.024308Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:00:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:06:30.045597Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:05:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:11:30.204781Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:10:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:16:31.739909Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:15:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:21:31.348596Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:20:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:26:30.640845Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:25:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:31:30.989121Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:30:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:36:32.157889Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:35:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:41:30.729470Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:40:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:46:30.472821Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:45:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:51:30.041400Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:50:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T06:56:31.082109Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T06:55:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:01:31.355811Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:00:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:06:30.912863Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:05:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:11:29.966444Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:10:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:16:29.524336Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:15:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:21:33.352092Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:20:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:26:30.751637Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:25:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:31:29.949939Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:30:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:36:30.133004Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:35:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:41:29.929985Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:40:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:46:30.939782Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:45:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:51:30.368015Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:50:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T07:56:30.085431Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T07:55:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:01:30.990844Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:00:00Z",
+      "value": 0.5,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:06:31.831677Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:05:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:11:29.865632Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:10:00Z",
+      "value": 0.5,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:16:29.978605Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:15:00Z",
+      "value": 0.5,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:21:36.636982Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:20:00Z",
+      "value": 0.5,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:26:30.312540Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:25:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:31:30.016000Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:30:00Z",
+      "value": 0.5,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:36:29.418915Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:35:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:41:32.221378Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:40:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:46:32.873462Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:45:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:51:30.386522Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:50:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T08:56:30.094282Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T08:55:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:01:30.999129Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:00:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:06:29.360462Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:05:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:11:29.607957Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:10:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:16:29.951223Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:15:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:21:30.701665Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:20:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:26:31.022360Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:25:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:31:30.957843Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:30:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:36:30.130948Z",
+      "detection_limit": ""
+    },
+    {
+      "time": "2026-06-14T09:35:00Z",
+      "value": 0.0,
+      "flag": null,
+      "validation_code": "",
+      "comment": "",
+      "last_modified": "2026-06-14T09:41:30.877610Z",
+      "detection_limit": ""
+    }
+  ]
+}

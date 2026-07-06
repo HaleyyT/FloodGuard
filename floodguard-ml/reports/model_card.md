@@ -5,7 +5,6 @@
 FloodGuard's Python ML pipeline is a shadow-mode comparison layer.
 It is intended to validate data plumbing, training safeguards, reporting, and model comparison workflows.
 It is not used for live alerting or official warning decisions.
-FloodGuard is not an official emergency-warning system, and this ML layer must remain shadow mode until stronger independent supervision and event-holdout validation exist.
 
 ## Training Data
 
@@ -35,7 +34,6 @@ FloodGuard is not an official emergency-warning system, and this ML layer must r
 - Real export target selection reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 - Real export supervision-quality summary: FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.
 - Scenario target selection reason: Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision.
-- Threshold state: prototype-calibration pending until reviewed event evidence and expert review exist.
 
 ## Supervision Quality
 
@@ -45,10 +43,12 @@ FloodGuard is not an official emergency-warning system, and this ML layer must r
 - Real export primary limitation: Labels are mostly scaffold or candidate-review placeholders rather than evidence-backed reviewed flood outcomes.
 - Joined evidence-linked event windows: 2
 - Joined placeholder-evidence event windows: 2
+- Joined evidence support status counts: {}
 - Joined reviewed event windows: 0
 - Joined reviewed elevated event windows: 0
-- Backlog evidence-linked rows: 2
+- Backlog evidence-linked rows: 7
 - Backlog placeholder-evidence rows: 2
+- Backlog evidence support status counts: {'unknown': 24, 'mismatch': 4, 'confirmed': 1}
 - Backlog reviewed rows: 0
 - Backlog promotion-ready rows: 0
 - Validated prediction depends on stronger supervision: independent flood-event labels, expert-calibrated thresholds, and event-holdout validation.
@@ -143,6 +143,7 @@ FloodGuard is not an official emergency-warning system, and this ML layer must r
 - Real-export training still falls back to rule-derived supervision when event labels remain weak or sparse.
 - Joined event labels exist to prepare better supervision, but coverage and strength must be inspected before treating them as validation evidence.
 - Placeholder evidence links do not count as defensible event supervision and must be replaced before review promotion.
+- Real gauge links still need support review; a real URL alone does not mean the archived values confirm the candidate event window.
 - No real `High` examples are present in the current historical export.
 - Metrics are illustrative and should not be interpreted as validated flood prediction performance.
 - Time-based validation is implemented, but real independent event holdout is still weak because joined event labels are placeholders rather than verified flood outcomes.
@@ -183,3 +184,4 @@ FloodGuard is not an official emergency-warning system, and this ML layer must r
 - Domain expert review is still pending.
 - Validation remains prototype-grade and not robust enough for advisory use.
 - FloodGuard has not approved ML for automated safety advice.
+
