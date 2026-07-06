@@ -52,6 +52,7 @@ def load_event_backlog(backlog_path: Path = EVENT_BACKLOG_DATASET) -> pd.DataFra
         "area_mapping_confidence",
         "matched_area_reason",
         "promotion_blocked_reason",
+        "evidence_support_status",
         "review_notes",
         "reviewer",
         "reviewed_at",
@@ -175,6 +176,12 @@ def summarise_label_frame(frame: pd.DataFrame, name: str) -> dict:
         .fillna("unknown")
         .value_counts(dropna=False)
         .to_dict(),
+        "evidenceSupportStatusCounts": frame.get(
+            "evidence_support_status", pd.Series(dtype="object")
+        )
+        .fillna("unknown")
+        .value_counts(dropna=False)
+        .to_dict(),
         "sourceStatusCounts": frame.get("source_status", pd.Series(dtype="object"))
         .fillna("unknown")
         .value_counts(dropna=False)
@@ -275,6 +282,7 @@ def write_label_audit_report(labels_summary: dict, backlog_summary: dict, superv
         f"- Label strengths: {labels_summary['labelStrengthCounts']}",
         f"- Label classes: {labels_summary['labelClassCounts']}",
         f"- Review status: {labels_summary['reviewStatusCounts']}",
+        f"- Evidence support status: {labels_summary['evidenceSupportStatusCounts']}",
         f"- Positive event windows: {labels_summary['positiveRows']}",
         f"- Reviewed joined rows: {labels_summary['reviewedRows']}",
         f"- Independent positive joined rows: {labels_summary['independentPositiveRows']}",
@@ -297,6 +305,7 @@ def write_label_audit_report(labels_summary: dict, backlog_summary: dict, superv
         f"- Label strengths: {backlog_summary['labelStrengthCounts']}",
         f"- Label classes: {backlog_summary['labelClassCounts']}",
         f"- Review status: {backlog_summary['reviewStatusCounts']}",
+        f"- Evidence support status: {backlog_summary['evidenceSupportStatusCounts']}",
         f"- Promotion ready: {backlog_summary['promotionReadyCounts']}",
         f"- Independence levels: {backlog_summary['independenceLevelCounts']}",
         f"- Review priorities: {backlog_summary['reviewPriorityCounts']}",

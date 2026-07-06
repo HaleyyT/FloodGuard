@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from build_candidate_event_backlog import build_candidate_event_backlog  # noqa: E402
+from build_candidate_event_backlog import build_candidate_event_backlog, gauge_triggered  # noqa: E402
 
 import pandas as pd  # noqa: E402
 
@@ -23,6 +23,20 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 class BuildCandidateEventBacklogTests(unittest.TestCase):
+    def test_gauge_triggered_rejects_uncorroborated_max_recent_rainfall(self) -> None:
+        record = {
+            "riskScore": 33,
+            "riskFeatures": {
+                "latestRainfallMm": 0,
+                "maxRecentRainfallMm": 10.5,
+                "rainfall24hMm": 0,
+                "rainfall72hMm": 0,
+                "risingRiverStations": 0,
+            },
+        }
+
+        self.assertFalse(gauge_triggered(record))
+
     def test_build_candidate_backlog_groups_contiguous_gauge_windows_without_duplicates(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

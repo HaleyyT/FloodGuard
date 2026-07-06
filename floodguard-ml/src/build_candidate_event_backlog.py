@@ -40,6 +40,7 @@ BACKLOG_COLUMNS = [
     "area_mapping_confidence",
     "matched_area_reason",
     "promotion_blocked_reason",
+    "evidence_support_status",
     "review_notes",
     "reviewer",
     "reviewed_at",
@@ -92,6 +93,7 @@ def build_row(**values: Any) -> dict[str, Any]:
     row["join_status"] = values.get("join_status", "backlog_only")
     row["review_priority"] = values.get("review_priority", "medium")
     row["independence_level"] = values.get("independence_level", "moderate")
+    row["evidence_support_status"] = values.get("evidence_support_status", "unknown")
     return row
 
 
@@ -105,9 +107,10 @@ def gauge_triggered(record: dict[str, Any]) -> bool:
     rain_72h = float(features.get("rainfall72hMm") or 0)
     rising = int(features.get("risingRiverStations") or 0)
     score = float(record.get("riskScore") or 0)
+    rainfall_correlated = latest_rain > 0 or rain_24h > 0 or rain_72h > 0
     return (
         latest_rain >= 10
-        or max_recent >= 10
+        or (max_recent >= 10 and rainfall_correlated)
         or rain_24h >= 30
         or rain_72h >= 50
         or (rising >= 1 and score >= 35)

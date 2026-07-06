@@ -141,6 +141,38 @@ class PromoteReviewedLabelsTests(unittest.TestCase):
         self.assertEqual(updated_backlog.loc[0, "promotion_ready"], "no")
         build_dataset_mock.assert_called_once()
 
+    def test_backlog_promotion_mask_requires_reviewed_status_even_with_real_evidence(self) -> None:
+        backlog = pd.DataFrame(
+            [
+                {
+                    "area": "parramatta",
+                    "start_time": "2026-06-29T00:00:00Z",
+                    "end_time": "2026-06-29T12:00:00Z",
+                    "label_class": 1,
+                    "label_source": "gauge_threshold",
+                    "review_status": "candidate_review",
+                    "join_status": "backlog_only",
+                    "evidence_link": "https://parramatta.lizard.net/api/v4/timeseries/example/events/?format=json",
+                    "evidence_support_status": "confirmed",
+                },
+                {
+                    "area": "north-parramatta",
+                    "start_time": "2026-07-01T00:00:00Z",
+                    "end_time": "2026-07-01T03:00:00Z",
+                    "label_class": 1,
+                    "label_source": "gauge_threshold",
+                    "review_status": "reviewed_for_shadow_mode",
+                    "join_status": "backlog_only",
+                    "evidence_link": "https://parramatta.lizard.net/api/v4/timeseries/example/events/?format=json",
+                    "evidence_support_status": "confirmed",
+                },
+            ]
+        )
+
+        mask = backlog_promotion_mask(backlog)
+
+        self.assertEqual(mask.tolist(), [False, True])
+
 
 if __name__ == "__main__":
     unittest.main()

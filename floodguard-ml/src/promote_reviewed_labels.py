@@ -49,9 +49,6 @@ def backlog_promotion_mask(backlog: pd.DataFrame) -> pd.Series:
     real_evidence_mask = real_evidence_link_present(
         backlog.get("evidence_link", pd.Series(index=backlog.index, dtype="object"))
     )
-    explicit_review_mask = explicit_shadow_review_status(
-        backlog.get("review_status", pd.Series(index=backlog.index, dtype="object"))
-    )
     expert_validated_mask = backlog.get("review_status", pd.Series(index=backlog.index, dtype="object")).fillna(
         "unknown"
     ).astype(str).eq("expert_validated")
@@ -72,8 +69,20 @@ def backlog_promotion_mask(backlog: pd.DataFrame) -> pd.Series:
         backlog.get("label_class", pd.Series(index=backlog.index, dtype="float64")),
         errors="coerce",
     ).notna()
-    return independent_mask & joinable_mask & label_class_present & (
-        real_evidence_mask | (explicit_review_mask & reviewed_mask)
+    evidence_support_status = (
+        backlog.get("evidence_support_status", pd.Series(index=backlog.index, dtype="object"))
+        .fillna("unknown")
+        .astype(str)
+        .str.lower()
+    )
+    support_mask = ~evidence_support_status.isin({"mismatch", "unsupported"})
+    return (
+        independent_mask
+        & joinable_mask
+        & label_class_present
+        & reviewed_mask
+        & support_mask
+        & (real_evidence_mask | reviewed_mask)
     )
 
 

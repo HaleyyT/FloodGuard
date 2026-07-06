@@ -35,6 +35,7 @@ REVIEW_QUEUE_COLUMNS = [
     "source_status",
     "source_reference",
     "area_mapping_confidence",
+    "evidence_support_status",
     "evidence_is_real",
     "evidence_is_placeholder",
     "area_match_status",
@@ -86,6 +87,7 @@ def recommended_next_action(row: pd.Series) -> str:
     reviewer = clean_str(row.get("reviewer", ""))
     reviewed_at = clean_str(row.get("reviewed_at", ""))
     review_notes = clean_str(row.get("review_notes", ""))
+    support_status = clean_str(row.get("evidence_support_status", "unknown"), "unknown").lower()
 
     if evidence_placeholder:
         return (
@@ -94,6 +96,10 @@ def recommended_next_action(row: pd.Series) -> str:
         )
     if not has_real_evidence:
         return "Add a real evidence link before this label can be considered for review."
+    if support_status in {"mismatch", "unsupported"}:
+        return "Replace or expand the evidence pack; the linked archive does not currently support this candidate window."
+    if support_status not in {"confirmed", "supported", "expert_confirmed"}:
+        return "Review the linked evidence pack and record whether it confirms or contradicts the candidate window."
     if review_status == "candidate_review":
         return "Review the linked evidence and decide whether this can be upgraded to reviewed_for_shadow_mode."
     if review_status == "reviewed_for_shadow_mode":
@@ -160,9 +166,18 @@ def can_become_reviewed_for_shadow_mode(row: pd.Series) -> bool:
     explicit_review = bool(
         explicit_shadow_review_status(pd.Series([review_status], dtype="object")).iloc[0]
     )
+    support_status = clean_str(row.get("evidence_support_status", "unknown"), "unknown").lower()
     valid_window = time_window_status(row) in {"window_present", "instant_window_review"}
     area_match = area_match_status(row) in {"direct_history_match", "high_confidence_area_match"}
-    return independent_source and valid_window and area_match and (has_real_evidence or explicit_review)
+    support_confirmed = support_status in {"confirmed", "supported", "expert_confirmed"}
+    support_blocked = support_status in {"mismatch", "unsupported"}
+    return (
+        independent_source
+        and valid_window
+        and area_match
+        and not support_blocked
+        and ((has_real_evidence and support_confirmed) or explicit_review)
+    )
 
 
 def write_review_queue_report(queue: pd.DataFrame, output_path: Path = REVIEW_QUEUE_REPORT_PATH) -> None:
@@ -213,6 +228,7 @@ def write_review_queue_report(queue: pd.DataFrame, output_path: Path = REVIEW_QU
                 f"- Review status: `{row['review_status']}`",
                 f"- Evidence link real: `{bool(row['evidence_is_real'])}`",
                 f"- Evidence link placeholder: `{bool(row['evidence_is_placeholder'])}`",
+                f"- Evidence support status: `{row['evidence_support_status']}`",
                 f"- Area match status: `{row['area_match_status']}`",
                 f"- Time window status: `{row['time_window_status']}`",
                 f"- Can become `reviewed_for_shadow_mode`: `{bool(row['can_become_reviewed_for_shadow_mode'])}`",
@@ -301,6 +317,11 @@ def build_event_review_queue(
             .astype(str),
             "area_mapping_confidence": queue_rows.get(
                 "area_mapping_confidence", pd.Series(index=queue_rows.index, dtype="object")
+            )
+            .fillna("unknown")
+            .astype(str),
+            "evidence_support_status": queue_rows.get(
+                "evidence_support_status", pd.Series(index=queue_rows.index, dtype="object")
             )
             .fillna("unknown")
             .astype(str),

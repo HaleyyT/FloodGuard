@@ -54,6 +54,7 @@ class BuildEventReviewQueueTests(unittest.TestCase):
                         "review_priority": "high",
                         "join_status": "joined_to_labels",
                         "evidence_link": "https://example.test/floodguard/labels/parramatta-warning-window",
+                        "evidence_support_status": "unknown",
                         "notes": "Placeholder evidence only.",
                     },
                     {
@@ -86,6 +87,7 @@ class BuildEventReviewQueueTests(unittest.TestCase):
                         "review_priority": "high",
                         "join_status": "backlog_only",
                         "evidence_link": "https://council.example.gov.au/flood-report",
+                        "evidence_support_status": "unknown",
                         "notes": "Real evidence candidate.",
                     },
                 ]
@@ -102,6 +104,7 @@ class BuildEventReviewQueueTests(unittest.TestCase):
         self.assertEqual(written["area"].tolist(), ["parramatta", "toongabbie"])
         self.assertEqual(written.loc[0, "evidence_is_real"], False)
         self.assertEqual(written.loc[0, "evidence_is_placeholder"], True)
+        self.assertEqual(written.loc[0, "evidence_support_status"], "unknown")
         self.assertEqual(written.loc[0, "supervision_kind"], "warning-derived")
         self.assertEqual(written.loc[0, "area_match_status"], "area_mapping_missing")
         self.assertEqual(written.loc[0, "required_evidence_missing"], True)
@@ -109,11 +112,13 @@ class BuildEventReviewQueueTests(unittest.TestCase):
         self.assertIn("Replace placeholder link", written.loc[0, "recommended_next_action"])
         self.assertEqual(written.loc[1, "evidence_is_real"], True)
         self.assertEqual(written.loc[1, "evidence_is_placeholder"], False)
+        self.assertEqual(written.loc[1, "evidence_support_status"], "unknown")
         self.assertEqual(written.loc[1, "supervision_kind"], "impact-derived")
         self.assertEqual(written.loc[1, "required_evidence_missing"], False)
         self.assertEqual(written.loc[1, "can_become_reviewed_for_shadow_mode"], False)
-        self.assertIn("Review the linked evidence", written.loc[1, "recommended_next_action"])
+        self.assertIn("record whether it confirms or contradicts", written.loc[1, "recommended_next_action"])
         self.assertIn("Windows with real evidence links: 1", report_text)
+        self.assertIn("Evidence support status: `unknown`", report_text)
         self.assertIn("Can become `reviewed_for_shadow_mode`: `False`", report_text)
 
     def test_build_event_review_queue_marks_high_confidence_real_evidence_rows_as_review_ready(self) -> None:
@@ -136,6 +141,7 @@ class BuildEventReviewQueueTests(unittest.TestCase):
                         "review_priority": "high",
                         "join_status": "backlog_only",
                         "evidence_link": "https://hazardwatch.gov.au/warnings/parramatta",
+                        "evidence_support_status": "confirmed",
                         "matched_area_reason": "Matched the area name in collected source evidence.",
                         "area_mapping_confidence": "high",
                         "source_reference": "https://hazardwatch.gov.au/",
