@@ -101,3 +101,36 @@ test("marks failed or timestamp-less sources as missing or unknown instead of cu
   assert.equal(rainfall.freshnessStatus, "unknown");
   assert.equal(river.freshnessStatus, "missing");
 });
+
+test("uses warning source check time for freshness when no local warning matched", () => {
+  const sourceMetadata = [
+    {
+      label: "NSW SES / HazardWatch warning status",
+      type: "warnings",
+      mode: "remote",
+      dataMode: "live",
+      status: "ok",
+      fetchedAt: ingestedAt,
+      sourceStrength: "official_warning",
+    },
+  ];
+
+  const signals = {
+    weatherObservations: {},
+    rainfallSeries: { points: [] },
+    riverContext: { issuedDate: null, stations: [] },
+    warningSummary: {
+      status: "no_current_warning",
+      observedAt: "2026-06-28T00:00:00Z",
+      freshnessObservedAt: ingestedAt,
+      sourceCheckedAt: ingestedAt,
+      warnings: [],
+    },
+  };
+
+  const freshness = buildAreaSourceFreshness(area, sourceMetadata, signals, ingestedAt);
+  const warning = freshness.find((source) => source.type === "warnings");
+
+  assert.equal(warning.observedAt, "2026-06-29T01:00:00.000Z");
+  assert.equal(warning.freshnessStatus, "current");
+});

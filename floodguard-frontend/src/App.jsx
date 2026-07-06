@@ -552,6 +552,18 @@ function buildOfficialWarning(signals) {
   );
   const warningSummary = signals.warningSummary ?? {};
   const warningCount = warningSummary.warningCount ?? 0;
+  const displayTimestamp =
+    warningSummary.status === "no_current_warning"
+      ? warningSummary.sourceCheckedAt ??
+        warningSummary.freshnessObservedAt ??
+        warningSummary.observedAt ??
+        warningSummary.issuedAt ??
+        null
+      : warningSummary.issuedAt ??
+        warningSummary.observedAt ??
+        warningSummary.freshnessObservedAt ??
+        warningSummary.sourceCheckedAt ??
+        null;
 
   let adapterStatus = "not_configured";
   if (warningSource && warningSource.status !== "not-connected") {
@@ -574,7 +586,7 @@ function buildOfficialWarning(signals) {
       warningCount > 0 && warningSummary.statusLabel
         ? warningSummary.statusLabel
         : "No current official warning",
-    issuedAt: warningSummary.issuedAt || warningSummary.observedAt || null,
+    issuedAt: displayTimestamp,
     note:
       warningCount > 0
         ? "Official warning wording is preserved separately from FloodGuard's local risk score."

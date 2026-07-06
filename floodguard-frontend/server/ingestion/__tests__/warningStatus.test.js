@@ -87,6 +87,33 @@ test("warning status reports no_relevant_warning for current but empty warning f
   assert.match(warning.statusReason, /no relevant official warning/i);
 });
 
+test("warning normaliser keeps empty but freshly checked feeds out of stale mode", () => {
+  const warning = readAreaWarningStatus(
+    areaSignals(
+      normalizeOfficialWarnings(
+        {
+          provider: "HazardWatch",
+          warnings: [],
+          observedAt: "2026-07-02T00:00:00Z",
+        },
+        area,
+        { sourceCheckedAt: "2026-07-03T01:00:00Z" },
+      ),
+      {
+        freshnessStatus: "current",
+        fetchedAt: "2026-07-03T01:00:00Z",
+        observedAt: "2026-07-03T01:00:00Z",
+        dataMode: "remote",
+      },
+    ),
+  );
+
+  assert.equal(warning.status, "no_relevant_warning");
+  assert.equal(warning.failureReason, "no_relevant_warning_for_area");
+  assert.equal(warning.lastObservedAt, "2026-07-03T01:00:00Z");
+  assert.equal(warning.freshnessMinutes, 0);
+});
+
 test("warning status reports stale when warning timestamps are too old", () => {
   const warning = readAreaWarningStatus(
     areaSignals(

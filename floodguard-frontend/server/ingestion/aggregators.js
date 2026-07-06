@@ -193,7 +193,9 @@ function sourceObservedAt(metadata, signals) {
   }
 
   if (metadata.type === "warnings") {
-    return parseSourceTimestamp(signals.warningSummary?.observedAt);
+    return parseSourceTimestamp(
+      signals.warningSummary?.freshnessObservedAt ?? signals.warningSummary?.observedAt,
+    );
   }
 
   return null;
@@ -386,7 +388,10 @@ function buildAreaRelevance(area, weatherObservations, rainfallSeries, riverCont
 function buildAreaSignals(area, normalizedSources, sourceMetadata, ingestedAt, publicSignalSummary) {
   const rainfallSeries = filterRainfallForArea(normalizedSources.rainfallSeries, area);
   const riverContext = filterRiverForArea(normalizedSources.riverContext, area);
-  const warningSummary = normalizeOfficialWarnings(normalizedSources.warningStatus, area);
+  const warningSourceMetadata = sourceMetadata.find((source) => source.type === "warnings") ?? null;
+  const warningSummary = normalizeOfficialWarnings(normalizedSources.warningStatus, area, {
+    sourceCheckedAt: warningSourceMetadata?.fetchedAt ?? ingestedAt,
+  });
   const weatherObservations = {
     ...normalizedSources.weatherObservations,
     areaRelevance: {
@@ -804,7 +809,11 @@ export function readAreaWarningStatus(areaSignals) {
   const hasWarning = adapterState === "live" && (warningSummary.warningCount ?? 0) > 0;
   const limitations = [...(warningSummary.notes ?? [])];
   const lastFetchedAt = warningSource?.fetchedAt ?? null;
-  const lastObservedAt = warningSummary.observedAt ?? warningSource?.observedAt ?? null;
+  const lastObservedAt =
+    warningSummary.freshnessObservedAt ??
+    warningSummary.observedAt ??
+    warningSource?.observedAt ??
+    null;
   const freshnessMinutes =
     lastObservedAt && lastFetchedAt ? minutesBetween(lastObservedAt, lastFetchedAt) : null;
   const failureReason = warningFailureReason(adapterState, warningSource, warningSummary);

@@ -183,7 +183,7 @@ export function normalizeWeather(raw) {
   };
 }
 
-export function normalizeOfficialWarnings(raw, area) {
+export function normalizeOfficialWarnings(raw, area, options = {}) {
   const { warnings, recognisable } = extractWarningRows(raw);
   const warningsWithRelevance = warnings.map((warning) => ({
     warning,
@@ -196,13 +196,18 @@ export function normalizeOfficialWarnings(raw, area) {
     .sort((a, b) => warningSeverityScore(b) - warningSeverityScore(a))[0];
   const parseStatus = recognisable ? "parsed" : "parser_error";
   const level = parseStatus === "parser_error" ? "unknown" : matchedLevel ?? globalLevel;
-  const observedAt =
+  const matchedWarningObservedAt =
     raw?.observedAt ??
     raw?.issuedAt ??
     raw?.updatedAt ??
     matchedWarnings[0]?.warning?.issuedAt ??
     matchedWarnings[0]?.warning?.updatedAt ??
     null;
+  const sourceCheckedAt = options.sourceCheckedAt ?? raw?.fetchedAt ?? null;
+  const freshnessObservedAt =
+    matchedWarnings.length > 0
+      ? matchedWarningObservedAt ?? sourceCheckedAt
+      : sourceCheckedAt ?? matchedWarningObservedAt;
   const matchedBy = [...new Set(matchedWarnings.flatMap(({ relevance }) => relevance.matchedBy))];
   const matchedHazardTypes = [...new Set(matchedWarnings.map(({ relevance }) => relevance.hazardType))];
   const notes = [];
@@ -230,7 +235,9 @@ export function normalizeOfficialWarnings(raw, area) {
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" "),
     parseStatus,
-    observedAt,
+    observedAt: matchedWarningObservedAt,
+    freshnessObservedAt,
+    sourceCheckedAt,
     issuedAt: raw?.issuedAt ?? raw?.updatedAt ?? null,
     availableWarningCount: warnings.length,
     relevance: {
