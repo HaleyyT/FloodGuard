@@ -1,19 +1,19 @@
 # FloodGuard Submission Readiness
 
-_Updated: 2026-07-05_
+_Updated: 2026-07-06_
 
 ## Day 5 objective
 
-This note records the current camera-ready state of FloodGuard after the latest verification and warning-connection hardening pass.
+This note records the current camera-ready state of FloodGuard after the latest documentation, warning-state, and rainfall-history hardening pass.
 
 ## Verification checks run
 
-All commands below were run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/package.json:1) on July 5, 2026.
+All commands below were run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/FloodGuard/floodguard-frontend/package.json:1) during the current camera-ready verification cycle.
 
 | Command | Result | Notes |
 |---|---|---|
 | `npm run lint` | pass | ESLint completed with no reported errors. |
-| `npm run test -- --runInBand` | pass | `87/87` frontend, backend, and contract tests passed. |
+| `npm run test` | pass | `96/96` backend, ingestion, and contract tests passed in the current repo state. |
 | `npm run build` | pass with warning | Production build succeeds; Vite reports a large main-chunk warning. |
 | `npm run check:ingestion -- --no-refresh` | pass with degraded external source | Submission readiness now passes when degraded external sources are labelled honestly and no false live claim is made. |
 | `npm run check:ingestion:live -- --no-refresh` | fail | Strict live readiness still fails because context and warning evidence are not fresh enough for a full live claim. |
@@ -24,6 +24,7 @@ All commands below were run from [floodguard-frontend/package.json](/Users/haley
 - README and package-level documentation now describe the system honestly and consistently.
 - Poster text, abstract text, and demo-script wording now exist in `docs/`.
 - ML integration is visible and clearly labelled as shadow mode rather than live decision authority.
+- Signals and Model pages are now laid out more consistently with the front page and preserve the same evidence-first visual language.
 - Backend verification remains strong, with passing tests and a successful production build.
 
 ## Current ingestion reality
@@ -48,6 +49,15 @@ What this means:
 - the current run is acceptable for submission readiness because degraded-state handling is explicit;
 - the current run is not healthy enough to claim fully live all-source operation;
 - submission/demo wording must continue to describe live ingestion as architecture with degraded-state handling, not guaranteed current operation.
+
+## Required camera-ready wording
+
+Every showcase-facing document and spoken demo should preserve these points:
+
+- FloodGuard is a flood-awareness and decision-support prototype, not an official emergency-warning system.
+- Official warnings are shown separately from FloodGuard-generated local concern.
+- ML remains shadow mode only and does not trigger live alerts.
+- Thresholds are prototype-calibration pending and still require reviewed event evidence plus expert review.
 
 ## Safe public claims
 
@@ -85,6 +95,6 @@ Avoid claims:
 - [docs/demo-script.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/demo-script.md:1)
 - [docs/ml-scope.md](/Users/haleytran/Desktop/Projects/FloodGuard/docs/ml-scope.md:1)
 
-## Day 5 conclusion
+## Camera-ready conclusion
 
-FloodGuard is now in a strong submission state as a reliability-aware flood-awareness prototype. The main story is credible: explainable rule logic, explicit source-trust handling, notification safeguards, and a real Python ML shadow pipeline. The main caveat is also clear and verified: FloodGuard can currently support submission-ready honest degraded-state handling, but it still should not be described as fully live across every supporting source or as a validated operational ML system.
+FloodGuard is now in a strong camera-ready state as a reliability-aware flood-awareness prototype. The main story is credible: explainable rule logic, explicit source-trust handling, notification safeguards, official-warning separation, historical replay/reporting, and a real Python ML shadow pipeline. The main caveat is also clear and verified: FloodGuard supports honest degraded-state handling and strong prototype reviewability, but it still should not be described as a fully live operational warning platform or as a validated production ML system.

@@ -8,7 +8,7 @@ FloodGuard calibrates thresholds in a reviewable shadow workflow and does not au
 - Calibration evidence statement: Prototype-only calibration: reviewed event windows are insufficient.
 - Calibration target kind: `rule`
 - Target used: `rule-derived`
-- Threshold status: `prototype-calibrated`
+- Threshold status: `prototype-calibration-pending`
 - Calibration target reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 - Positive rows available for this target: `18`
 - Candidate threshold sets evaluated: `2187`
@@ -128,5 +128,4 @@ In practice, FloodGuard should keep the current conservative thresholds, improve
 
 This sweep currently ranks threshold sets against rule-derived reference targets because no elevated independent event windows are joined yet.
 That means the workbench is valuable for replay plumbing, degraded-source review, and expert discussion, but it is not evidence that a new threshold set is validated.
-Until FloodGuard has evidence-backed reviewed event windows, calibration should be described as prototype-only rather than evidence-backed.
-
+Until FloodGuard has evidence-backed reviewed event windows, calibration should be described as prototype-only and prototype-calibration pending rather than evidence-backed.

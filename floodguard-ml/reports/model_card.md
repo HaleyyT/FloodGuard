@@ -5,6 +5,7 @@
 FloodGuard's Python ML pipeline is a shadow-mode comparison layer.
 It is intended to validate data plumbing, training safeguards, reporting, and model comparison workflows.
 It is not used for live alerting or official warning decisions.
+FloodGuard is not an official emergency-warning system, and this ML layer must remain shadow mode until stronger independent supervision and event-holdout validation exist.
 
 ## Training Data
 
@@ -34,6 +35,7 @@ It is not used for live alerting or official warning decisions.
 - Real export target selection reason: Fallback to rule-derived target because event-labelled rows contain only 0 elevated example(s).
 - Real export supervision-quality summary: FloodGuard's current independent supervision remains weak; event labels mainly support plumbing, tracking, and future calibration preparation.
 - Scenario target selection reason: Fallback to rule-derived target because no event-labelled rows are evidence-linked or explicitly reviewed enough to count as independent supervision.
+- Threshold state: prototype-calibration pending until reviewed event evidence and expert review exist.
 
 ## Supervision Quality
 
@@ -181,4 +183,3 @@ It is not used for live alerting or official warning decisions.
 - Domain expert review is still pending.
 - Validation remains prototype-grade and not robust enough for advisory use.
 - FloodGuard has not approved ML for automated safety advice.
-

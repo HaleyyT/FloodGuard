@@ -1,6 +1,6 @@
 # FloodGuard Final Verification
 
-_Updated: 2026-07-05_
+_Updated: 2026-07-06_
 
 ## Purpose
 
@@ -8,7 +8,7 @@ This note freezes the final verification evidence for the FloodGuard Coding Fest
 
 ## Verified commands
 
-All commands below were run from the local project workspace on July 5, 2026.
+All commands below were run from the local project workspace during the current camera-ready verification cycle.
 
 ### Frontend / backend checks
 
@@ -17,7 +17,7 @@ Run from [floodguard-frontend/package.json](/Users/haleytran/Desktop/Projects/Fl
 | Command | Result | Notes |
 |---|---|---|
 | `npm run lint` | pass | ESLint completed with no reported errors. |
-| `npm run test -- --runInBand` | pass | `87/87` frontend, backend, and contract tests passed. |
+| `npm run test` | pass | `96/96` backend, ingestion, and contract tests passed. |
 | `npm run build` | pass with warning | Production build succeeds; Vite still reports a large main chunk warning. |
 | `npm run export:ml-dataset` | pass | Exported `3000` feature rows to `floodguard-ml/data/`. |
 | `npm run check:ingestion -- --no-refresh` | pass with degraded external source | Submission readiness passes because degraded external sources are labelled honestly while core flood gauges remain usable. |
@@ -71,6 +71,16 @@ FloodGuard handled this correctly by:
 - blocking strict live-source readiness
 - allowing submission readiness to pass only because degraded state was labelled honestly
 - avoiding any false live-data claim in the dashboard or readiness output
+
+## Camera-ready wording guardrails
+
+The final showcase wording should continue to preserve these boundaries:
+
+- FloodGuard is a flood-awareness and decision-support prototype.
+- FloodGuard is not an official emergency-warning system.
+- Official warnings stay separate from FloodGuard-generated local concern.
+- ML remains shadow mode only and does not control live alerts.
+- Thresholds remain prototype-calibration pending unless reviewed event evidence and expert review say otherwise.
 
 ## Known caveats
 

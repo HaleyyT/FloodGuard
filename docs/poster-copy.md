@@ -48,6 +48,7 @@ Important limitation:
 - current labels are rule-derived
 - the real export is strongly imbalanced
 - no real `High` examples exist yet
+- thresholds are prototype-calibration pending and not yet backed by reviewed event evidence
 - ML is implemented for comparison and future calibration, not validated live prediction
 
 ## Honest limitations
@@ -67,6 +68,7 @@ Current safeguards:
 - stale or cached evidence is labelled explicitly
 - strong alerts are suppressed when core evidence is degraded
 - ML remains shadow mode until independent validation is available
+- threshold choices remain review-oriented rather than presented as expert-validated flood triggers
 
 ## Takeaway
 

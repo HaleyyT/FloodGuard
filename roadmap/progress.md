@@ -1,6 +1,6 @@
 # FloodGuard Progress Report
 
-_Last updated: 2026-07-05 (final verification refresh and live-vs-degraded warning-state reporting)_
+_Last updated: 2026-07-06 (camera-ready wording sync, production-readiness documentation pass, and rainfall-history/dashboard alignment)_
 
 ## Purpose
 
@@ -42,14 +42,14 @@ These percentages are intentionally honest and reflect implemented code, tests, 
 |---|---:|---|
 | Core prototype / backend framework | **92%** | ingestion, health, cache, source registry, explainable risk, notifications, replay storage, queryable history windows, and API contracts are now strongly integrated |
 | Reliability / trust architecture | **95%** | one of the strongest parts of FloodGuard; live vs cached vs stale vs missing vs fallback is handled clearly and now more deeply observable |
-| Frontend dashboard / evidence UX | **89%** | strong overview, evidence, warning, map, signals, and ML panels exist; the front page now explains concern, trust, next steps, and simulated demo scenarios more clearly |
-| Official warning layer | **78%** | architecture, adapter states, relevance filtering, failure categories, and warning observability are implemented more strongly, and the default public warning adapter is now connected, though full live operational maturity is still not there |
-| Historical data foundation | **83%** | snapshot history, deduplication, replay SQLite output, decision-audit storage, queryable event-window history, and review-oriented summary contracts now exist, though the long-term store is still prototype-grade |
+| Frontend dashboard / evidence UX | **90%** | strong overview, evidence, warning, map, signals, and ML panels exist; the front page now explains concern, trust, next steps, and simulated demo scenarios more clearly, and supporting pages are more layout-consistent |
+| Official warning layer | **79%** | architecture, adapter states, relevance filtering, failure categories, warning observability, and the default public warning adapter are implemented more strongly, though full live operational maturity is still not there |
+| Historical data foundation | **84%** | snapshot history, deduplication, replay SQLite output, decision-audit storage, queryable event-window history, and broader rainfall-history alignment now exist, though the long-term store is still prototype-grade |
 | Rule engine / explainable concern logic | **87%** | feature engineering and risk reasoning are strong, and the backend now exposes a cleaner risk-intelligence explanation contract alongside the detailed audit |
 | Testing / regression protection | **93%** | backend, ML, replay, failure-injection, browser smoke coverage, and final verification checks are strong and now include richer history-window and supervision-reporting contracts |
 | ML engineering / shadow pipeline | **86%** | Python training, model comparison, validation controls, target selection, calibration, replay summaries, promotion reporting, and label-review auditing are implemented well |
 | Validated ML / real predictive credibility | **41%** | still limited by weak independent labels and sparse real elevated supervision, but event-backlog review signals and evidence-linked supervision auditing are now more concrete and actionable |
-| Overall project toward credible prototype goal | **90%** | FloodGuard is already a strong reliability-aware prototype with stronger replay/reporting depth, queryable review windows, clearer backend trust contracts, and a more honest final readiness story |
+| Overall project toward credible prototype goal | **91%** | FloodGuard is already a strong reliability-aware prototype with stronger replay/reporting depth, queryable review windows, clearer backend trust contracts, and a more honest final readiness story |
 | Overall project toward final long-term vision | **76%** | still missing stronger labels, expert-calibrated live warning maturity, and truly validated event supervision, but the architecture and review workflow are materially closer to that destination |
 
 ---
@@ -97,6 +97,9 @@ Newer work completed since the earlier progress snapshot includes:
 - backend history summaries that now count concern levels, official-warning context, degraded-record rate, and latest decision state for calibration/replay review.
 - a stronger event-label backlog contract with independence level, review priority, join status, and evidence-link placeholders.
 - richer label-audit outputs and `/api/ml/report` supervision summaries that now distinguish evidence-linked backlog rows from fully joined reviewed supervision.
+- live rainfall-history ingestion now captures a broader 7-day FloodSmart event window instead of only a very short recent slice, which makes the dashboard rainfall trend and 24h values much more faithful to the configured local gauge source.
+- supporting `Signals` and `Model` pages now use a tighter, more balanced layout so half-width evidence cards occupy their intended space more consistently.
+- README, submission-readiness, poster/demo wording, and final verification notes were refreshed so the camera-ready story stays consistent about official-warning separation, shadow-mode ML, and prototype-calibration thresholds.
 
 What matters about this:
 

@@ -33,7 +33,7 @@ test("parses FloodSmart rainfall from detailed event rows as live gauge data", a
   const measuringStationsUrl = "https://example.test/stations";
   const timeseriesUrl = "https://example.test/timeseries/rainfall-67111/";
   const eventUrl =
-    "https://example.test/timeseries/rainfall-67111/events/?format=json&ordering=-time&page_size=24";
+    "https://example.test/timeseries/rainfall-67111/events/?format=json&ordering=-time&page_size=2016";
   const restoreFetch = installFetchMock({
     [measuringStationsUrl]: {
       json: {
@@ -85,6 +85,7 @@ test("parses FloodSmart rainfall from detailed event rows as live gauge data", a
     assert.equal(payload.stations[0].latestValue, 1.4);
     assert.equal(payload.stations[0].dataMode, "live");
     assert.equal(payload.stations[0].eventStatus, "ok");
+    assert.equal(payload.stations[0].events.length, 1);
     assert.deepEqual(payload.stations[0].qualityNotes, ["Detailed live event rows were used."]);
   } finally {
     restoreFetch();

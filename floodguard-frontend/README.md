@@ -2,6 +2,8 @@
 
 This package contains the FloodGuard React dashboard and the Node.js ingestion/API layer used by the prototype.
 
+FloodGuard is a decision-support prototype, not an official emergency-warning system. Official warnings are kept separate from FloodGuard-generated local concern, and ML remains shadow mode only.
+
 ## What runs here
 
 - React + Vite dashboard
@@ -120,32 +122,44 @@ Important:
 - the rule engine remains the live decision authority
 - ML is shadow mode only
 - current labels are rule-derived
+- thresholds are prototype-calibration pending and still need reviewed event evidence plus expert review
 - the current real export is not strong enough for validated predictive claims
 
 ## Environment variables
 
-- `FLOODGUARD_WEATHER_URL`
-- `FLOODGUARD_RAINFALL_URL`
-- `FLOODGUARD_RIVER_URL`
-- `FLOODGUARD_WARNINGS_URL`
-- `FLOODGUARD_HAZARDWATCH`
-- `FLOODGUARD_API_HOST`
-- `FLOODGUARD_API_PORT`
-- `VITE_FLOODGUARD_API_URL`
-- `VITE_FLOODGUARD_AREAS_API_URL`
-- `VITE_FLOODGUARD_HISTORY_API_URL`
-- `VITE_FLOODGUARD_FEATURES_API_URL`
-- `VITE_FLOODGUARD_DATASET_QUALITY_API_URL`
-- `VITE_FLOODGUARD_BASELINE_API_URL`
-- `VITE_FLOODGUARD_MODEL_EXPERIMENT_API_URL`
-- `VITE_FLOODGUARD_MODEL_CARD_API_URL`
-- `VITE_FLOODGUARD_ML_REPORT_API_URL`
-- `VITE_FLOODGUARD_COMMUNITY_REPORTS_API_URL`
-- `VITE_FLOODGUARD_EVIDENCE_REVIEW_API_URL`
-- `VITE_FLOODGUARD_NOTIFICATIONS_API_URL`
-- `VITE_FLOODGUARD_REFRESH_MS`
+- Backend source configuration:
+  - `FLOODGUARD_WEATHER_URL`
+  - `FLOODGUARD_RAINFALL_URL`
+  - `FLOODGUARD_RIVER_URL`
+  - `FLOODGUARD_WARNINGS_URL`
+  - `FLOODGUARD_HAZARDWATCH`
+- Backend server binding:
+  - `FLOODGUARD_API_HOST`
+  - `FLOODGUARD_API_PORT`
+- Frontend API overrides:
+  - `VITE_FLOODGUARD_API_URL`
+  - `VITE_FLOODGUARD_AREAS_API_URL`
+  - `VITE_FLOODGUARD_HISTORY_API_URL`
+  - `VITE_FLOODGUARD_FEATURES_API_URL`
+  - `VITE_FLOODGUARD_DATASET_QUALITY_API_URL`
+  - `VITE_FLOODGUARD_BASELINE_API_URL`
+  - `VITE_FLOODGUARD_MODEL_EXPERIMENT_API_URL`
+  - `VITE_FLOODGUARD_MODEL_CARD_API_URL`
+  - `VITE_FLOODGUARD_ML_REPORT_API_URL`
+  - `VITE_FLOODGUARD_COMMUNITY_REPORTS_API_URL`
+  - `VITE_FLOODGUARD_EVIDENCE_REVIEW_API_URL`
+  - `VITE_FLOODGUARD_NOTIFICATIONS_API_URL`
+- Frontend refresh:
+  - `VITE_FLOODGUARD_REFRESH_MS`
 
 `VITE_FLOODGUARD_REFRESH_MS` controls dashboard polling and defaults to 60 seconds.
+
+Production-readiness safety note:
+
+- Missing or unreachable external sources must degrade into structured states such as `stale`, `source_unavailable`, `no_relevant_warning`, `fallback`, or `not_connected`.
+- The dashboard should never present those states as current live evidence.
+- Official warning status must remain separate from FloodGuard-generated concern.
+- Shadow-mode ML must not be described as operational alerting.
 
 ## Key API routes
 
@@ -182,3 +196,6 @@ Important:
 - `npm run test`
 - `npm run build`
 - `npm run check:ingestion`
+- `npm run check:ingestion:live`
+
+For showcase readiness, `npm run check:ingestion` is the key safety gate. `npm run check:ingestion:live` is stricter and should be used only when you want to prove genuinely current live-source operation rather than honest degraded-state handling.

@@ -301,7 +301,7 @@ function buildRiskAssessment(parramattaSignals, riverSummary, publicSignalCards)
   };
 }
 
-function buildRainfallTrend(signals) {
+function buildRainfallTrend(signals, rainfallHistory = []) {
   const dailyBuckets = new Map();
   const rollingWindowDays = 7;
 
@@ -322,6 +322,42 @@ function buildRainfallTrend(signals) {
         rainfall: rainfallMm,
         lastTimestamp: timestamp,
       });
+    }
+  }
+
+  if (dailyBuckets.size < 3) {
+    const dedupedHistoryPoints = new Map();
+
+    for (const record of rainfallHistory) {
+      const pointTime = record?.rainfall?.latestPointTime;
+      const rainfallMm = Number(record?.rainfall?.latestValidRainfallMm);
+
+      if (!pointTime || !Number.isFinite(rainfallMm)) continue;
+
+      const timestamp = new Date(pointTime);
+      if (Number.isNaN(timestamp.getTime())) continue;
+
+      const pointKey = timestamp.toISOString();
+      if (dedupedHistoryPoints.has(pointKey)) continue;
+
+      dedupedHistoryPoints.set(pointKey, { timestamp, rainfallMm });
+    }
+
+    for (const { timestamp, rainfallMm } of dedupedHistoryPoints.values()) {
+      const dayKey = timestamp.toISOString().slice(0, 10);
+      const existingBucket = dailyBuckets.get(dayKey);
+
+      if (existingBucket) {
+        existingBucket.rainfall += rainfallMm;
+        if (timestamp > existingBucket.lastTimestamp) {
+          existingBucket.lastTimestamp = timestamp;
+        }
+      } else {
+        dailyBuckets.set(dayKey, {
+          rainfall: rainfallMm,
+          lastTimestamp: timestamp,
+        });
+      }
     }
   }
 
@@ -663,7 +699,11 @@ function CompactMlSnapshotPanel({ report, experiment, riskLevel, className = "" 
   const comparisonReady = experiment?.readiness?.readyForComparison ?? false;
   const trainingRows = report?.realExport?.rows ?? experiment?.rowCount ?? 0;
   const elevatedRows = report?.realExport?.elevatedRows ?? experiment?.classBalance?.elevatedCount ?? 0;
-  const bestModel = report?.bestPrototypeModel ?? "Waiting";
+  const bestModel =
+    report?.bestPrototypeModel ??
+    report?.realExport?.bestPrototypeModel ??
+    report?.scenarioStressTest?.bestPrototypeModel ??
+    "Waiting";
   const modeLabel = humanizeMlMode(report?.mode);
   const liveAuthority = report?.liveDecisionAuthority === "rule_engine" ? "Rule engine" : "FloodGuard rules";
 
@@ -836,13 +876,13 @@ function buildLocationRelevance(signals) {
   };
 }
 
-function buildDashboardData(signals, sourceStatus, liveStatus) {
+function buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory = []) {
   // The UI mostly consumes one composed dashboard object so the FloodGuard framework is easier to trace from one place.
   const areaName = signals.area?.name || signals.location.name;
   const riverSummary = summariseRiverData(signals.riverContext);
   const publicSignalCards = buildPublicSignalCards(signals);
   const riskAssessment = buildRiskAssessment(signals, riverSummary, publicSignalCards);
-  const latestRain = signals.rainfallSeries.latestValidRainfallMm;
+  const latestRain = signals.riskAssessment?.features?.rainfall24hMm ?? signals.rainfallSeries.latestValidRainfallMm;
   const sourceHealth = signals.sourceMetadata ?? [];
   const ingestionHealth = signals.ingestionHealth ?? null;
   const reliabilitySummary = buildReliabilitySummary(sourceHealth, ingestionHealth);
@@ -857,7 +897,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     publicSignalPressure: 0,
     note: "No public signal summary is available.",
   };
-  const rainDisplay = latestRain !== null ? `${latestRain} mm` : "No recent reading";
+  const rainDisplay = latestRain !== null ? `${Number(latestRain).toFixed(1)} mm` : "No recent reading";
   const dataStatus = liveStatus.isRefreshing
     ? "Refreshing live area signals"
     : formatRefreshStatus(refreshMetadata, sourceStatus);
@@ -871,7 +911,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus) {
     riskScore: riskAssessment.score,
     summary: riskAssessment.summary,
     riverSummary,
-    rainfallTrend: buildRainfallTrend(signals),
+    rainfallTrend: buildRainfallTrend(signals, rainfallHistory),
     riskSignals: buildRiskSignals(signals),
     sourceHealth,
     reliabilitySummary,
@@ -1036,6 +1076,31 @@ function useAreaHistory(selectedAreaId, lastUpdated) {
     fetchAreaHistory({
       areaId: selectedAreaId,
       limit: 12,
+      signal: controller.signal,
+    })
+      .then(setHistory)
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setHistory([]);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedAreaId, lastUpdated]);
+
+  return history;
+}
+
+function useRainfallHistory(selectedAreaId, lastUpdated) {
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchAreaHistory({
+      areaId: selectedAreaId,
+      limit: 2500,
+      sinceHours: 24 * 7,
       signal: controller.signal,
     })
       .then(setHistory)
@@ -1471,6 +1536,12 @@ function RainfallChart({ rainfallTrend }) {
     (maxValue, point) => Math.max(maxValue, Number(point.rainfall ?? 0)),
     0
   );
+  const yAxisMax = Math.max(4, Math.ceil(peakRainfall + 0.6));
+  const yAxisStep = yAxisMax > 8 ? 2 : 1;
+  const yAxisTicks = Array.from(
+    { length: Math.floor(yAxisMax / yAxisStep) + 1 },
+    (_, index) => index * yAxisStep,
+  );
   const totalRainfall = rainfallTrend.reduce(
     (sum, point) => sum + Number(point.rainfall ?? 0),
     0
@@ -1479,7 +1550,7 @@ function RainfallChart({ rainfallTrend }) {
     rainfallTrend.length > 0 ? Number(rainfallTrend[rainfallTrend.length - 1].rainfall ?? 0) : 0;
 
   return (
-    <section className="card signal-chart-card signal-breakdown-card">
+    <section className="card signal-chart-card rainfall-chart-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">Signal visualisation</p>
@@ -1495,7 +1566,7 @@ function RainfallChart({ rainfallTrend }) {
         <ResponsiveContainer width="100%" height={255}>
           <LineChart
             data={rainfallTrend}
-            margin={{ top: 12, right: 16, left: 6, bottom: 6 }}
+            margin={{ top: 12, right: 16, left: 6, bottom: 18 }}
           >
             <defs>
               <linearGradient id="rainfallLineGlow" x1="0" y1="0" x2="0" y2="1">
@@ -1509,7 +1580,7 @@ function RainfallChart({ rainfallTrend }) {
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
-              tickMargin={8}
+              tickMargin={12}
               minTickGap={28}
               padding={{ left: 10, right: 10 }}
               tick={{ fontSize: 11, fill: "#5b6c84" }}
@@ -1517,8 +1588,10 @@ function RainfallChart({ rainfallTrend }) {
             <YAxis
               axisLine={false}
               tickLine={false}
+              domain={[-0.2, yAxisMax]}
+              ticks={yAxisTicks}
               width={44}
-              tickFormatter={(value) => `${value} mm`}
+              tickFormatter={(value) => (value < 0 ? "" : `${value} mm`)}
               tick={{ fontSize: 11, fill: "#5b6c84" }}
             />
             <Tooltip
@@ -1540,6 +1613,7 @@ function RainfallChart({ rainfallTrend }) {
               type="monotone"
               stroke="#2d8cf0"
               strokeWidth={3}
+              connectNulls
               dot={{ r: 4, strokeWidth: 2, stroke: "#ffffff", fill: "#2d8cf0" }}
               activeDot={{ r: 5, strokeWidth: 2, stroke: "#ffffff", fill: "#0f6dcb" }}
             />
@@ -2861,6 +2935,7 @@ export default function App() {
   const signalsAreaId = signals.area?.id ?? "parramatta";
   const hasSelectedAreaSignals = signalsAreaId === selectedAreaId;
   const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
+  const rainfallHistory = useRainfallHistory(selectedAreaId, liveStatus.lastUpdated);
   const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
   const evidenceReviewQueue = useEvidenceReviewQueue(selectedAreaId, liveStatus.lastUpdated);
   const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
@@ -2871,7 +2946,7 @@ export default function App() {
   const mlReport = useMlReport(liveStatus.lastUpdated);
   const notifications = useAreaNotifications(selectedAreaId, liveStatus.lastUpdated);
   const dashboardData = hasSelectedAreaSignals
-    ? buildDashboardData(signals, sourceStatus, liveStatus)
+    ? buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory)
     : null;
   const overviewModeState = dashboardData
     ? buildOverviewModeState(dashboardData, overviewMode)
@@ -2908,7 +2983,6 @@ export default function App() {
 
       {hasSelectedAreaSignals && activeView === "overview" && (
         <>
-          <NotificationBanner notifications={overviewModeState.notifications ?? notifications} />
           <OverviewDashboard
             data={overviewModeState.data}
             experiment={modelExperiment}
@@ -2918,21 +2992,42 @@ export default function App() {
       )}
 
       {hasSelectedAreaSignals && activeView === "signals" && (
-        <section className="section-page">
-          <SourceHealthPanel
-            ingestionHealth={dashboardData.ingestionHealth}
-            sources={dashboardData.sourceHealth}
-          />
-          <WarningStatusPanel warning={dashboardData.officialWarning} />
-          <LocationRelevancePanel relevance={dashboardData.locationRelevance} />
-          <DecisionAuditPanel audit={dashboardData.decisionAudit} />
-          <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
-          <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
-          <RiverStatusPanel
-            areaName={dashboardData.areaName}
-            riverSummary={dashboardData.riverSummary}
-          />
-          <MapPanel areaName={dashboardData.areaName} />
+        <section className="section-page signals-page">
+          {buildNotificationBannerModel(overviewModeState.notifications ?? notifications).primary ? (
+            <div className="signals-banner-span">
+              <NotificationBanner notifications={overviewModeState.notifications ?? notifications} />
+            </div>
+          ) : null}
+          <div className="signals-source-panel">
+            <SourceHealthPanel
+              ingestionHealth={dashboardData.ingestionHealth}
+              sources={dashboardData.sourceHealth}
+            />
+          </div>
+          <div className="signals-warning-panel">
+            <WarningStatusPanel warning={dashboardData.officialWarning} />
+          </div>
+          <div className="signals-relevance-panel">
+            <LocationRelevancePanel relevance={dashboardData.locationRelevance} />
+          </div>
+          <div className="signals-audit-panel">
+            <DecisionAuditPanel audit={dashboardData.decisionAudit} />
+          </div>
+          <div className="signals-chart-panel">
+            <SignalBreakdownChart riskSignals={dashboardData.riskSignals} />
+          </div>
+          <div className="signals-chart-panel">
+            <RainfallChart rainfallTrend={dashboardData.rainfallTrend} />
+          </div>
+          <div className="signals-river-panel">
+            <RiverStatusPanel
+              areaName={dashboardData.areaName}
+              riverSummary={dashboardData.riverSummary}
+            />
+          </div>
+          <div className="signals-map-panel">
+            <MapPanel areaName={dashboardData.areaName} />
+          </div>
         </section>
       )}
 
@@ -2953,17 +3048,31 @@ export default function App() {
 
       {hasSelectedAreaSignals && activeView === "model" && (
         <section className="section-page model-page">
-          <MlPrototypePanel
-            report={mlReport}
-            experiment={modelExperiment}
-            riskLevel={dashboardData.riskLevel}
-          />
-          <HistoryPanel history={history} />
-          <FeatureReadinessPanel dataset={featureDataset} />
-          <DatasetQualityPanel quality={datasetQuality} />
-          <BaselinePredictionPanel baseline={baselinePrediction} />
-          <ModelExperimentPanel experiment={modelExperiment} />
-          <ModelCardPanel modelCard={modelCard} />
+          <div className="model-hero-panel">
+            <MlPrototypePanel
+              report={mlReport}
+              experiment={modelExperiment}
+              riskLevel={dashboardData.riskLevel}
+            />
+          </div>
+          <div className="model-history-panel">
+            <HistoryPanel history={history} />
+          </div>
+          <div className="model-feature-panel">
+            <FeatureReadinessPanel dataset={featureDataset} />
+          </div>
+          <div className="model-quality-panel">
+            <DatasetQualityPanel quality={datasetQuality} />
+          </div>
+          <div className="model-baseline-panel">
+            <BaselinePredictionPanel baseline={baselinePrediction} />
+          </div>
+          <div className="model-experiment-panel">
+            <ModelExperimentPanel experiment={modelExperiment} />
+          </div>
+          <div className="model-card-panel">
+            <ModelCardPanel modelCard={modelCard} />
+          </div>
         </section>
       )}
 

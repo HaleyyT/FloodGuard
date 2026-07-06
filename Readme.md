@@ -3,6 +3,8 @@
 
 FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. The live dashboard is intentionally honest about stale sources, fallback state, and official-warning feeds that may be connected but still too old for a live claim.
 
+FloodGuard is not an official emergency-warning system. Official warnings are shown separately from FloodGuard-generated local concern, the live rule engine remains the active authority inside the prototype, and ML remains shadow mode only.
+
 FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
 
 ![FloodGuard dashboard prototype](docs/images/floodguard-6-july-final.png)
@@ -67,6 +69,7 @@ Current ML limitations:
 - current historical labels are rule-derived rather than independent flood outcomes
 - the real export is severely imbalanced
 - there are no real `High` examples in the current dataset
+- thresholds remain prototype-calibration pending and still need reviewed event evidence plus domain review
 - ML is implemented for plumbing, safeguards, and comparison, not validated operational prediction
 
 ## Safety and domain expert oversight
@@ -118,6 +121,17 @@ npm run dev
 cd floodguard-frontend
 npm run api
 ```
+
+### Camera-ready verification
+
+```bash
+cd floodguard-frontend
+npm run test
+npm run build
+npm run check:ingestion
+```
+
+For the current prototype, `npm run check:ingestion` is the camera-ready honesty gate. It passes when degraded, stale, cached, unavailable, or partially connected sources are labelled safely rather than misrepresented as live. `npm run check:ingestion:live` is stricter and should only pass when rainfall, river, and supporting live context are genuinely current.
 
 ### Refresh ingestion manually
 
@@ -200,4 +214,4 @@ This is why a stale-source run can still demonstrate a successful trust layer ev
 
 ## Honest one-line summary
 
-FloodGuard is a reliability-aware flood-awareness prototype that turns local public signals into explainable local concern levels, while clearly showing when those signals are current, partial, stale, or only available through fallback data.
+FloodGuard is a reliability-aware flood-awareness prototype that turns local public signals into explainable local concern levels, while clearly showing when those signals are current, partial, stale, or only available through fallback data, while keeping official warnings separate and ML in shadow mode.

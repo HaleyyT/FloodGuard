@@ -74,10 +74,13 @@ export async function fetchFloodguardAreas({ signal } = {}) {
   return response.json();
 }
 
-export async function fetchAreaHistory({ areaId, limit = 12, signal } = {}) {
+export async function fetchAreaHistory({ areaId, limit = 12, sinceHours, startTime, endTime, signal } = {}) {
   const url = new URL(floodguardHistoryApiUrl);
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
+  if (sinceHours) url.searchParams.set("sinceHours", String(sinceHours));
+  if (startTime) url.searchParams.set("start", startTime);
+  if (endTime) url.searchParams.set("end", endTime);
 
   const response = await fetch(url, { signal });
 

@@ -29,7 +29,7 @@
    Explain that notification logic is conservative and can suppress strong app-generated notices when evidence quality is degraded.
 
 7. Show the model page or ML card.
-   Say that FloodGuard already exports historical features and runs a Python ML shadow pipeline, but it does not use ML to control live alerts because the current labels are rule-derived and not yet strong enough for validated prediction.
+   Say that FloodGuard already exports historical features and runs a Python ML shadow pipeline, but it does not use ML to control live alerts because the current labels are rule-derived, thresholds are still prototype-calibration pending, and the evidence is not yet strong enough for validated prediction.
 
 8. Close with the safety boundary.
    Say that FloodGuard is a flood-awareness and decision-support prototype, not an official warning system, and future deployment would require hydrologist, council, and emergency-management review.
@@ -42,4 +42,4 @@ FloodGuard’s main value is not only turning public signals into a local concer
 
 Use this exact phrasing when needed:
 
-FloodGuard does not replace NSW SES, BoM, council, or emergency-service advice. Its next steps are deliberately conservative, official warnings stay separate, degraded evidence suppresses stronger alerts, and ML remains shadow mode until reviewed and validated more rigorously.
+FloodGuard does not replace NSW SES, BoM, council, or emergency-service advice. Its next steps are deliberately conservative, official warnings stay separate, degraded evidence suppresses stronger alerts, thresholds remain prototype-calibration pending, and ML remains shadow mode until reviewed and validated more rigorously.

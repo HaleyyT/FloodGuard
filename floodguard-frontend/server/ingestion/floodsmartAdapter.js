@@ -1,4 +1,5 @@
-const eventPageSize = 24;
+const rainfallEventPageSize = 2016;
+const riverEventPageSize = 24;
 const maxStationPages = 10;
 
 const riverStationNameMap = {
@@ -35,13 +36,13 @@ async function fetchPaginatedJson(url) {
   return results;
 }
 
-function timeseriesEventsUrl(timeseriesUrl) {
+function timeseriesEventsUrl(timeseriesUrl, pageSize) {
   const url = new URL(timeseriesUrl);
   url.pathname = url.pathname.replace(/\/$/, "").replace(/\/timeseries\/([^/]+)$/, "/timeseries/$1/events/");
   url.search = "";
   url.searchParams.set("format", "json");
   url.searchParams.set("ordering", "-time");
-  url.searchParams.set("page_size", String(eventPageSize));
+  url.searchParams.set("page_size", String(pageSize));
   return url.toString();
 }
 
@@ -64,7 +65,8 @@ async function hydrateStation(station, metric) {
     (station.timeseries ?? []).map(async (url) => fetchJson(url)),
   );
   const selectedTimeseries = timeseries.find((item) => metricMatches(item, metric)) ?? timeseries[0];
-  const eventUrl = selectedTimeseries?.url ? timeseriesEventsUrl(selectedTimeseries.url) : null;
+  const eventPageSize = metric === "rainfall" ? rainfallEventPageSize : riverEventPageSize;
+  const eventUrl = selectedTimeseries?.url ? timeseriesEventsUrl(selectedTimeseries.url, eventPageSize) : null;
   const eventsPayload = eventUrl
     ? await fetchJson(eventUrl).catch((error) => ({
         results: [],
