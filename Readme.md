@@ -1,13 +1,29 @@
 # FloodGuard (accepted for [Coding Fest](https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html))
 
 
-FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. 
+FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. The system eliminates data fragmentation by translating rainfall, river, weather, warning-context, and public-signal evidence into an explainable local concern summary. Rather than leaving residents to compare multiple technical feeds manually, it empowers communities to react swiftly to emergent situations by clearly communicating what is happening, why it matters, and what next steps to take.
 
 FloodGuard is not an official emergency-warning system. Official warnings are shown separately from FloodGuard-generated local concern, the live rule engine remains the active authority inside the prototype, and ML remains shadow mode only.
 
 FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
 
 ![FloodGuard dashboard prototype](docs/images/floodguard-6-july-final.png)
+
+
+## Technical highlights
+
+Its main technical contribution is the reliability layer. FloodGuard does not treat every source as equally trustworthy: it tracks freshness, provenance, fallback/cache state, official-warning separation, and degraded evidence before those signals are allowed to shape the visible concern summary or notification candidates.
+
+
+| Area | What FloodGuard implements |
+|---|---|
+| Ingestion | Rainfall, river, weather, warning-context, and resident/public-signal ingestion |
+| Reliability | Freshness checks, provenance, fallback/cache labelling, stale/missing/unavailable states |
+| Risk logic | Explainable rule-based concern scoring with decision audit output |
+| Notifications | Conservative suppression when degraded core evidence makes stronger advice unsafe |
+| History | Queryable JSONL snapshots, replay summaries, and ML-ready feature export |
+| ML | Python shadow pipeline, baseline models, label audit, and model-card reporting |
+| Testing | Backend regression tests, ingestion honesty checks, API contracts, and Playwright smoke flows |
 
 
 ## What is implemented
@@ -24,12 +40,17 @@ FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened t
 - Shadow-mode ML comparison surfaced in the backend and dashboard without overriding the live rule engine
 - Deterministic Playwright dashboard smoke tests plus replay and failure-injection regression coverage
 
+## Why this project is technically interesting
+
+FloodGuard is not just a visual flood dashboard. It is a reliability-aware decision layer that checks whether evidence is live, stale, cached, fallback-based, missing, or unavailable before allowing it to influence user-facing concern levels or notification decisions.
+
+That matters because high-stakes software should not only produce a status label; it should also make the quality, limits, and trustworthiness of its evidence visible before people act on it.
+
 ## Project structure
 
 - [floodguard-frontend](./floodguard-frontend/README.md): React dashboard and Node ingestion/API layer
 - [floodguard-ml](./floodguard-ml/README.md): Python ML experimentation workspace
 - [docs](./docs): public screenshots and diagram assets used to present FloodGuard
-- [roadmap](./roadmap): implementation plans and progress tracking
 - [explanation.md](./explanation.md): beginner-friendly guide to FloodGuard's framework, logic, reliability model, and ML boundaries
 
 ## How FloodGuard works
@@ -89,6 +110,17 @@ FloodGuard therefore keeps:
 - stale and cached data labelled explicitly
 - strong app-generated alerts suppressed when core evidence is degraded
 - ML in shadow mode rather than operational use
+
+## Verification
+
+FloodGuard includes checks for:
+
+- backend ingestion behaviour and source-health contracts
+- stale/cache/fallback honesty under degraded-source conditions
+- frontend production build correctness
+- dashboard smoke testing across core views and area switching
+- ML report and API contract stability
+- strict live-source readiness when genuinely current data is available
 
 ## Limitations
 
@@ -171,6 +203,15 @@ npm run build
 ### Run the Python ML pipeline
 
 See [floodguard-ml/README.md](./floodguard-ml/README.md).
+
+## Demo walkthrough
+
+1. Select a pilot area.
+2. Inspect the current concern level and key concern drivers.
+3. Check source-health and evidence reliability to see whether the signals are live, stale, cached, fallback, or unavailable.
+4. Review the decision audit and rainfall/river context to understand why the concern level was assigned.
+5. Inspect notifications and public signals to see how FloodGuard behaves under stronger or degraded evidence.
+6. Review the ML shadow output, noting that it is comparison-only and does not control live alerts.
 
 ## Key API routes
 
