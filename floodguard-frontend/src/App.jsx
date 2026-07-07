@@ -2461,7 +2461,7 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
 // #image evidence review card
 function EvidenceReviewPanel({ queue }) {
   return (
-    <section className="card evidence-review-card">
+    <section className="card evidence-review-card evidence-review-card-padded">
       <div className="section-header compact">
         <div>
           <p className="section-label">Image-assisted validation</p>
@@ -2885,7 +2885,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
 // #system flow card
 function ArchitecturePanel() {
   return (
-    <section className="card">
+    <section className="card architecture-card">
       <div className="section-header compact">
         <div>
           <p className="section-label">System flow</p>
