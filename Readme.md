@@ -21,9 +21,9 @@ Its main technical contribution is the reliability layer. FloodGuard does not tr
 | Reliability | Freshness checks, provenance, fallback/cache labelling, stale/missing/unavailable states |
 | Risk logic | Explainable rule-based concern scoring with decision audit output |
 | Notifications | Conservative suppression when degraded core evidence makes stronger advice unsafe |
-| History | Queryable JSONL snapshots, replay summaries, and ML-ready feature export |
-| ML | Python shadow pipeline, baseline models, label audit, and model-card reporting |
-| Testing | Backend regression tests, ingestion honesty checks, API contracts, and Playwright smoke flows |
+| History | Queryable JSONL snapshots, replay summaries, decision-audit storage, and ML-ready feature export |
+| ML | Python shadow pipeline, baseline models, scenario stress-test data, label audit, and model-card reporting |
+| Testing | Backend regression tests, ingestion honesty checks, API contracts, replay coverage, and Playwright smoke flows |
 
 
 ## What is implemented
@@ -34,10 +34,13 @@ Its main technical contribution is the reliability layer. FloodGuard does not tr
 - Source provenance and freshness reporting
 - Explainable rule-based risk scoring with decision audit output
 - Public community-signal intake with validation, rate limiting, duplicate checks, and review-safe image-link handling
+- Image-assisted evidence review queue for linked community-report media
 - Historical snapshot storage and tabular feature export
+- Replay summaries, compact `decisionSummary` outputs, and queryable review windows
 - Notification decision logic with suppression and degraded-data safeguards
 - Python ML prototype pipeline for offline training, evaluation, metrics, and model-card reporting
 - Shadow-mode ML comparison surfaced in the backend and dashboard without overriding the live rule engine
+- Scenario stress-test mode that demonstrates stronger synthetic flood pressure without pretending it is live
 - Deterministic Playwright dashboard smoke tests plus replay and failure-injection regression coverage
 
 ## Why this project is technically interesting
@@ -61,7 +64,8 @@ That matters because high-stakes software should not only produce a status label
 4. The rule engine combines rainfall, river, wetness, confidence, and public-signal pressure into an explainable concern score.
 5. The dashboard presents current concern, trust state, why the concern was assigned, and recommended next steps.
 6. Historical snapshots are exported into feature rows for offline Python ML experiments.
-7. ML results are shown in shadow mode only and do not control live alerts.
+7. A scenario stress-test mode can demonstrate stronger synthetic flood pressure without confusing it with the live area state.
+8. ML results are shown in shadow mode only and do not control live alerts.
 
 ## Why the reliability layer matters
 
@@ -120,6 +124,7 @@ FloodGuard includes checks for:
 - frontend production build correctness
 - dashboard smoke testing across core views and area switching
 - ML report and API contract stability
+- replay summary and event-window review contract stability
 - strict live-source readiness when genuinely current data is available
 
 ## Limitations
@@ -172,6 +177,13 @@ cd floodguard-frontend
 npm run ingest
 ```
 
+### Collect source snapshots for evidence/history review
+
+```bash
+cd floodguard-frontend
+npm run collect:sources
+```
+
 ### Check ingestion honesty state
 
 ```bash
@@ -218,6 +230,7 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 - `GET /api/health`
 - `GET /api/areas`
 - `GET /api/signals?area=parramatta`
+- `GET /api/source-registry?area=parramatta`
 - `GET /api/source-health?area=parramatta`
 - `GET /api/ingestion-readiness`
 - `GET /api/decision-audit?area=parramatta`
@@ -248,7 +261,3 @@ FloodGuard now separates:
 - strict live-source readiness, where rainfall and river must be genuinely fresh live readings
 
 This is why a stale-source run can still demonstrate a successful trust layer even when strict live operation is not currently available.
-
-## Honest one-line summary
-
-FloodGuard is a reliability-aware flood-awareness prototype that turns local public signals into explainable local concern levels, while clearly showing when those signals are current, partial, stale, or only available through fallback data, while keeping official warnings separate and ML in shadow mode.

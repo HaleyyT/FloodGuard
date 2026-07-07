@@ -1,6 +1,6 @@
 # FloodGuard Progress Report
 
-_Last updated: 2026-07-06 (camera-ready wording sync, production-readiness documentation pass, and rainfall-history/dashboard alignment)_
+_Last updated: 2026-07-07 (camera-ready documentation alignment, README strengthening, event-evidence review visibility, and final consistency pass)_
 
 ## Purpose
 
@@ -26,8 +26,10 @@ It is strongest in:
 - cache and fallback handling;
 - explainable risk features and decision audit output;
 - notification decision logic and regression tests;
+- scenario stress-test explanation mode that stays clearly synthetic rather than live;
+- image-assisted community evidence review support and safer linked-media handling;
 - explicit expert-oversight framing and visible prototype thresholds;
-- ML dataset export, label-join plumbing, and time-aware validation safeguards without overclaiming real ML;
+- ML dataset export, label-join plumbing, event-evidence review workflow, and time-aware validation safeguards without overclaiming real ML;
 - dashboard evidence, history, and front-page summary coverage that make the prototype easier to inspect and demo.
 
 It is not yet a production emergency-warning system, and it is not yet a validated ML flood-prediction system.
@@ -97,9 +99,12 @@ Newer work completed since the earlier progress snapshot includes:
 - backend history summaries that now count concern levels, official-warning context, degraded-record rate, and latest decision state for calibration/replay review.
 - a stronger event-label backlog contract with independence level, review priority, join status, and evidence-link placeholders.
 - richer label-audit outputs and `/api/ml/report` supervision summaries that now distinguish evidence-linked backlog rows from fully joined reviewed supervision.
+- an event-evidence review queue workflow that now generates human-review artifacts instead of pretending candidate labels are already validated.
+- an image-assisted evidence review queue in the dashboard so linked media can be surfaced safely for review rather than treated as trusted proof automatically.
 - live rainfall-history ingestion now captures a broader 7-day FloodSmart event window instead of only a very short recent slice, which makes the dashboard rainfall trend and 24h values much more faithful to the configured local gauge source.
 - supporting `Signals` and `Model` pages now use a tighter, more balanced layout so half-width evidence cards occupy their intended space more consistently.
-- README, submission-readiness, poster/demo wording, and final verification notes were refreshed so the camera-ready story stays consistent about official-warning separation, shadow-mode ML, and prototype-calibration thresholds.
+- README, submission-readiness, poster/demo wording, and final verification notes were refreshed so the camera-ready story stays consistent about official-warning separation, shadow-mode ML, prototype-calibration thresholds, and FloodGuard's trust-aware architecture.
+- the public README now surfaces quick-read technical highlights, verification scope, demo walkthrough, and stronger explanation of FloodGuard's core technical contribution.
 
 What matters about this:
 
@@ -122,6 +127,7 @@ What is now implemented:
 
 - Python dataset builder and scenario dataset generator;
 - label-strategy document and label-join contract;
+- event-evidence review queue generation and promotion-gate support for future reviewed supervision;
 - feature-quality report;
 - model registry and multiple baseline models;
 - time-aware validation with area/event holdout checks;
