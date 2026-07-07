@@ -31,6 +31,22 @@ Start the API:
 npm run api
 ```
 
+Start the easiest judge/demo flow:
+
+```bash
+npm run demo
+```
+
+Then open `http://127.0.0.1:4173/`.
+
+This command does three things for you:
+
+- refreshes the latest ingestion snapshot once;
+- starts the FloodGuard API on `127.0.0.1:5174`;
+- starts the frontend on `127.0.0.1:4173`.
+
+This is the simplest command for manual review because `npm run test:e2e` is a test runner, not a human-facing app launcher.
+
 Refresh the stored ingestion snapshot manually:
 
 ```bash
@@ -195,6 +211,7 @@ Production-readiness safety note:
 - `npm run lint`
 - `npm run test`
 - `npm run build`
+- `npm run demo`
 - `npm run check:ingestion`
 - `npm run check:ingestion:live`
 

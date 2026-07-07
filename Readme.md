@@ -1,7 +1,10 @@
 # FloodGuard (accepted for [Coding Fest](https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html))
 
+FloodGuard is a reliability-aware local flood-awareness and decision-support prototype for Parramatta, North Parramatta, and Toongabbie. Its purpose is to make fragmented flood information easier to interpret at the community level, where residents often need to compare separate rainfall gauges, river-height feeds, weather observations, public reports, and official-warning sources before they can understand whether local conditions may be changing. In urgent situations, that fragmentation slows interpretation and makes important environmental information less accessible. FloodGuard is motivated by a simple goal: help people see what is happening locally, why it matters, how trustworthy the evidence is, and what cautious next steps they should consider.
 
-FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. The system eliminates data fragmentation by translating rainfall, river, weather, warning-context, and public-signal evidence into an explainable local concern summary. Rather than leaving residents to compare multiple technical feeds manually, it empowers communities to react swiftly to emergent situations by clearly communicating what is happening, why it matters, and what next steps to take.
+The prototype addresses this problem by integrating live or safely labelled public rainfall, river, weather, official-warning, and community-signal evidence into a single explainable dashboard. FloodGuard normalises these inputs into a consistent local signal model, checks freshness, provenance, fallback/cache state, and source reliability, then applies an explainable rule-based risk engine to classify local concern as Low, Moderate, or High. The dashboard shows the current signal, the evidence behind it, recent rainfall and river trends, official-warning status kept separate from FloodGuard's own local concern, conservative recommended actions, and shadow-mode ML outputs for transparent model comparison without allowing experimental predictions to override the live rule engine.
+
+The current result is a real-data-informed, judge-ready prototype that demonstrates how public environmental signals can be transformed into clearer, more actionable local flood awareness. Its strength is not only that it combines multiple data sources, but that it does so responsibly: stale, cached, fallback, unavailable, and experimental evidence is labelled rather than hidden. This makes FloodGuard useful as a decision-support layer for residents, reviewers, councils, and future emergency-management collaborators because it improves situational awareness while preserving trust, safety boundaries, and explainability. With further expert calibration, stronger event labels, verified community evidence, and validated models, FloodGuard could evolve into a high-impact local flood-risk intelligence platform that supports earlier awareness, better communication, and more confident community preparedness.
 
 FloodGuard is not an official emergency-warning system. Official warnings are shown separately from FloodGuard-generated local concern, the live rule engine remains the active authority inside the prototype, and ML remains shadow mode only.
 
@@ -144,7 +147,19 @@ FloodGuard includes checks for:
 - npm
 - Python 3.11+ for the `floodguard-ml` workspace
 
-### Start the dashboard
+### Quick start for judges and reviewers
+
+```bash
+cd floodguard-frontend
+npm install
+npm run demo
+```
+
+Then open `http://127.0.0.1:4173/`.
+
+`npm run demo` is the easiest end-to-end command for manual review because it refreshes one ingestion snapshot, starts the Node API, and starts the frontend with the correct local API wiring. The commands below remain available if you want to run components manually.
+
+### Start the dashboard manually
 
 ```bash
 cd floodguard-frontend
@@ -152,7 +167,7 @@ npm install
 npm run dev
 ```
 
-### Start the API
+### Start the API manually
 
 ```bash
 cd floodguard-frontend
@@ -261,3 +276,16 @@ FloodGuard now separates:
 - strict live-source readiness, where rainfall and river must be genuinely fresh live readings
 
 This is why a stale-source run can still demonstrate a successful trust layer even when strict live operation is not currently available.
+
+## References
+
+- Bureau of Meteorology. (n.d.). *New South Wales warnings summary*. https://www.bom.gov.au/nsw/warnings/
+- Bureau of Meteorology. (n.d.). *Weather observations for Parramatta*. http://www.bom.gov.au/products/IDN60801/IDN60801.94767.shtml
+- City of Parramatta. (n.d.). *FloodSmart Parramatta: River and rainfall gauges*. https://floodsmartparramatta.com.au/
+- New South Wales Government. (n.d.). *HazardWatch*. https://hazardwatch.gov.au/
+- Transport for NSW. (n.d.). *Live Traffic NSW*. https://www.livetraffic.com/
+- Coding Fest. (n.d.). *Coding Fest*. https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html
+- Node.js. (n.d.). *Node.js documentation*. https://nodejs.org/
+- React. (n.d.). *React documentation*. https://react.dev/
+- Recharts Group. (n.d.). *Recharts*. https://recharts.org/
+- Vite. (n.d.). *Vite guide*. https://vite.dev/guide/

@@ -6,6 +6,7 @@
   "scripts": {
     "api": "node server/server.js",
     "dev": "vite",
+    "demo": "node server/run-demo.js",
     "ingest": "node server/ingest.js",
     "collect:sources": "node server/collect-sources.js",
     "check:ingestion": "node server/check-ingestion.js",
