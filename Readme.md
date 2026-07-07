@@ -28,7 +28,7 @@ FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened t
 
 - [floodguard-frontend](./floodguard-frontend/README.md): React dashboard and Node ingestion/API layer
 - [floodguard-ml](./floodguard-ml/README.md): Python ML experimentation workspace
-- [docs](./docs): submission notes, abstract/poster copy, and screenshots
+- [docs](./docs): public screenshots and diagram assets used to present FloodGuard
 - [roadmap](./roadmap): implementation plans and progress tracking
 - [explanation.md](./explanation.md): beginner-friendly guide to FloodGuard's framework, logic, reliability model, and ML boundaries
 
@@ -195,13 +195,9 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 
 ## Submission notes
 
-- [docs/submission-readiness.md](./docs/submission-readiness.md): verification status and claim boundaries
-- [docs/final-verification.md](./docs/final-verification.md): final command results, manual demo checks, and known caveats
-- [docs/abstract.md](./docs/abstract.md): abstract-ready wording
-- [docs/poster-copy.md](./docs/poster-copy.md): poster text blocks
-- [docs/demo-script.md](./docs/demo-script.md): short demo flow
-- [docs/ml-scope.md](./docs/ml-scope.md): honest ML wording and scope guardrails
-- [docs/expert-review-plan.md](./docs/expert-review-plan.md): domain-review pathway for thresholds, wording, and future validation
+FloodGuard's internal submission-writing notes, poster drafts, verification logs, and planning documents are kept as private working material and are not part of the public repo surface.
+
+The public repo keeps the implementation, screenshots, diagrams, roadmap, and beginner-facing explanation that are most useful for reviewers, judges, and future collaborators.
 
 ## Ingestion-readiness note
 
