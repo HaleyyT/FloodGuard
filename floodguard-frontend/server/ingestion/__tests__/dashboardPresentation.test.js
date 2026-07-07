@@ -81,6 +81,13 @@ test("resident overview model explains concern, trust, and next steps in plain l
         freshnessStatus: "stale",
       },
     ],
+    riskSignals: [
+      { name: "Rainfall", value: 8 },
+      { name: "River", value: 20 },
+      { name: "Wetness", value: 4 },
+      { name: "Public", value: 6 },
+      { name: "Confidence", value: 82 },
+    ],
     decisionAudit: {
       hazardPressure: { rainfall: "watch", river: "stable", wetness: "low" },
       evidenceConfidence: "partial",
@@ -103,6 +110,28 @@ test("resident overview model explains concern, trust, and next steps in plain l
   assert.match(model.decisionOutlook, /Rainfall is elevated enough to watch/i);
   assert.match(model.decisionOutlook, /official warning feed is not connected yet/i);
   assert.ok(model.whyThisMatters.some((item) => /Weather context is stale/i.test(item)));
+});
+
+test("resident overview confidence matches the signal breakdown confidence bar", () => {
+  const model = buildResidentOverviewModel({
+    riskLevel: "Low",
+    summary: "Low local concern is present.",
+    riskSignals: [
+      { name: "Rainfall", value: 4 },
+      { name: "River", value: 31 },
+      { name: "Wetness", value: 12 },
+      { name: "Public", value: 0 },
+      { name: "Confidence", value: 98 },
+    ],
+    decisionAudit: {
+      hazardPressure: { rainfall: "low", river: "stable", wetness: "low" },
+      evidenceConfidence: "high",
+      officialWarningContext: "no_current_warning",
+      reliability: { score: 99, level: "High" },
+    },
+  });
+
+  assert.match(model.trustNote, /98% confidence/i);
 });
 
 test("resident overview model produces a calm outlook for low concern windows", () => {

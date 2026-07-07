@@ -109,6 +109,14 @@ export function buildRiskSummaryModel(dashboardData) {
   };
 }
 
+function signalConfidenceScore(dashboardData) {
+  const confidenceSignal = (dashboardData?.riskSignals ?? []).find(
+    (signal) => signal.name === "Confidence",
+  );
+  const value = confidenceSignal?.value;
+  return typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
+}
+
 function humanizeHazardPressureLevel(level, signalLabel) {
   if (!level) return `${signalLabel} status is unavailable`;
   if (level === "stable") {
@@ -156,6 +164,7 @@ function buildDecisionOutlook(audit, dashboardData) {
 export function buildResidentOverviewModel(dashboardData) {
   const audit = dashboardData?.decisionAudit ?? null;
   const reliability = audit?.reliability ?? null;
+  const confidenceScore = signalConfidenceScore(dashboardData);
   const sourceHealth = dashboardData?.sourceHealth ?? [];
   const staleWeather = sourceHealth.some(
     (source) => source.type === "weather" && source.freshnessStatus === "stale",
@@ -187,8 +196,10 @@ export function buildResidentOverviewModel(dashboardData) {
           ? "Partly, some evidence is limited"
           : "Use extra caution, evidence is limited",
     trustNote:
-      reliability?.score !== undefined && reliability?.score !== null
-        ? `${reliability.score}% confidence with ${reliability.level.toLowerCase()} evidence reliability.`
+      confidenceScore !== null
+        ? `${confidenceScore}% confidence with ${(reliability?.level ?? audit?.evidenceConfidence ?? "unknown").toLowerCase()} evidence reliability.`
+        : reliability?.score !== undefined && reliability?.score !== null
+          ? `${reliability.score}% confidence with ${reliability.level.toLowerCase()} evidence reliability.`
         : "Evidence reliability is unavailable.",
     whyAssigned: [
       ...(audit?.whatIncreasedConcern ?? []).slice(0, 2),
