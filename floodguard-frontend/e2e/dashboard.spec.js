@@ -632,5 +632,5 @@ test("scenario stress-test mode is clearly labelled as simulated and does not lo
   ).toBeVisible();
   await expect(page.getByText("Watch and Act (simulated)")).toBeVisible();
   await expect(page.getByText("Demo/Fallback").first()).toBeVisible();
-  await expect(page.getByText("Scenario stress-test view for Parramatta, NSW")).toBeVisible();
+  await expect(page.getByText("Simulated stress-test for Parramatta")).toBeVisible();
 });
