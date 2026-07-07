@@ -1,7 +1,7 @@
 # FloodGuard (accepted for [Coding Fest](https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html))
 
 
-FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. The live dashboard is intentionally honest about stale sources, fallback state, and official-warning feeds that may be connected but still too old for a live claim.
+FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. It combines local rainfall, river, weather, public-signal, and source-trust evidence into an explainable local concern level. 
 
 FloodGuard is not an official emergency-warning system. Official warnings are shown separately from FloodGuard-generated local concern, the live rule engine remains the active authority inside the prototype, and ML remains shadow mode only.
 
