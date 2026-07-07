@@ -276,13 +276,13 @@ This is why a stale-source run can still demonstrate a successful trust layer ev
 
 ## References
 
-- Bureau of Meteorology. (n.d.). *New South Wales warnings summary*. https://www.bom.gov.au/nsw/warnings/
-- Bureau of Meteorology. (n.d.). *Weather observations for Parramatta*. http://www.bom.gov.au/products/IDN60801/IDN60801.94767.shtml
-- City of Parramatta. (n.d.). *FloodSmart Parramatta: River and rainfall gauges*. https://floodsmartparramatta.com.au/
-- New South Wales Government. (n.d.). *HazardWatch*. https://hazardwatch.gov.au/
-- Transport for NSW. (n.d.). *Live Traffic NSW*. https://www.livetraffic.com/
-- Coding Fest. (n.d.). *Coding Fest*. https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html
-- Node.js. (n.d.). *Node.js documentation*. https://nodejs.org/
-- React. (n.d.). *React documentation*. https://react.dev/
-- Recharts Group. (n.d.). *Recharts*. https://recharts.org/
-- Vite. (n.d.). *Vite guide*. https://vite.dev/guide/
+- Breiman, L. (2001). Random forests. *Machine Learning, 45*(1), 5-32. https://doi.org/10.1023/A:1010933404324
+- Bureau of Meteorology. (n.d.). *New South Wales rain and river data*. Retrieved July 7, 2026, from https://www.bom.gov.au/nsw/flood/rain_river.shtml
+- City of Parramatta. (n.d.). *Check your river and rain gauge levels*. Retrieved July 7, 2026, from https://www.cityofparramatta.nsw.gov.au/environment/flooding-and-emergencies/floodsmart-parramatta/check-your-river-and-rain-gauge-levels
+- City of Parramatta FloodSmart. (n.d.). *Lizard measuring stations API* [Data set]. Retrieved July 7, 2026, from https://parramatta.lizard.net/api/v4/measuringstations/
+- Cox, D. R. (1958). The regression analysis of binary sequences. *Journal of the Royal Statistical Society: Series B (Methodological), 20*(2), 215-242.
+- Data.NSW. (n.d.). *Hazard Watch* [Data set]. Retrieved July 7, 2026, from https://data.nsw.gov.au/data/dataset/hazard-watch
+- Geurts, P., Ernst, D., & Wehenkel, L. (2006). Extremely randomized trees. *Machine Learning, 63*(1), 3-42. https://doi.org/10.1007/s10994-006-6226-1
+- HazardWatch. (n.d.). *HazardWatch*. Retrieved July 7, 2026, from https://www.hazardwatch.gov.au/
+- NSW Flood Data Portal. (n.d.). *NSW Flood Data Portal*. Retrieved July 7, 2026, from https://flooddata.ses.nsw.gov.au/
+- NSW State Emergency Service. (n.d.). *Understand warning levels*. Retrieved July 7, 2026, from https://www.ses.nsw.gov.au/understand-warnings
