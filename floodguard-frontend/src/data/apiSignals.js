@@ -43,8 +43,7 @@ function buildSignalsUrl(areaId, refresh = false) {
   const url = new URL(parramattaSignalsApiUrl);
 
   if (areaId) {
-    url.pathname = "/api/signals";
-    url.searchParams.set("area", areaId);
+    url.pathname = `/api/signals/${areaId}`;
   }
 
   if (refresh) {
