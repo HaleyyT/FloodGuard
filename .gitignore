@@ -39,5 +39,6 @@ floodguard-data/
 docs/diagrams
 docs/images/drafts-dashboard
 docs/internal/
+docs/private/
 floodguard-frontend/playwright-report/
 floodguard-frontend/test-results/
