@@ -1,4 +1,4 @@
-# FloodGuard ([Coding Fest](https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html) Best UG senior 2nd Prize)
+# FloodGuard ([Coding Fest](https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html) Best UG senior project 2nd Prize)
 
 
 FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. The system eliminates data fragmentation by translating rainfall, river, weather, warning-context, and public-signal evidence into an explainable local concern summary. Rather than leaving residents to compare multiple technical feeds manually, it empowers communities to react swiftly to emergent situations by clearly communicating what is happening, why it matters, and what next steps to take.
