@@ -173,7 +173,7 @@ def review_gauge_candidates(
         write_review_report([])
         return []
 
-    reviewed_at = pd.Timestamp.utcnow().isoformat()
+    reviewed_at = pd.Timestamp.now(tz="UTC").isoformat()
     results: list[GaugeEvidenceResult] = []
     for index, row in candidate_rows.iterrows():
         area = str(row["area"])

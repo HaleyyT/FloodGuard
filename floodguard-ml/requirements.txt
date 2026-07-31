@@ -4,6 +4,7 @@ scipy
 scikit-learn
 joblib
 matplotlib
+certifi
 # Optional later model families:
 # xgboost
 # lightgbm

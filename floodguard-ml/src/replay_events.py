@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -98,10 +99,34 @@ def json_safe(value: Any) -> Any:
     return value
 
 
+def int_or_default(value: Any, default: int = 0) -> int:
+    """Convert nullable dataframe values without treating NaN as an integer."""
+
+    if value is None:
+        return default
+    try:
+        if value != value:  # NaN/NA values are not equal to themselves.
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def snapshot_key(area_id: str, observed_at: str | None) -> str:
     """Use a deterministic composite key across history, labels, and model outputs."""
 
-    return f"{area_id}|{observed_at or 'unknown'}"
+    timestamp = observed_at or "unknown"
+    if observed_at:
+        try:
+            parsed = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone(timezone.utc)
+            timestamp = parsed.isoformat()
+        except ValueError:
+            # Preserve malformed legacy values so replay remains inspectable.
+            timestamp = observed_at
+
+    return f"{area_id}|{timestamp}"
 
 
 def load_jsonl_history(history_dir: Path = HISTORY_DIR, area_id: str | None = None) -> list[dict[str, Any]]:
@@ -524,7 +549,27 @@ def write_replay_sqlite(
             for _, row in dataset.iterrows()
         }
 
-        for record in history_records:
+        # The feature dataset may legitimately contain snapshots that predate the
+        # append-only JSONL history. Keep those rows replayable instead of
+        # producing an empty database when history has not yet been collected.
+        replay_records = list(history_records)
+        history_keys = {
+            snapshot_key(
+                record.get("areaId") or record.get("_historyAreaId"),
+                iso_timestamp(record.get("ingestedAt")),
+            )
+            for record in history_records
+        }
+        for key, row in dataset_rows.items():
+            if key not in history_keys:
+                replay_records.append(
+                    {
+                        "areaId": row["areaId"],
+                        "ingestedAt": row[GROUP_TIMESTAMP_COLUMN].isoformat(),
+                    }
+                )
+
+        for record in replay_records:
             area_id = record.get("areaId") or record.get("_historyAreaId")
             observed_at = iso_timestamp(record.get("ingestedAt"))
             key = snapshot_key(area_id, observed_at)
@@ -597,7 +642,7 @@ def write_replay_sqlite(
             )
 
             rule_target = (
-                int(training_row[RULE_TARGET_COLUMN])
+                int_or_default(training_row[RULE_TARGET_COLUMN])
                 if training_row is not None and training_row.get(RULE_TARGET_COLUMN) is not None
                 else int(record.get("riskLevel") in {"Moderate", "High"})
             )
@@ -627,7 +672,9 @@ def write_replay_sqlite(
                     area_id,
                     observed_at,
                     training_row["warningStatus"] if training_row is not None and "warningStatus" in training_row else (record.get("warningSummary") or {}).get("status"),
-                    int(training_row["warningActive"]) if training_row is not None and "warningActive" in training_row else 0,
+                    int_or_default(training_row["warningActive"])
+                    if training_row is not None and "warningActive" in training_row
+                    else 0,
                 ),
             )
 
@@ -642,11 +689,13 @@ def write_replay_sqlite(
                     rule_target,
                     None
                     if training_row is None or training_row.get(EVENT_TARGET_COLUMN) != training_row.get(EVENT_TARGET_COLUMN)
-                    else int(training_row[EVENT_TARGET_COLUMN]),
+                    else int_or_default(training_row[EVENT_TARGET_COLUMN]),
                     training_row[RULE_LABEL_SOURCE_COLUMN] if training_row is not None and RULE_LABEL_SOURCE_COLUMN in training_row else "rule_derived",
                     training_row[EVENT_LABEL_SOURCE_COLUMN] if training_row is not None and EVENT_LABEL_SOURCE_COLUMN in training_row else None,
                     training_row[EVENT_LABEL_STRENGTH_COLUMN] if training_row is not None and EVENT_LABEL_STRENGTH_COLUMN in training_row else None,
-                    int(training_row[EVENT_LABEL_AVAILABLE_COLUMN]) if training_row is not None and EVENT_LABEL_AVAILABLE_COLUMN in training_row else 0,
+                    int_or_default(training_row[EVENT_LABEL_AVAILABLE_COLUMN])
+                    if training_row is not None and EVENT_LABEL_AVAILABLE_COLUMN in training_row
+                    else 0,
                 ),
             )
 

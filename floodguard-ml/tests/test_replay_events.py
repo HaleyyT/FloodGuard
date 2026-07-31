@@ -18,6 +18,7 @@ from replay_events import (  # noqa: E402
     event_window_limitations,
     flatten_source_readings,
     run_replay,
+    snapshot_key,
     summarise_window,
 )
 
@@ -25,6 +26,12 @@ import pandas as pd  # noqa: E402
 
 
 class ReplayEventsTests(unittest.TestCase):
+    def test_snapshot_key_normalises_equivalent_utc_timestamps(self) -> None:
+        self.assertEqual(
+            snapshot_key("parramatta", "2026-07-01T00:00:00Z"),
+            snapshot_key("parramatta", "2026-07-01T00:00:00+00:00"),
+        )
+
     def test_flatten_source_readings_supports_legacy_history_rows(self) -> None:
         record = {
             "areaId": "parramatta",
