@@ -4066,3 +4066,105 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Keep overview content stable when live explanations become longer. */
+.resident-answer-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.resident-answer-card.concern-card {
+  height: 222px;
+}
+
+.resident-answer-card.trust-card {
+  height: 112px;
+}
+
+.resident-answer-card.why-card {
+  height: 154px;
+}
+
+.resident-answer-card.next-card {
+  height: 512px;
+}
+
+.resident-answer-scroll,
+.signal-kpi-grid .info-tile h3,
+.overview-sidebar-column .local-signals-card .report-description {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(108, 173, 244, 0.35) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.resident-answer-scroll {
+  flex: 1 1 auto;
+}
+
+.resident-answer-scroll::-webkit-scrollbar,
+.signal-kpi-grid .info-tile h3::-webkit-scrollbar,
+.overview-sidebar-column .local-signals-card .report-description::-webkit-scrollbar {
+  width: 3px;
+}
+
+.resident-answer-scroll::-webkit-scrollbar-track,
+.signal-kpi-grid .info-tile h3::-webkit-scrollbar-track,
+.overview-sidebar-column .local-signals-card .report-description::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.resident-answer-scroll::-webkit-scrollbar-thumb,
+.signal-kpi-grid .info-tile h3::-webkit-scrollbar-thumb,
+.overview-sidebar-column .local-signals-card .report-description::-webkit-scrollbar-thumb {
+  background: rgba(108, 173, 244, 0.35);
+  border-radius: 999px;
+}
+
+.signal-kpi-grid .info-tile {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 96px;
+  overflow: hidden;
+}
+
+.signal-kpi-grid .info-tile h3 {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+
+/* Show all three public-signal cards while retaining independent scrolling. */
+.overview-sidebar-column .local-signals-card {
+  height: 700px;
+  max-height: none;
+  min-height: 700px;
+  padding-bottom: 1.25rem !important;
+}
+
+.overview-sidebar-column .local-signals-card .reports-list {
+  padding-bottom: 15px;
+}
+
+.overview-sidebar-column .local-signals-card .report-card {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 175px;
+  flex-direction: column;
+  height: 175px;
+  overflow: hidden;
+}
+
+.overview-sidebar-column .local-signals-card .report-description {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 720px) {
+  .resident-answer-card.next-card {
+    height: 250px;
+  }
+}
