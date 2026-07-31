@@ -3978,8 +3978,8 @@ body {
 }
 
 .overview-sidebar-column .location-card .map-panel {
-  height: 345px;
-  min-height: 345px;
+  height: 338px;
+  min-height: 338px;
 }
 
 .overview-sidebar-column .local-signals-card .reports-list {
@@ -4154,11 +4154,12 @@ body {
 .overview-sidebar-column .local-signals-card .report-card {
   box-sizing: border-box;
   display: flex;
-  flex: 0 0 175px;
+  flex: 0 0 179px;
   flex-direction: column;
-  height: 175px;
+  height: 179px;
   overflow: hidden;
   padding: 7px !important;
+  padding-top: 11px !important;
 }
 
 .overview-sidebar-column .local-signals-card .report-description {
