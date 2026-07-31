@@ -41,6 +41,26 @@ function normaliseSignalType(value) {
   return signalTypes.has(signalType) ? signalType : "local observation";
 }
 
+function normaliseReportLocation(input = {}) {
+  const lat = Number(input.latitude);
+  const lon = Number(input.longitude);
+
+  if ((input.latitude === undefined || input.latitude === "") && (input.longitude === undefined || input.longitude === "")) {
+    return null;
+  }
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    throw validationError("Report location must include valid latitude and longitude values.");
+  }
+
+  // Approximate to roughly 100 m before storage, so community reports retain useful map context without precise addresses.
+  return {
+    lat: Number(lat.toFixed(3)),
+    lon: Number(lon.toFixed(3)),
+    precision: "approximate-100m",
+  };
+}
+
 function isPrivateImageHost(hostname) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   const ipVersion = net.isIP(host);
@@ -342,6 +362,7 @@ export function validateCommunityReport(input = {}) {
   const severity = normaliseSeverity(input.severity);
   const signalType = normaliseSignalType(input.signalType);
   const imageEvidence = normaliseImageEvidence(input);
+  const reportLocation = normaliseReportLocation(input);
   const title =
     cleanText(input.title, 80) ||
     `${signalType.replace(/^\w/, (letter) => letter.toUpperCase())} report`;
@@ -359,6 +380,7 @@ export function validateCommunityReport(input = {}) {
     source: "community",
     confidence: reportConfidence(severity),
     createdAt: new Date().toISOString(),
+    ...(reportLocation ? { location: reportLocation } : {}),
     ...(imageEvidence ? { imageEvidence } : {}),
   };
 

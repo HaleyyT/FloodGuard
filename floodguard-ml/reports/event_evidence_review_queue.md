@@ -4,11 +4,11 @@ This report highlights the current best candidate event windows for human eviden
 
 ## Queue Summary
 
-- Candidate windows in queue: 26
+- Candidate windows in queue: 2
 - High-priority candidate windows: 2
-- Windows with real evidence links: 5
-- Windows still using placeholder evidence: 2
-- Windows currently eligible to become `reviewed_for_shadow_mode`: 1
+- Windows with real evidence links: 1
+- Windows still using placeholder evidence: 1
+- Windows currently eligible to become `reviewed_for_shadow_mode`: 0
 
 ## Top Candidate Windows
 
@@ -27,65 +27,20 @@ This report highlights the current best candidate event windows for human eviden
 - Can become `reviewed_for_shadow_mode`: `False`
 - Recommended next action: Replace placeholder link with a real warning archive, gauge record, council report, road closure notice, or verified local impact source.
 
-### Candidate local impact window for review
+### Candidate impact window with real notice
 
 - Area: `toongabbie`
 - Window: `2026-06-30 00:00:00+00:00` to `2026-06-30 06:00:00+00:00`
 - Supervision kind: `impact-derived`
-- Label strength: `weak`
+- Label strength: `strong`
 - Review status: `candidate_review`
-- Evidence link real: `False`
-- Evidence link placeholder: `True`
+- Evidence link real: `True`
+- Evidence link placeholder: `False`
 - Evidence support status: `unknown`
 - Area match status: `area_mapping_missing`
 - Time window status: `window_present`
 - Can become `reviewed_for_shadow_mode`: `False`
-- Recommended next action: Replace placeholder link with a real warning archive, gauge record, council report, road closure notice, or verified local impact source.
-
-### North Parramatta gauge-threshold candidate window
-
-- Area: `north-parramatta`
-- Window: `2026-06-12 05:24:44.242000+00:00` to `2026-06-12 05:24:44.242000+00:00`
-- Supervision kind: `gauge-threshold`
-- Label strength: `weak`
-- Review status: `candidate_review`
-- Evidence link real: `True`
-- Evidence link placeholder: `False`
-- Evidence support status: `mismatch`
-- Area match status: `high_confidence_area_match`
-- Time window status: `instant_window_review`
-- Can become `reviewed_for_shadow_mode`: `False`
-- Recommended next action: Replace or expand the evidence pack; the linked archive does not currently support this candidate window.
-
-### North Parramatta gauge-threshold candidate window
-
-- Area: `north-parramatta`
-- Window: `2026-06-13 06:44:51.865000+00:00` to `2026-06-13 06:54:32.863000+00:00`
-- Supervision kind: `gauge-threshold`
-- Label strength: `weak`
-- Review status: `candidate_review`
-- Evidence link real: `True`
-- Evidence link placeholder: `False`
-- Evidence support status: `mismatch`
-- Area match status: `high_confidence_area_match`
-- Time window status: `window_present`
-- Can become `reviewed_for_shadow_mode`: `False`
-- Recommended next action: Replace or expand the evidence pack; the linked archive does not currently support this candidate window.
-
-### North Parramatta gauge-threshold candidate window
-
-- Area: `north-parramatta`
-- Window: `2026-06-14 09:33:49.773000+00:00` to `2026-06-14 09:39:37.035000+00:00`
-- Supervision kind: `gauge-threshold`
-- Label strength: `weak`
-- Review status: `candidate_review`
-- Evidence link real: `True`
-- Evidence link placeholder: `False`
-- Evidence support status: `confirmed`
-- Area match status: `high_confidence_area_match`
-- Time window status: `window_present`
-- Can become `reviewed_for_shadow_mode`: `True`
-- Recommended next action: Review the linked evidence and decide whether this can be upgraded to reviewed_for_shadow_mode.
+- Recommended next action: Review the linked evidence pack and record whether it confirms or contradicts the candidate window.
 
 ## Interpretation
 
