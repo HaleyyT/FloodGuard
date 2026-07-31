@@ -7,6 +7,12 @@ FloodGuard is not an official emergency-warning system. Official warnings are sh
 
 FloodGuard won 2nd prize for Best Undergraduate Senior Project Award at Coding Fest 2026, a competition opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
 
+## Live web demo
+
+### [Open FloodGuard →](https://floodguard-project.vercel.app/)
+
+***Please wait for FloodGuard to refresh before using the dashboard.*** The status near the area selector will show whether the current evidence is live, stale, fallback-based or unavailable.
+
 ![FloodGuard dashboard prototype](docs/images/floodguard-1-8-rm.png)
 
 ## Technical strengths
@@ -119,12 +125,6 @@ FloodGuard exports rainfall, river, wetness, lag and reliability features into a
 ### Which model is strongest?
 
 **Random forest is the strongest current shadow model by balanced accuracy.** Balanced accuracy gives equal importance to lower-concern and elevated classes, so it is more meaningful than ordinary accuracy for this 0.6%-positive dataset. Its 1.000 recall means it matched every elevated rule label in the evaluated split; however, its 0.020 precision means most of its escalations were false positives. It is useful for sensitivity analysis, not ready for resident alerts.
-
-### Does ML agree with the rule engine?
-
-Partially. Random forest agrees with the rule-derived target on 61.3% of evaluated rows overall. It reproduces all eight elevated rule cases but labels 387 lower-concern rows as elevated. Logistic regression and Extra Trees agree with 99.4% overall mainly because lower-concern rows dominate, while each misses six of eight elevated cases.
-
-More importantly, the current target comes from FloodGuard's own rules. Agreement shows that a model can imitate parts of the rule logic; it is not independent confirmation that either approach predicts real floods. The rule engine therefore remains authoritative and ML stays outside operational decisions.
 
 ### Next ML steps
 
