@@ -3937,10 +3937,10 @@ body {
 .overview-sidebar-column .local-signals-card {
   box-sizing: border-box;
   margin-bottom: 3px;
-  max-height: min(630px, calc(100vh - 120px));
+  max-height: min(606px, calc(100vh - 120px));
   min-height: 392px;
   overflow: hidden;
-  padding-bottom: calc(1.25rem + 44px) !important;
+  padding-bottom: calc(1.25rem + 40px) !important;
 }
 
 .overview-top-grid .card,
