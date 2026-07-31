@@ -361,16 +361,8 @@ async function fulfillJson(route, body) {
 
 async function installMockFloodguardApi(
   page,
-  {
-    degradedAreaIds = [],
-    warningUnavailableAreaIds = [],
-    mlReportUnavailable = false,
-    signalDelayMsByArea = {},
-    signalFailureRequestNumbersByArea = {},
-  } = {},
+  { degradedAreaIds = [], warningUnavailableAreaIds = [], mlReportUnavailable = false } = {},
 ) {
-  const signalRequestCounts = new Map();
-
   await page.route(`${apiBaseUrl}/api/**`, async (route) => {
     const url = new URL(route.request().url());
     const signalPathPrefix = "/api/signals/";
@@ -387,23 +379,6 @@ async function installMockFloodguardApi(
     }
 
     if (url.pathname === "/api/signals" || pathAreaId) {
-      const requestNumber = (signalRequestCounts.get(areaId) || 0) + 1;
-      signalRequestCounts.set(areaId, requestNumber);
-
-      const delayMs = Number(signalDelayMsByArea[areaId] || 0);
-      if (delayMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-
-      if ((signalFailureRequestNumbersByArea[areaId] || []).includes(requestNumber)) {
-        await route.fulfill({
-          status: 503,
-          contentType: "application/json",
-          body: JSON.stringify({ error: "Signal refresh temporarily unavailable" }),
-        });
-        return;
-      }
-
       await fulfillJson(route, buildSignalFixture(areaId, { degraded: isDegraded, warningUnavailable }));
       return;
     }
@@ -603,47 +578,6 @@ test("area switcher updates the monitored region content for each pilot suburb",
 
   await page.getByRole("button", { name: "Toongabbie" }).click();
   await expect(page.getByRole("heading", { name: "Toongabbie, NSW", exact: true })).toBeVisible();
-});
-
-test("a slow area switch stays responsive and becomes live when its API response arrives", async ({
-  page,
-}) => {
-  await installMockFloodguardApi(page, {
-    signalDelayMsByArea: { "north-parramatta": 1000 },
-  });
-
-  await page.goto("/");
-  await expect(page.getByText("Live feed", { exact: true })).toBeVisible();
-
-  await page.getByRole("button", { name: "North Parramatta" }).click();
-  await expect(
-    page.getByRole("heading", { name: "North Parramatta, NSW", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator(".source-state-chip")).toHaveText("Refreshing");
-  await expect(page.getByText("Live feed", { exact: true })).toBeVisible();
-});
-
-test("a failed cached-area revalidation keeps the API snapshot instead of claiming local fallback", async ({
-  page,
-}) => {
-  await installMockFloodguardApi(page, {
-    signalFailureRequestNumbersByArea: { "north-parramatta": [2] },
-  });
-
-  await page.goto("/");
-  await expect(page.getByText("Live feed", { exact: true })).toBeVisible();
-
-  await page.getByRole("button", { name: "North Parramatta" }).click();
-  await expect(page.getByText("Live feed", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Parramatta", exact: true }).click();
-  await expect(page.getByText("Live feed", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "North Parramatta" }).click();
-
-  await expect(
-    page.getByRole("heading", { name: "North Parramatta, NSW", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Cached API snapshot", { exact: true })).toBeVisible();
-  await expect(page.getByText("Fallback mode", { exact: true })).toHaveCount(0);
 });
 
 test("degraded source fixture keeps stale evidence visible without presenting it as live", async ({

@@ -64,11 +64,6 @@ const fallbackAreas = [
 const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
-const areaSignalsRequestTimeoutMs = Number(
-  import.meta.env.VITE_FLOODGUARD_REQUEST_TIMEOUT_MS || 20000
-);
-const areaSignalsCache = new Map();
-const areaSignalsRequests = new Map();
 const appSections = [
   { id: "overview", label: "Overview" },
   { id: "signals", label: "Signals" },
@@ -76,63 +71,6 @@ const appSections = [
   { id: "model", label: "Model" },
   { id: "architecture", label: "Architecture" },
 ];
-
-function buildAreaFallbackSignals(areaId) {
-  const area = fallbackAreas.find((candidate) => candidate.id === areaId) ?? fallbackAreas[0];
-
-  return {
-    ...localParramattaSignals,
-    area: {
-      id: area.id,
-      name: area.name,
-      catchment: area.catchment,
-    },
-    location: {
-      ...localParramattaSignals.location,
-      name: area.name,
-    },
-  };
-}
-
-function loadCachedAreaSignals(
-  areaId,
-  { forceRefresh = false, preferCache = true } = {}
-) {
-  if (preferCache && !forceRefresh) {
-    const cachedSignals = areaSignalsCache.get(areaId);
-    if (cachedSignals) return Promise.resolve(cachedSignals);
-  }
-
-  const existingRequest = areaSignalsRequests.get(areaId);
-  if (existingRequest) return existingRequest;
-
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), areaSignalsRequestTimeoutMs);
-  const request = fetchParramattaSignals({
-    areaId,
-    refresh: forceRefresh,
-    signal: controller.signal,
-  })
-    .then((apiSignals) => {
-      areaSignalsCache.set(areaId, apiSignals);
-      return apiSignals;
-    })
-    .catch((error) => {
-      if (error.name === "AbortError") {
-        throw new Error("Live data is taking longer than expected. Showing local fallback data.");
-      }
-      throw error;
-    })
-    .finally(() => {
-      window.clearTimeout(timeoutId);
-      if (areaSignalsRequests.get(areaId) === request) {
-        areaSignalsRequests.delete(areaId);
-      }
-    });
-
-  areaSignalsRequests.set(areaId, request);
-  return request;
-}
 
 const fallbackRiverGaugeLocations = {
   "Parramatta River at Riverside Theatre": { lat: -33.814, lon: 151.004 },
@@ -596,8 +534,7 @@ function buildReliabilitySummary(sources = [], ingestionHealth = null) {
 }
 
 function formatRefreshStatus(refreshMetadata, sourceStatus) {
-  if (sourceStatus === "local") return "Local fallback signals loaded";
-  if (sourceStatus === "api-cache") return "Latest good API snapshot kept";
+  if (sourceStatus !== "api") return "Local fallback signals loaded";
   if (refreshMetadata?.status === "protected-cache") return "Latest good API snapshot kept";
   if (refreshMetadata?.status === "blocked-refresh") return "Live API refresh blocked";
   if (refreshMetadata?.status === "cache") return "Live API cache loaded";
@@ -619,8 +556,9 @@ function formatRefreshNote(refreshMetadata) {
 
 function buildHeaderSourceState(sourceStatus, liveStatus) {
   if (liveStatus?.isRefreshing) return { label: "Refreshing", tone: "neutral" };
-  if (sourceStatus === "api-cache") return { label: "Cached API snapshot", tone: "warn" };
-  if (sourceStatus !== "api") return { label: "Fallback mode", tone: "warn" };
+  if (liveStatus?.errorMessage || sourceStatus !== "api") {
+    return { label: "Fallback mode", tone: "warn" };
+  }
   if (liveStatus?.lastUpdated) return { label: "Live feed", tone: "live" };
   return { label: "Sync pending", tone: "neutral" };
 }
@@ -1114,15 +1052,16 @@ function useParramattaSignals(selectedAreaId) {
   const [errorMessage, setErrorMessage] = useState(null);
 
   const loadAreaSignals = useCallback(
-    async ({ forceRefresh = false, preferCache = true } = {}) => {
+    async ({ forceRefresh = false, signal } = {}) => {
       const requestId = latestRequestRef.current + 1;
       latestRequestRef.current = requestId;
       setIsRefreshing(true);
 
       try {
-        const apiSignals = await loadCachedAreaSignals(selectedAreaId, {
-          forceRefresh,
-          preferCache,
+        const apiSignals = await fetchParramattaSignals({
+          areaId: selectedAreaId,
+          refresh: forceRefresh,
+          signal,
         });
 
         if (requestId === latestRequestRef.current) {
@@ -1133,15 +1072,7 @@ function useParramattaSignals(selectedAreaId) {
         }
       } catch (error) {
         if (error.name !== "AbortError" && requestId === latestRequestRef.current) {
-          const cachedSignals = areaSignalsCache.get(selectedAreaId);
-          if (cachedSignals) {
-            setSignals(cachedSignals);
-            setSourceStatus("api-cache");
-            setLastUpdated(cachedSignals.ingestedAt || null);
-          } else {
-            setSourceStatus("local");
-            setLastUpdated(null);
-          }
+          setSourceStatus("local");
           setErrorMessage(error.message);
         }
       } finally {
@@ -1154,32 +1085,19 @@ function useParramattaSignals(selectedAreaId) {
   );
 
   useEffect(() => {
+    const controller = new AbortController();
     let intervalId;
 
-    const cachedSignals = areaSignalsCache.get(selectedAreaId);
-    if (cachedSignals) {
-      setSignals(cachedSignals);
-      setSourceStatus("api-cache");
-      setLastUpdated(cachedSignals.ingestedAt || new Date().toISOString());
-      setErrorMessage(null);
-    } else {
-      setSignals(buildAreaFallbackSignals(selectedAreaId));
-      setSourceStatus("local");
-      setLastUpdated(null);
-      setErrorMessage(null);
-    }
-
-    // Revalidate through the fast API path. Only manual/interval refreshes ask
-    // the server to run upstream ingestion via `refresh=true`.
-    loadAreaSignals({ preferCache: false });
+    loadAreaSignals({ signal: controller.signal });
     intervalId = window.setInterval(() => {
       loadAreaSignals({ forceRefresh: true });
     }, liveRefreshIntervalMs);
 
     return () => {
+      controller.abort();
       window.clearInterval(intervalId);
     };
-  }, [loadAreaSignals, selectedAreaId]);
+  }, [loadAreaSignals]);
 
   return {
     signals,

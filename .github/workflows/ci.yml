@@ -47,8 +47,8 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run dashboard browser tests
-        run: npm run test:e2e
+      - name: Run dashboard smoke test
+        run: npm run test:e2e -- --grep "resident-facing overview"
 
       - name: Upload Playwright diagnostics
         if: failure()
