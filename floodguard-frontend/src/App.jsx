@@ -64,6 +64,7 @@ const fallbackAreas = [
 const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
+const areaSignalsRequestTimeoutMs = 8000;
 const areaSignalsCache = new Map();
 const areaSignalsRequests = new Map();
 const appSections = [
@@ -74,6 +75,23 @@ const appSections = [
   { id: "architecture", label: "Architecture" },
 ];
 
+function buildAreaFallbackSignals(areaId) {
+  const area = fallbackAreas.find((candidate) => candidate.id === areaId) ?? fallbackAreas[0];
+
+  return {
+    ...localParramattaSignals,
+    area: {
+      id: area.id,
+      name: area.name,
+      catchment: area.catchment,
+    },
+    location: {
+      ...localParramattaSignals.location,
+      name: area.name,
+    },
+  };
+}
+
 function loadCachedAreaSignals(areaId, { forceRefresh = false } = {}) {
   if (!forceRefresh) {
     const cachedSignals = areaSignalsCache.get(areaId);
@@ -83,12 +101,25 @@ function loadCachedAreaSignals(areaId, { forceRefresh = false } = {}) {
   const existingRequest = areaSignalsRequests.get(areaId);
   if (existingRequest) return existingRequest;
 
-  const request = fetchParramattaSignals({ areaId, refresh: forceRefresh })
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), areaSignalsRequestTimeoutMs);
+  const request = fetchParramattaSignals({
+    areaId,
+    refresh: forceRefresh,
+    signal: controller.signal,
+  })
     .then((apiSignals) => {
       areaSignalsCache.set(areaId, apiSignals);
       return apiSignals;
     })
+    .catch((error) => {
+      if (error.name === "AbortError") {
+        throw new Error("Live data is taking longer than expected. Showing local fallback data.");
+      }
+      throw error;
+    })
     .finally(() => {
+      window.clearTimeout(timeoutId);
       if (areaSignalsRequests.get(areaId) === request) {
         areaSignalsRequests.delete(areaId);
       }
@@ -96,16 +127,6 @@ function loadCachedAreaSignals(areaId, { forceRefresh = false } = {}) {
 
   areaSignalsRequests.set(areaId, request);
   return request;
-}
-
-function prefetchOtherAreaSignals(selectedAreaId) {
-  fallbackAreas
-    .filter((area) => area.id !== selectedAreaId)
-    .forEach((area) => {
-      void loadCachedAreaSignals(area.id).catch(() => {
-        // Prefetching is an optional speed-up; the selected-area request shows errors normally.
-      });
-    });
 }
 
 const fallbackRiverGaugeLocations = {
@@ -1101,7 +1122,6 @@ function useParramattaSignals(selectedAreaId) {
           setSourceStatus("api");
           setLastUpdated(apiSignals.ingestedAt || new Date().toISOString());
           setErrorMessage(null);
-          prefetchOtherAreaSignals(selectedAreaId);
         }
       } catch (error) {
         if (error.name !== "AbortError" && requestId === latestRequestRef.current) {
@@ -1125,6 +1145,11 @@ function useParramattaSignals(selectedAreaId) {
       setSignals(cachedSignals);
       setSourceStatus("api");
       setLastUpdated(cachedSignals.ingestedAt || new Date().toISOString());
+      setErrorMessage(null);
+    } else {
+      setSignals(buildAreaFallbackSignals(selectedAreaId));
+      setSourceStatus("local");
+      setLastUpdated(null);
       setErrorMessage(null);
     }
 
