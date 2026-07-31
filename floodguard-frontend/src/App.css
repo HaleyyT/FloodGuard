@@ -3940,7 +3940,7 @@ body {
   max-height: min(602px, calc(100vh - 120px));
   min-height: 392px;
   overflow: hidden;
-  padding-bottom: calc(1.25rem + 40px) !important;
+  padding-bottom: calc(1.25rem + 20px) !important;
 }
 
 .overview-top-grid .card,
@@ -4147,6 +4147,8 @@ body {
 
 .overview-sidebar-column .local-signals-card .reports-list {
   padding-bottom: 0;
+  margin-top: 30px;
+  gap: 19px;
 }
 
 .overview-sidebar-column .local-signals-card .report-card {
