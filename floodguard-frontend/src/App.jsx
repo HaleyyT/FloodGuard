@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 import {
   ResponsiveContainer,
   BarChart,
@@ -69,6 +71,15 @@ const appSections = [
   { id: "model", label: "Model" },
   { id: "architecture", label: "Architecture" },
 ];
+
+const fallbackRiverGaugeLocations = {
+  "Parramatta River at Riverside Theatre": { lat: -33.814, lon: 151.004 },
+  "Parramatta River at Marsden Weir": { lat: -33.809, lon: 150.999 },
+  "Darling Mills Creek at North Parramatta": { lat: -33.788, lon: 151.009 },
+  "Toongabbie Creek at Johnstons Bridge": { lat: -33.785, lon: 150.95 },
+  "Toongabbie Creek at Briens Rd": { lat: -33.795, lon: 150.963 },
+  "Toongabbie Creek at Redbank Road": { lat: -33.804, lon: 150.943 },
+};
 
 // #river monitoring card
 function RiverStatusPanel({ areaName, riverSummary }) {
@@ -572,6 +583,14 @@ function formatObservedAt(value) {
   return new Date(timestamp).toLocaleString("en-AU");
 }
 
+function formatModelName(value) {
+  if (!value || value === "Waiting") return "Waiting";
+
+  return String(value)
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function formatWarningAdapterStatus(status) {
   if (status === "live" || status === "connected") return "Official warning available";
   if (status === "not_configured") return "Not connected yet";
@@ -734,7 +753,7 @@ function CompactMlSnapshotPanel({ report, experiment, riskLevel, className = "" 
   );
 }
 
-function OverviewDashboard({ data, report, experiment }) {
+function OverviewDashboard({ data, report, experiment, reports }) {
   return (
     <section className="dashboard-grid overview-workspace" aria-label="FloodGuard operational overview">
       <div className="primary-ops-column overview-main-column">
@@ -750,7 +769,7 @@ function OverviewDashboard({ data, report, experiment }) {
       </div>
 
       <aside className="context-sidebar-column overview-sidebar-column" aria-label="Local context and evidence">
-        <MapPanel areaName={data.areaName} />
+        <MapPanel map={data.map} reports={reports} />
         <ReportsPanel reports={data.reports.slice(0, 3)} />
       </aside>
 
@@ -876,6 +895,35 @@ function buildLocationRelevance(signals) {
   };
 }
 
+function buildMapGauges(signals) {
+  const configuredStations = (signals.spatialRelevance?.configuredStations ?? [])
+    .filter((station) => station.type === "river")
+    .map((station) => ({
+      ...station,
+      ...(signals.riverContext?.stations ?? []).find(
+        (riverStation) => riverStation.stationName === station.stationName,
+      ),
+      observedAt: signals.riverContext?.issuedDate ?? null,
+    }));
+
+  if (configuredStations.length > 0) return configuredStations;
+
+  return Object.entries(fallbackRiverGaugeLocations).map(([stationName, coordinates]) => {
+    const reading = (signals.riverContext?.stations ?? []).find(
+      (station) => station.stationName === stationName,
+    );
+
+    return {
+      ...coordinates,
+      ...reading,
+      id: stationName,
+      stationName,
+      tendency: reading?.tendency ?? "unknown",
+      observedAt: signals.riverContext?.issuedDate ?? null,
+    };
+  });
+}
+
 function buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory = []) {
   // The UI mostly consumes one composed dashboard object so the FloodGuard framework is easier to trace from one place.
   const areaName = signals.area?.name || signals.location.name;
@@ -918,6 +966,15 @@ function buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory =
     ingestionHealth,
     refreshMetadata,
     locationRelevance: buildLocationRelevance(signals),
+    map: {
+      areaName,
+      center: {
+        lat: Number(signals.location?.lat ?? signals.area?.lat),
+        lon: Number(signals.location?.lon ?? signals.area?.lon),
+      },
+      gauges: buildMapGauges(signals),
+      officialWarnings: signals.warningSummary?.warnings ?? [],
+    },
     decisionAudit: signals.riskAssessment?.decisionAudit ?? null,
     publicSignalSummary,
 
@@ -1712,7 +1769,7 @@ function SignalBreakdownChart({ riskSignals }) {
               tick={{ fontSize: 11, fill: "#5b6c84" }}
             />
             <Tooltip />
-            <Bar dataKey="value" fill="#3c8de3" radius={[8, 8, 0, 0]} maxBarSize={48} />
+            <Bar dataKey="value" fill="var(--signal-chart)" radius={[8, 8, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -2070,7 +2127,7 @@ function FrontPageSummary({ data }) {
       </div>
 
       <div className="frontpage-map">
-        <MapPanel areaName={data.areaName} />
+        <MapPanel map={data.map} reports={data.reports} />
       </div>
 
       <div className="frontpage-reports">
@@ -2299,10 +2356,13 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
     description: "",
     imageCaption: "",
     imageUrl: "",
+    latitude: "",
+    longitude: "",
     severity: "low",
     signalType: "local observation",
   });
   const [submitMessage, setSubmitMessage] = useState(null);
+  const [locationMessage, setLocationMessage] = useState(null);
   const isSubmitting = reportState.status === "submitting";
 
   const updateForm = (event) => {
@@ -2323,6 +2383,8 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
         description: "",
         imageCaption: "",
         imageUrl: "",
+        latitude: "",
+        longitude: "",
         severity: "low",
         signalType: "local observation",
       });
@@ -2330,6 +2392,27 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
     } catch (error) {
       setSubmitMessage(error.message);
     }
+  };
+
+  const addApproximateLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationMessage("This browser does not support location sharing.");
+      return;
+    }
+
+    setLocationMessage("Finding your approximate report location…");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setForm((current) => ({
+          ...current,
+          latitude: position.coords.latitude.toFixed(3),
+          longitude: position.coords.longitude.toFixed(3),
+        }));
+        setLocationMessage("Approximate location added to this report (about 100 m precision).");
+      },
+      () => setLocationMessage("Location was not shared; this report will not be mapped."),
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 },
+    );
   };
 
   return (
@@ -2392,6 +2475,12 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
             value={form.description}
           />
         </label>
+        <div className="report-location-row">
+          <button className="refresh-button" onClick={addApproximateLocation} type="button">
+            Add approximate map location
+          </button>
+          <span>{locationMessage ?? "Optional. Only reports with a shared approximate location appear on the map."}</span>
+        </div>
         <div className="report-form-grid">
           <label>
             <span>Image evidence URL</span>
@@ -2445,6 +2534,7 @@ function CommunityReportPanel({ publicSignalSummary, reportState }) {
                     report.imageEvidence.verification}
                 </p>
               )}
+              {report.location && <p className="report-quality">Approximate map location attached</p>}
               <p className="report-quality">
                 Quality {report.validation?.qualityScore ?? report.confidence}/100 - {report.status}
               </p>
@@ -2844,7 +2934,7 @@ function MlPrototypePanel({ report, experiment, riskLevel }) {
         />
         <InfoTile
           label="Best model"
-          value={report.bestPrototypeModel ?? "Waiting"}
+          value={formatModelName(report.bestPrototypeModel)}
         />
         <InfoTile
           label="Training target"
@@ -2987,6 +3077,7 @@ export default function App() {
             data={overviewModeState.data}
             experiment={modelExperiment}
             report={mlReport}
+            reports={communityReportState.reports}
           />
         </>
       )}
@@ -3026,7 +3117,7 @@ export default function App() {
             />
           </div>
           <div className="signals-map-panel">
-            <MapPanel areaName={dashboardData.areaName} />
+            <MapPanel map={dashboardData.map} reports={communityReportState.reports} />
           </div>
         </section>
       )}
@@ -3086,63 +3177,266 @@ export default function App() {
   );
 }
 
+function useLiveLocation() {
+  const watchId = useRef(null);
+  const [location, setLocation] = useState(null);
+  const [status, setStatus] = useState("idle");
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  const stop = useCallback(() => {
+    if (watchId.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchId.current);
+    }
+    watchId.current = null;
+    setStatus("idle");
+  }, []);
+
+  const start = useCallback(() => {
+    if (!navigator.geolocation) {
+      setStatus("unavailable");
+      setErrorMessage("This browser does not support location sharing.");
+      return;
+    }
+
+    if (watchId.current !== null) {
+      stop();
+      return;
+    }
+
+    setStatus("locating");
+    setErrorMessage(null);
+    watchId.current = navigator.geolocation.watchPosition(
+      (position) => {
+        setLocation({
+          accuracy: Math.round(position.coords.accuracy),
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
+        setStatus("tracking");
+      },
+      (error) => {
+        watchId.current = null;
+        setStatus(error.code === error.PERMISSION_DENIED ? "denied" : "unavailable");
+        setErrorMessage(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission was not granted."
+            : "Your location could not be determined right now.",
+        );
+      },
+      { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 },
+    );
+  }, [stop]);
+
+  useEffect(() => stop, [stop]);
+
+  return { errorMessage, location, start, status, stop };
+}
+
+function markerIcon(kind, label = "") {
+  return L.divIcon({
+    className: "",
+    html: `<span class="flood-map-marker ${kind}">${label}</span>`,
+    iconAnchor: [15, 30],
+    iconSize: [30, 30],
+  });
+}
+
+function formatMapTime(value) {
+  if (!value || Number.isNaN(new Date(value).getTime())) return "Time unavailable";
+  return new Date(value).toLocaleString("en-AU", { dateStyle: "short", timeStyle: "short" });
+}
+
+function buildMapPopup(title, lines, reviewedImageUrl = null) {
+  const popup = document.createElement("div");
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  popup.append(heading);
+
+  for (const line of lines) {
+    const text = document.createElement("div");
+    text.textContent = line;
+    popup.append(text);
+  }
+
+  if (reviewedImageUrl) {
+    const image = document.createElement("img");
+    image.alt = "Reviewed community report evidence";
+    image.className = "map-report-image";
+    image.src = reviewedImageUrl;
+    popup.append(image);
+  }
+
+  return popup;
+}
+
+function OperationalMap({ center, followLocation, gauges, reports, warnings, layers, userLocation }) {
+  const elementRef = useRef(null);
+  const initialCenterRef = useRef(center);
+  const leafletMapRef = useRef(null);
+  const layerGroupsRef = useRef(null);
+
+  useEffect(() => {
+    const initialCenter = initialCenterRef.current;
+    const leafletMap = L.map(elementRef.current, { attributionControl: false, scrollWheelZoom: true }).setView([initialCenter.lat, initialCenter.lon], 14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+    }).addTo(leafletMap);
+    leafletMapRef.current = leafletMap;
+    layerGroupsRef.current = {
+      gauges: L.layerGroup().addTo(leafletMap),
+      reports: L.layerGroup().addTo(leafletMap),
+      user: L.layerGroup().addTo(leafletMap),
+      warnings: L.layerGroup().addTo(leafletMap),
+    };
+
+    window.requestAnimationFrame(() => leafletMap.invalidateSize());
+    return () => leafletMap.remove();
+  }, []);
+
+  useEffect(() => {
+    if (followLocation) leafletMapRef.current?.flyTo([center.lat, center.lon], 15, { animate: true });
+  }, [center.lat, center.lon, followLocation]);
+
+  useEffect(() => {
+    const groups = layerGroupsRef.current;
+    if (!groups) return;
+
+    Object.values(groups).forEach((group) => group.clearLayers());
+    if (layers.gauges) {
+      gauges.forEach((gauge) => {
+        L.marker([gauge.lat, gauge.lon], { icon: markerIcon(`gauge ${gauge.tendency}`) })
+          .bindPopup(buildMapPopup(gauge.stationName, [
+            gauge.heightM === null || gauge.heightM === undefined ? "Height unavailable" : `${gauge.heightM} m · ${gauge.tendency}`,
+            formatMapTime(gauge.observedAt),
+          ]))
+          .addTo(groups.gauges);
+      });
+    }
+    if (layers.reports) {
+      reports.forEach((report) => {
+        L.marker([report.location.lat, report.location.lon], { icon: markerIcon(`report ${report.severity}`, "!") })
+          .bindPopup(
+            buildMapPopup(
+              report.title,
+              [
+                report.description,
+                `${report.severity} · ${formatMapTime(report.createdAt)} · unverified`,
+                ...(report.imageEvidence ? ["Image evidence: pending human review"] : []),
+              ],
+              report.imageEvidence?.verification === "reviewed" ? report.imageEvidence.url : null,
+            ),
+          )
+          .addTo(groups.reports);
+      });
+    }
+    if (layers.warnings) {
+      warnings.forEach((warning) => {
+        L.circle([center.lat, center.lon], {
+          color: "#6d28d9",
+          fillColor: "#8b5cf6",
+          fillOpacity: 0.1,
+          radius: 1800,
+          weight: 2,
+        })
+          .bindPopup(buildMapPopup("Official warning", [
+            warning.headline ?? warning.title ?? "Current official warning",
+            "Pilot-area context only — this is not an official warning boundary.",
+          ]))
+          .addTo(groups.warnings);
+      });
+    }
+    if (userLocation) {
+      L.marker([userLocation.lat, userLocation.lon], { icon: markerIcon("user") })
+        .bindPopup(buildMapPopup("Your live location", ["This stays in your browser and is not saved."]))
+        .addTo(groups.user);
+    }
+  }, [center.lat, center.lon, gauges, layers, reports, userLocation, warnings]);
+
+  return <div className="flood-map" ref={elementRef} />;
+}
+
 // #location context map card
-function MapPanel({ areaName }) {
-  const shortAreaName = areaName.replace(", NSW", "");
+function MapPanel({ map, reports = [] }) {
+  const liveLocation = useLiveLocation();
+  const center = liveLocation.location ?? map.center;
+  const isTracking = liveLocation.status === "tracking";
+  const [layers, setLayers] = useState({ gauges: true, reports: true, warnings: true });
+  const mappedReports = reports.filter(
+    (report) => Number.isFinite(report.location?.lat) && Number.isFinite(report.location?.lon),
+  );
+  const activeWarnings = map.officialWarnings ?? [];
+  const openMapUrl = `https://www.openstreetmap.org/?mlat=${center.lat.toFixed(5)}&mlon=${center.lon.toFixed(5)}#map=15/${center.lat.toFixed(5)}/${center.lon.toFixed(5)}`;
+
+  const toggleLayer = (layer) => {
+    setLayers((current) => ({ ...current, [layer]: !current[layer] }));
+  };
 
   return (
     <section className="card location-card">
       <div className="section-header compact">
         <div>
-          <p className="section-label">Location context</p>
-          <h3>Incident map snapshot</h3>
+          <p className="section-label">Live location</p>
+          <h3>{isTracking ? "Your live position" : "Area map"}</h3>
         </div>
+        <button
+          className="map-location-button"
+          onClick={isTracking ? liveLocation.stop : liveLocation.start}
+          type="button"
+        >
+          {liveLocation.status === "locating"
+            ? "Finding you…"
+            : isTracking
+              ? "Stop sharing"
+              : "Use my location"}
+        </button>
       </div>
 
-      <div className="map-panel">
-        <div className="map-grid"></div>
-        <div className="map-catchment-glow"></div>
-        <div className="map-river"></div>
-        <div className="map-river-label">Parramatta River corridor</div>
-
-        <div className="map-label suburb">{areaName}</div>
-        <div className="map-focus-ring"></div>
-        <div className="map-label precinct">Active community reports</div>
-
-        <div className="map-pin high" style={{ top: "24%", left: "74%" }}>
-        </div>
-        <div className="map-event-label high" style={{ top: "19%", left: "79%" }}>
-          Road pooling
-        </div>
-        <div className="map-pin moderate" style={{ top: "50%", left: "35%" }}>
-        </div>
-        <div className="map-event-label moderate" style={{ top: "45%", left: "48%" }}>
-          Creek watch
-        </div>
-        <div className="map-pin low" style={{ top: "74%", left: "78%" }}>
-        </div>
-        <div className="map-event-label low" style={{ top: "67%", left: "60%" }}>
-          Minor debris
-        </div>
-
-        <div className="map-road road-1"></div>
-        <div className="map-road road-2"></div>
-        <div className="map-road road-3"></div>
-        <div className="map-neighbourhood north">North Parramatta</div>
-        <div className="map-neighbourhood south">Parramatta CBD</div>
-        <div className="map-legend">
-          <span className="legend-dot high"></span>
-          High
-          <span className="legend-dot moderate"></span>
-          Moderate
-          <span className="legend-dot low"></span>
-          Low
-        </div>
+      <div className="map-panel live-map-panel">
+        <OperationalMap
+          center={center}
+          followLocation={isTracking}
+          gauges={map.gauges ?? []}
+          layers={layers}
+          reports={mappedReports}
+          userLocation={isTracking ? liveLocation.location : null}
+          warnings={activeWarnings}
+        />
       </div>
 
-      <p className="map-note">
-        Snapshot combines suburb focus, river corridor, and clustered report severity around {shortAreaName}.
-      </p>
+      <div className="map-open-row">
+        <a href={openMapUrl} rel="noreferrer" target="_blank">Open full map ↗</a>
+        <a href="https://www.openstreetmap.org/copyright" rel="noreferrer" target="_blank">© OpenStreetMap</a>
+      </div>
+
+      <div className="map-layer-controls" aria-label="Map layers">
+        <button className={layers.reports ? "active" : ""} onClick={() => toggleLayer("reports")} type="button">
+          Reports {mappedReports.length}
+        </button>
+        <button className={layers.gauges ? "active" : ""} onClick={() => toggleLayer("gauges")} type="button">
+          Gauges {map.gauges?.length ?? 0} · rising {(map.gauges ?? []).filter((gauge) => gauge.tendency === "rising").length}
+        </button>
+        <button className={layers.warnings ? "active" : ""} onClick={() => toggleLayer("warnings")} type="button">
+          Official warnings {activeWarnings.length}
+        </button>
+      </div>
+
+      <div className="map-legend" aria-label="Map legend">
+        <span><i className="legend-marker low" />Low report</span>
+        <span><i className="legend-marker moderate" />Moderate report</span>
+        <span><i className="legend-marker high" />High report</span>
+        <span><i className="legend-marker gauge" />River gauge</span>
+        <span><i className="legend-marker warning" />Official warning context</span>
+      </div>
+
+      <div className="map-location-status" aria-live="polite">
+        {isTracking ? (
+          <p>Live location · ±{liveLocation.location.accuracy} m · not saved</p>
+        ) : liveLocation.errorMessage ? (
+          <p>{liveLocation.errorMessage}</p>
+        ) : (
+          <p>Reports are approximate, warnings need official boundaries</p>
+        )}
+      </div>
     </section>
   );
 }

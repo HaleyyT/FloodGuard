@@ -574,7 +574,7 @@ p {
 }
 
 .frontpage-map .map-panel {
-  height: 1108px;
+  height: 1088px;
 }
 
 .frontpage-map .location-card {
@@ -582,7 +582,11 @@ p {
 }
 
 .frontpage-reports .local-signals-card {
-  padding-bottom: 81px;
+  align-self: stretch;
+  box-sizing: border-box;
+  height: 100%;
+  margin-bottom: 5px;
+  padding-bottom: 84px;
 }
 
 /* #contributing factors and recommended actions */
@@ -1101,6 +1105,15 @@ p {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.ml-prototype-card .history-grid .info-tile {
+  min-width: 0;
+}
+
+.ml-prototype-card .history-grid .info-tile h3 {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
 .evidence-card {
   background: #ebf0f9;
   border: 1px solid #e0eaf7;
@@ -1217,7 +1230,7 @@ p {
   }
 
   .frontpage-map .map-panel {
-    height: 400px;
+    height: 380px;
   }
 
   .frontpage-rainfall .signal-chart-card .chart-box {
@@ -1265,7 +1278,7 @@ p {
   }
 
   .frontpage-map .map-panel {
-    height: 310px;
+    height: 290px;
   }
 
   .frontpage-rainfall .signal-chart-card .chart-box {
@@ -1534,6 +1547,201 @@ p {
   font-size: 0.82rem;
   margin-bottom: 0;
   text-align: center;
+}
+
+.live-map-panel {
+  background: #e6eef4;
+}
+
+.live-map-frame {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.map-location-button {
+  border: 1px solid #184e9f;
+  border-radius: 999px;
+  background: #184e9f;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.map-location-button:hover {
+  background: #103f83;
+}
+
+.map-attribution {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #19345a;
+  font-size: 0.59rem;
+  padding: 2px 4px;
+  pointer-events: none;
+}
+
+.map-location-status {
+  display: block;
+  margin-top: 0;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.map-location-status p {
+  color: #3a587a;
+  font-size: 0.6rem;
+  margin: 0;
+}
+
+.map-location-status a {
+  color: #184e9f;
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.flood-map {
+  background: #d7ecfa;
+  height: 100%;
+  width: 100%;
+}
+
+/* Cool the standard OSM tiles to sit closer to FloodGuard's aqua/sky-blue UI. */
+.flood-map .leaflet-tile {
+  filter: hue-rotate(20deg) saturate(0.75) brightness(1.07) contrast(1.03);
+}
+
+.flood-map-marker {
+  align-items: center;
+  border: 3px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  box-shadow: 0 3px 9px rgba(15, 23, 42, 0.35);
+  color: #ffffff;
+  display: flex;
+  font-size: 0.75rem;
+  font-weight: 900;
+  height: 21px;
+  justify-content: center;
+  transform: rotate(-45deg);
+  width: 21px;
+}
+
+.flood-map-marker > * {
+  transform: rotate(45deg);
+}
+
+.flood-map-marker.report.low { background: #269653; }
+.flood-map-marker.report.moderate { background: #e17d12; }
+.flood-map-marker.report.high { background: #c63d3d; }
+.flood-map-marker.gauge { background: #1769aa; border-radius: 50%; transform: none; }
+.flood-map-marker.gauge.rising { background: #b45309; }
+.flood-map-marker.user { background: #245db2; border-radius: 50%; transform: none; }
+
+.map-layer-controls,
+.map-legend {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 7px;
+  margin-bottom: 5px;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.map-layer-controls button {
+  border: 1px solid #bdd3ea;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #315371;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 4px 6px;
+}
+
+.map-layer-controls button.active {
+  background: var(--signal-chart);
+  border-color: var(--signal-chart);
+  color: #ffffff;
+}
+
+.map-legend {
+  position: static;
+  align-items: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #3a587a;
+  font-size: 0.63rem;
+  font-weight: 600;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 0;
+}
+
+.map-legend span {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.map-open-row a {
+  color: #184e9f;
+}
+
+.map-open-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 2px 0 4px;
+}
+
+.map-open-row a {
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.legend-marker {
+  background: #269653;
+  border-radius: 50%;
+  display: inline-block;
+  height: 9px;
+  width: 9px;
+}
+
+.legend-marker.moderate { background: #e17d12; }
+.legend-marker.high { background: #c63d3d; }
+.legend-marker.gauge { background: #1769aa; }
+.legend-marker.warning { background: #7c3aed; }
+
+.map-report-image {
+  border-radius: 6px;
+  display: block;
+  margin-top: 8px;
+  max-height: 150px;
+  max-width: 220px;
+  object-fit: cover;
+}
+
+.report-location-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin: 2px 0 10px;
+}
+
+.report-location-row span {
+  color: #526b84;
+  font-size: 0.78rem;
 }
 
 /* #river monitoring metric tiles */
@@ -2379,6 +2587,7 @@ button[type="submit"] {
 
   --brand: #184e9f;
   --brand-deep: #19345a;
+  --signal-chart: #3c8de3;
   --brand-soft: rgba(24, 78, 159, 0.08);
   --accent-cyan: #2b8aa6;
   --accent-purple: #561b9d;
@@ -3441,7 +3650,7 @@ body {
 }
 
 .frontpage-reports .report-card {
-  padding: 90px 20px !important;
+  padding: 79.33px 20px !important;
 }
 
 .resident-answer-card.next-card {
@@ -3725,7 +3934,9 @@ body {
 }
 
 .overview-sidebar-column .local-signals-card {
+  margin-bottom: 5px;
   min-height: 392px;
+  padding-bottom: calc(1.25rem + 6px) !important;
 }
 
 .overview-top-grid .card,
