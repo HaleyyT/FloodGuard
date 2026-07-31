@@ -4138,16 +4138,15 @@ body {
   margin-bottom: 0;
 }
 
-/* Show all three public-signal cards while retaining independent scrolling. */
+/* Keep all three public-signal cards visible in the available panel space. */
 .overview-sidebar-column .local-signals-card {
   height: 700px;
   max-height: none;
   min-height: 700px;
-  padding-bottom: 1.25rem !important;
 }
 
 .overview-sidebar-column .local-signals-card .reports-list {
-  padding-bottom: 15px;
+  padding-bottom: 0;
 }
 
 .overview-sidebar-column .local-signals-card .report-card {
@@ -4157,6 +4156,7 @@ body {
   flex-direction: column;
   height: 175px;
   overflow: hidden;
+  padding: 7px !important;
 }
 
 .overview-sidebar-column .local-signals-card .report-description {
