@@ -44,7 +44,7 @@ flowchart LR
 > **Storage status:** `main` has **not** migrated to PostgreSQL/PostGIS. It uses JSONL history and coordinate-distance/configured-station relevance. PostgreSQL/PostGIS remains a documented future migration target, not a current capability.
 
 
-## What is implemented
+## Current implementation
 
 - Multi-area dashboard for Parramatta, North Parramatta, and Toongabbie
 - Live or fallback ingestion paths for rainfall, river, and weather context
@@ -122,7 +122,7 @@ FloodGuard exports rainfall, river, wetness, lag and reliability features into a
 | Random forest | Captures non-linear relationships between rainfall windows, river movement, wetness and reliability without requiring a fixed formula | **Best balanced accuracy: 0.805** and 100% elevated recall, but only 2% precision because it over-escalates |
 | Extra Trees | Tests whether a more randomised ensemble is robust to sparse, correlated features | 0.625 balanced accuracy and 25% recall; similar PR-AUC to random forest but much more selective |
 
-### Which model is strongest?
+### Strongest model
 
 **Random forest is the strongest current shadow model by balanced accuracy.** Balanced accuracy gives equal importance to lower-concern and elevated classes, so it is more meaningful than ordinary accuracy for this 0.6%-positive dataset. Its 1.000 recall means it matched every elevated rule label in the evaluated split; however, its 0.020 precision means most of its escalations were false positives. It is useful for sensitivity analysis, not ready for resident alerts.
 
@@ -214,73 +214,9 @@ Then open `http://127.0.0.1:4173/`.
 7. Open **Architecture** for a plain-language view of the system flow.
 8. Use **Refresh now** to request new API data. The **Scenario stress-test** is a labelled simulation; switch back to **Current source state** for real source status.
 
-### Start the dashboard manually
-
-```bash
-cd floodguard-frontend
-npm install
-npm run dev
-```
-
-### Start the API manually
-
-```bash
-cd floodguard-frontend
-npm run api
-```
-
-### Camera-ready verification
-
-```bash
-cd floodguard-frontend
-npm run test
-npm run build
-npm run check:ingestion
-```
 
 For the current prototype, `npm run check:ingestion` is the camera-ready honesty gate. It passes when degraded, stale, cached, unavailable, or partially connected sources are labelled safely rather than misrepresented as live. `npm run check:ingestion:live` is stricter and should only pass when rainfall, river, and supporting live context are genuinely current.
 
-### Refresh ingestion manually
-
-```bash
-cd floodguard-frontend
-npm run ingest
-```
-
-### Collect source snapshots for evidence/history review
-
-```bash
-cd floodguard-frontend
-npm run collect:sources
-```
-
-### Check ingestion honesty state
-
-```bash
-cd floodguard-frontend
-npm run check:ingestion
-```
-
-### Run backend tests
-
-```bash
-cd floodguard-frontend
-npm run test
-```
-
-### Run end-to-end smoke tests
-
-```bash
-cd floodguard-frontend
-npm run test:e2e
-```
-
-### Build production frontend
-
-```bash
-cd floodguard-frontend
-npm run build
-```
 
 ### Run the Python ML pipeline
 
