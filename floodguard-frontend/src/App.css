@@ -3978,8 +3978,8 @@ body {
 }
 
 .overview-sidebar-column .location-card .map-panel {
-  height: 338px;
-  min-height: 338px;
+  height: 345px;
+  min-height: 345px;
 }
 
 .overview-sidebar-column .local-signals-card .reports-list {
@@ -4140,9 +4140,9 @@ body {
 
 /* Keep all three public-signal cards visible in the available panel space. */
 .overview-sidebar-column .local-signals-card {
-  height: 700px;
+  height: 707px;
   max-height: none;
-  min-height: 700px;
+  min-height: 707px;
 }
 
 .overview-sidebar-column .local-signals-card .reports-list {
