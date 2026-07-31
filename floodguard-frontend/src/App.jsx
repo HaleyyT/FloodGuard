@@ -64,6 +64,8 @@ const fallbackAreas = [
 const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
+const areaSignalsCache = new Map();
+const areaSignalsRequests = new Map();
 const appSections = [
   { id: "overview", label: "Overview" },
   { id: "signals", label: "Signals" },
@@ -71,6 +73,40 @@ const appSections = [
   { id: "model", label: "Model" },
   { id: "architecture", label: "Architecture" },
 ];
+
+function loadCachedAreaSignals(areaId, { forceRefresh = false } = {}) {
+  if (!forceRefresh) {
+    const cachedSignals = areaSignalsCache.get(areaId);
+    if (cachedSignals) return Promise.resolve(cachedSignals);
+  }
+
+  const existingRequest = areaSignalsRequests.get(areaId);
+  if (existingRequest) return existingRequest;
+
+  const request = fetchParramattaSignals({ areaId, refresh: forceRefresh })
+    .then((apiSignals) => {
+      areaSignalsCache.set(areaId, apiSignals);
+      return apiSignals;
+    })
+    .finally(() => {
+      if (areaSignalsRequests.get(areaId) === request) {
+        areaSignalsRequests.delete(areaId);
+      }
+    });
+
+  areaSignalsRequests.set(areaId, request);
+  return request;
+}
+
+function prefetchOtherAreaSignals(selectedAreaId) {
+  fallbackAreas
+    .filter((area) => area.id !== selectedAreaId)
+    .forEach((area) => {
+      void loadCachedAreaSignals(area.id).catch(() => {
+        // Prefetching is an optional speed-up; the selected-area request shows errors normally.
+      });
+    });
+}
 
 const fallbackRiverGaugeLocations = {
   "Parramatta River at Riverside Theatre": { lat: -33.814, lon: 151.004 },
@@ -1052,23 +1088,20 @@ function useParramattaSignals(selectedAreaId) {
   const [errorMessage, setErrorMessage] = useState(null);
 
   const loadAreaSignals = useCallback(
-    async ({ forceRefresh = false, signal } = {}) => {
+    async ({ forceRefresh = false } = {}) => {
       const requestId = latestRequestRef.current + 1;
       latestRequestRef.current = requestId;
       setIsRefreshing(true);
 
       try {
-        const apiSignals = await fetchParramattaSignals({
-          areaId: selectedAreaId,
-          refresh: forceRefresh,
-          signal,
-        });
+        const apiSignals = await loadCachedAreaSignals(selectedAreaId, { forceRefresh });
 
         if (requestId === latestRequestRef.current) {
           setSignals(apiSignals);
           setSourceStatus("api");
           setLastUpdated(apiSignals.ingestedAt || new Date().toISOString());
           setErrorMessage(null);
+          prefetchOtherAreaSignals(selectedAreaId);
         }
       } catch (error) {
         if (error.name !== "AbortError" && requestId === latestRequestRef.current) {
@@ -1085,19 +1118,25 @@ function useParramattaSignals(selectedAreaId) {
   );
 
   useEffect(() => {
-    const controller = new AbortController();
     let intervalId;
 
-    loadAreaSignals({ signal: controller.signal });
+    const cachedSignals = areaSignalsCache.get(selectedAreaId);
+    if (cachedSignals) {
+      setSignals(cachedSignals);
+      setSourceStatus("api");
+      setLastUpdated(cachedSignals.ingestedAt || new Date().toISOString());
+      setErrorMessage(null);
+    }
+
+    loadAreaSignals({ forceRefresh: Boolean(cachedSignals) });
     intervalId = window.setInterval(() => {
       loadAreaSignals({ forceRefresh: true });
     }, liveRefreshIntervalMs);
 
     return () => {
-      controller.abort();
       window.clearInterval(intervalId);
     };
-  }, [loadAreaSignals]);
+  }, [loadAreaSignals, selectedAreaId]);
 
   return {
     signals,
