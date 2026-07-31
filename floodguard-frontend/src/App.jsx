@@ -64,7 +64,9 @@ const fallbackAreas = [
 const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
-const areaSignalsRequestTimeoutMs = 8000;
+const areaSignalsRequestTimeoutMs = Number(
+  import.meta.env.VITE_FLOODGUARD_REQUEST_TIMEOUT_MS || 20000
+);
 const areaSignalsCache = new Map();
 const areaSignalsRequests = new Map();
 const appSections = [
@@ -92,8 +94,11 @@ function buildAreaFallbackSignals(areaId) {
   };
 }
 
-function loadCachedAreaSignals(areaId, { forceRefresh = false } = {}) {
-  if (!forceRefresh) {
+function loadCachedAreaSignals(
+  areaId,
+  { forceRefresh = false, preferCache = true } = {}
+) {
+  if (preferCache && !forceRefresh) {
     const cachedSignals = areaSignalsCache.get(areaId);
     if (cachedSignals) return Promise.resolve(cachedSignals);
   }
@@ -591,7 +596,8 @@ function buildReliabilitySummary(sources = [], ingestionHealth = null) {
 }
 
 function formatRefreshStatus(refreshMetadata, sourceStatus) {
-  if (sourceStatus !== "api") return "Local fallback signals loaded";
+  if (sourceStatus === "local") return "Local fallback signals loaded";
+  if (sourceStatus === "api-cache") return "Latest good API snapshot kept";
   if (refreshMetadata?.status === "protected-cache") return "Latest good API snapshot kept";
   if (refreshMetadata?.status === "blocked-refresh") return "Live API refresh blocked";
   if (refreshMetadata?.status === "cache") return "Live API cache loaded";
@@ -613,9 +619,8 @@ function formatRefreshNote(refreshMetadata) {
 
 function buildHeaderSourceState(sourceStatus, liveStatus) {
   if (liveStatus?.isRefreshing) return { label: "Refreshing", tone: "neutral" };
-  if (liveStatus?.errorMessage || sourceStatus !== "api") {
-    return { label: "Fallback mode", tone: "warn" };
-  }
+  if (sourceStatus === "api-cache") return { label: "Cached API snapshot", tone: "warn" };
+  if (sourceStatus !== "api") return { label: "Fallback mode", tone: "warn" };
   if (liveStatus?.lastUpdated) return { label: "Live feed", tone: "live" };
   return { label: "Sync pending", tone: "neutral" };
 }
@@ -1109,13 +1114,16 @@ function useParramattaSignals(selectedAreaId) {
   const [errorMessage, setErrorMessage] = useState(null);
 
   const loadAreaSignals = useCallback(
-    async ({ forceRefresh = false } = {}) => {
+    async ({ forceRefresh = false, preferCache = true } = {}) => {
       const requestId = latestRequestRef.current + 1;
       latestRequestRef.current = requestId;
       setIsRefreshing(true);
 
       try {
-        const apiSignals = await loadCachedAreaSignals(selectedAreaId, { forceRefresh });
+        const apiSignals = await loadCachedAreaSignals(selectedAreaId, {
+          forceRefresh,
+          preferCache,
+        });
 
         if (requestId === latestRequestRef.current) {
           setSignals(apiSignals);
@@ -1125,7 +1133,15 @@ function useParramattaSignals(selectedAreaId) {
         }
       } catch (error) {
         if (error.name !== "AbortError" && requestId === latestRequestRef.current) {
-          setSourceStatus("local");
+          const cachedSignals = areaSignalsCache.get(selectedAreaId);
+          if (cachedSignals) {
+            setSignals(cachedSignals);
+            setSourceStatus("api-cache");
+            setLastUpdated(cachedSignals.ingestedAt || null);
+          } else {
+            setSourceStatus("local");
+            setLastUpdated(null);
+          }
           setErrorMessage(error.message);
         }
       } finally {
@@ -1143,7 +1159,7 @@ function useParramattaSignals(selectedAreaId) {
     const cachedSignals = areaSignalsCache.get(selectedAreaId);
     if (cachedSignals) {
       setSignals(cachedSignals);
-      setSourceStatus("api");
+      setSourceStatus("api-cache");
       setLastUpdated(cachedSignals.ingestedAt || new Date().toISOString());
       setErrorMessage(null);
     } else {
@@ -1153,7 +1169,9 @@ function useParramattaSignals(selectedAreaId) {
       setErrorMessage(null);
     }
 
-    loadAreaSignals({ forceRefresh: Boolean(cachedSignals) });
+    // Revalidate through the fast API path. Only manual/interval refreshes ask
+    // the server to run upstream ingestion via `refresh=true`.
+    loadAreaSignals({ preferCache: false });
     intervalId = window.setInterval(() => {
       loadAreaSignals({ forceRefresh: true });
     }, liveRefreshIntervalMs);
