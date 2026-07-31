@@ -859,3 +859,26 @@ test("unknown area returns 404 instead of leaking default area data", async () =
   assert.equal(statusCode, 404);
   assert.match(body.error, /Unknown area/i);
 });
+
+test("concurrent refresh requests share one ingestion run and return one stable snapshot", async () => {
+  const deps = dependencies();
+  const regionalSignals = mockRegionalSignals();
+  let refreshCount = 0;
+
+  deps.runRegionalIngestion = async () => {
+    refreshCount += 1;
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    return regionalSignals;
+  };
+
+  const [first, second, third] = await Promise.all([
+    requestJson("/api/signals/parramatta?refresh=true", deps),
+    requestJson("/api/signals/parramatta?refresh=true", deps),
+    requestJson("/api/signals/parramatta?refresh=true", deps),
+  ]);
+
+  assert.equal(refreshCount, 1);
+  assert.equal(first.body.ingestedAt, regionalSignals.ingestedAt);
+  assert.equal(second.body.ingestedAt, regionalSignals.ingestedAt);
+  assert.equal(third.body.ingestedAt, regionalSignals.ingestedAt);
+});

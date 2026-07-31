@@ -37,6 +37,23 @@ const host = process.env.FLOODGUARD_API_HOST ?? "127.0.0.1";
 const reportRateLimits = new Map();
 const reportRateLimitWindowMs = 10 * 60 * 1000;
 const maxReportsPerWindow = 5;
+const refreshInFlightByDependencySet = new WeakMap();
+
+function refreshRegionalSignalsOnce(deps) {
+  const existingRefresh = refreshInFlightByDependencySet.get(deps);
+  if (existingRefresh) return existingRefresh;
+
+  const refresh = deps
+    .runRegionalIngestion({ protectCache: true })
+    .finally(() => {
+      if (refreshInFlightByDependencySet.get(deps) === refresh) {
+        refreshInFlightByDependencySet.delete(deps);
+      }
+    });
+
+  refreshInFlightByDependencySet.set(deps, refresh);
+  return refresh;
+}
 
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, {
@@ -370,7 +387,7 @@ export async function routeRequest(request, response, deps = defaultDependencies
 
   const shouldRefresh = url.searchParams.get("refresh") === "true";
   const regionalSignals = shouldRefresh
-    ? await deps.runRegionalIngestion({ protectCache: true })
+    ? await refreshRegionalSignalsOnce(deps)
     : await deps.readOrRefreshRegionalSignals();
 
   // Everything below serves from the same regional snapshot to avoid mixing ingestion states across related endpoints.

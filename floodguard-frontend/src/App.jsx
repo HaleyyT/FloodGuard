@@ -1044,6 +1044,7 @@ function buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory =
 }
 
 function useParramattaSignals(selectedAreaId) {
+  const latestRequestRef = useRef(0);
   const [signals, setSignals] = useState(localParramattaSignals);
   const [sourceStatus, setSourceStatus] = useState("local");
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -1052,6 +1053,8 @@ function useParramattaSignals(selectedAreaId) {
 
   const loadAreaSignals = useCallback(
     async ({ forceRefresh = false, signal } = {}) => {
+      const requestId = latestRequestRef.current + 1;
+      latestRequestRef.current = requestId;
       setIsRefreshing(true);
 
       try {
@@ -1061,17 +1064,21 @@ function useParramattaSignals(selectedAreaId) {
           signal,
         });
 
-        setSignals(apiSignals);
-        setSourceStatus("api");
-        setLastUpdated(apiSignals.ingestedAt || new Date().toISOString());
-        setErrorMessage(null);
+        if (requestId === latestRequestRef.current) {
+          setSignals(apiSignals);
+          setSourceStatus("api");
+          setLastUpdated(apiSignals.ingestedAt || new Date().toISOString());
+          setErrorMessage(null);
+        }
       } catch (error) {
-        if (error.name !== "AbortError") {
+        if (error.name !== "AbortError" && requestId === latestRequestRef.current) {
           setSourceStatus("local");
           setErrorMessage(error.message);
         }
       } finally {
-        setIsRefreshing(false);
+        if (requestId === latestRequestRef.current) {
+          setIsRefreshing(false);
+        }
       }
     },
     [selectedAreaId]
