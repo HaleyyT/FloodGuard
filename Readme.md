@@ -9,16 +9,18 @@ FloodGuard won 2nd prize for Best Undergraduate Senior Project Award at Coding F
 
 ![FloodGuard dashboard prototype](docs/images/floodguard-1-8-rm.png)
 
-## Engineering snapshot
+## Technical strengths
 
-| Layer | What is implemented on `main` |
+| Strength | What FloodGuard demonstrates on `main` |
 |---|---|
-| Frontend | React 19, Vite 8, Recharts and Leaflet; responsive multi-area dashboard with live/fallback state, maps and explainable evidence panels |
-| Backend | Node.js HTTP API with source-specific adapters, validation, timeouts, retries, caching and stable JSON contracts |
-| Data | Append-only JSONL history, latest-valid source cache, evidence snapshots and CSV/JSON feature export |
-| Decision logic | Versioned rule engine combining rainfall, river movement, antecedent wetness, public signals and evidence reliability |
-| ML | Python 3.12 and scikit-learn shadow pipeline with four-model comparison, leakage controls, time-aware evaluation and generated model cards |
-| Quality | Node regression tests, Python ML tests, Playwright browser flows, ESLint, production builds and explicit degraded-source readiness checks |
+| Reliability-aware ingestion | Source-specific FloodSmart, BoM and HazardWatch adapters with timeouts, retries, latest-valid caching, freshness windows and explicit live/stale/fallback/parser-error/unavailable states |
+| API design and integration | Node.js REST API with separate contracts for signals, warnings, health, observability, spatial relevance, decision audit, history, notifications and ML reports; upstream failure is separated from application health |
+| Explainable decision intelligence | Versioned rule engine combines rainfall, river movement, antecedent wetness, public signals and evidence reliability; every concern result exposes its drivers, exclusions and recommended next checks |
+| Safety logic | Official warnings never become FloodGuard-generated risk, stale core inputs are excluded from live scoring, and degraded evidence suppresses stronger notification candidates |
+| Data and replay | Append-only JSONL history, raw/parsed evidence snapshots, latest-valid source cache, replayable event windows and CSV/JSON feature export |
+| ML evaluation | Python 3.12 and scikit-learn shadow pipeline with four model families, leakage controls, imbalance-aware metrics, time/area/degraded-source evaluation and generated model cards |
+| Resident experience | React 19, Vite 8, Recharts and Leaflet deliver a responsive three-area dashboard with evidence status, maps, scenario labelling and plain-language explanations |
+| Engineering quality | 99 passing Node regression tests on current `main`, plus Python ML tests, Playwright browser flows, ESLint, production builds and separate submission/live readiness gates |
 
 ```mermaid
 flowchart LR
@@ -34,22 +36,6 @@ flowchart LR
 ```
 
 > **Storage status:** `main` has **not** migrated to PostgreSQL/PostGIS. It uses JSONL history and coordinate-distance/configured-station relevance. PostgreSQL/PostGIS remains a documented future migration target, not a current capability.
-
-
-## Technical highlights
-
-Its main technical contribution is the reliability layer. FloodGuard does not treat every source as equally trustworthy: it tracks freshness, provenance, fallback/cache state, official-warning separation, and degraded evidence before those signals are allowed to shape the visible concern summary or notification candidates.
-
-
-| Area | What FloodGuard implements |
-|---|---|
-| Ingestion | Rainfall, river, weather, warning-context, and resident/public-signal ingestion |
-| Reliability | Freshness checks, provenance, fallback/cache labelling, stale/missing/unavailable states |
-| Risk logic | Explainable rule-based concern scoring with decision audit output |
-| Notifications | Conservative suppression when degraded core evidence makes stronger advice unsafe |
-| History | Queryable JSONL snapshots, replay summaries, decision-audit storage, and ML-ready feature export |
-| ML | Python shadow pipeline, baseline models, scenario stress-test data, label audit, and model-card reporting |
-| Testing | Backend regression tests, ingestion honesty checks, API contracts, replay coverage, and Playwright smoke flows |
 
 
 ## What is implemented
@@ -119,22 +105,36 @@ This means the dashboard can say “blocked”, “partial”, or “fallback”
 
 ## Machine learning: evaluated in shadow mode
 
-FloodGuard exports rainfall, river, wetness, lag and reliability features into a Python 3.12/scikit-learn pipeline. The pipeline compares simple and ensemble models, generates model cards and feature-importance reports, and blocks leakage-prone fields such as risk scores, rule labels, event labels and provenance metadata from predictors.
+FloodGuard exports rainfall, river, wetness, lag and reliability features into a Python 3.12/scikit-learn pipeline. The current real export contains 3,000 rows, but only 18 are rule-derived elevated examples. This severe imbalance is why **balanced accuracy**, recall and PR-AUC matter more than plain accuracy: a model that always predicts the majority class is 99.2% accurate but detects no elevated rows.
 
-The current real-export experiment contains **3,000 rows**: 2,982 lower-concern rows and **18 rule-derived elevated rows (0.6%)**. Because there are currently no independently reviewed elevated event windows, these results measure agreement with prototype rule-derived supervision—not real flood-prediction performance.
+### Why these models were chosen
 
-### Current real-export results
+| Model | Why it is included | What the current experiment shows |
+|---|---|---|
+| Majority baseline | Establishes the minimum comparison and exposes misleading accuracy under imbalance | 0.500 balanced accuracy and zero elevated recall despite 0.992 accuracy |
+| Logistic regression | Provides an interpretable linear baseline and tests whether engineered signals separate concern without complex interactions | 0.625 balanced accuracy; precise when it escalates, but recalls only 25% of elevated rows |
+| Random forest | Captures non-linear relationships between rainfall windows, river movement, wetness and reliability without requiring a fixed formula | **Best balanced accuracy: 0.805** and 100% elevated recall, but only 2% precision because it over-escalates |
+| Extra Trees | Tests whether a more randomised ensemble is robust to sparse, correlated features | 0.625 balanced accuracy and 25% recall; similar PR-AUC to random forest but much more selective |
 
-| Model | Purpose | Accuracy | Balanced accuracy | Precision | Recall | F1 | PR-AUC |
-|---|---|---:|---:|---:|---:|---:|---:|
-| Majority baseline | Class-imbalance reference | 0.992 | 0.500 | 0.000 | 0.000 | 0.000 | 0.008 |
-| Logistic regression | Interpretable linear baseline | 0.994 | 0.625 | 1.000 | 0.250 | 0.400 | 0.261 |
-| Random forest | Non-linear tree ensemble | 0.613 | **0.805** | 0.020 | **1.000** | 0.040 | 0.265 |
-| Extra Trees | Randomised tree ensemble | 0.994 | 0.625 | 1.000 | 0.250 | 0.400 | **0.265** |
+### Which model is strongest?
 
-Random forest is the current prototype leader by balanced accuracy and recalls all eight elevated examples in its evaluated split, but its 2% precision means it produces many false escalations. Logistic regression and Extra Trees are much more selective but each detects only two of eight elevated examples. The 99% plain-accuracy scores are not treated as success because the dataset is extremely imbalanced.
+**Random forest is the strongest current shadow model by balanced accuracy.** Balanced accuracy gives equal importance to lower-concern and elevated classes, so it is more meaningful than ordinary accuracy for this 0.6%-positive dataset. Its 1.000 recall means it matched every elevated rule label in the evaluated split; however, its 0.020 precision means most of its escalations were false positives. It is useful for sensitivity analysis, not ready for resident alerts.
 
-The pipeline also includes a deliberately synthetic scenario stress test. Perfect scores on that dataset show that the end-to-end modelling pipeline can separate constructed scenarios; they are not evidence of real-world forecasting accuracy.
+### Does ML agree with the rule engine?
+
+Partially. Random forest agrees with the rule-derived target on 61.3% of evaluated rows overall. It reproduces all eight elevated rule cases but labels 387 lower-concern rows as elevated. Logistic regression and Extra Trees agree with 99.4% overall mainly because lower-concern rows dominate, while each misses six of eight elevated cases.
+
+More importantly, the current target comes from FloodGuard's own rules. Agreement shows that a model can imitate parts of the rule logic; it is not independent confirmation that either approach predicts real floods. The rule engine therefore remains authoritative and ML stays outside operational decisions.
+
+### Next ML steps
+
+1. Curate independently evidenced elevated events and hard negatives with hydrologist review.
+2. Evaluate event, chronological, area and degraded-source holdouts using event recall, lead time and false escalations per event.
+3. Tune class weights and decision thresholds to reduce the random forest's false-positive rate without losing critical-event recall.
+4. Compare calibrated logistic/tree probabilities only after enough independent positive events exist.
+5. Keep models in shadow mode until they outperform simple baselines on reviewed events with uncertainty reported.
+
+The pipeline also includes a deliberately synthetic scenario stress test. Its perfect separability verifies pipeline behaviour only; it is not real-world forecasting evidence.
 
 ### ML engineering safeguards
 
@@ -149,16 +149,19 @@ The pipeline also includes a deliberately synthetic scenario stress test. Perfec
 
 See the generated [model comparison](floodguard-ml/reports/model_comparison.md), [model card](floodguard-ml/reports/model_card.md) and [label audit](floodguard-ml/reports/label_audit.md) for reproducible detail.
 
-## Safety and domain expert oversight
+## Safety, current boundaries and expert oversight
 
 FloodGuard does not replace NSW SES, Bureau of Meteorology, council, or emergency-service advice. The project currently provides local flood-awareness support by combining public signals with reliability checks and explainable risk logic.
 
-Because flood-risk guidance is high stakes, future versions require expert review of:
+The current boundaries are explicit: history is JSONL rather than PostgreSQL/PostGIS, spatial relevance uses configured stations and coordinate distance rather than catchment intersection, thresholds are heuristic, and ML lacks independently reviewed elevated events. HazardWatch and live gauges can also become stale or unavailable.
 
-- rainfall thresholds and river-signal calibration
-- next-step wording and notification safety
-- when degraded evidence should suppress stronger guidance
-- ML labels, validation strategy, and operational boundaries
+The next product-hardening phase combines stronger infrastructure with domain review:
+
+- migrate durable observations, decisions and geometry to PostgreSQL/PostGIS
+- have a hydrologist review rainfall thresholds, station mapping and river-signal calibration
+- have emergency/risk-communication reviewers assess notification wording and degraded-evidence suppression
+- independently label historical events and hard negatives before event-level ML evaluation
+- preserve official-warning separation and require evidence-backed gates before any operational ML use
 
 FloodGuard therefore keeps:
 
@@ -178,25 +181,9 @@ FloodGuard verifies:
 - ESLint and the production Vite build
 - submission readiness separately from strict live-source readiness
 
-## Limitations
-
-- Official NSW SES / HazardWatch integration is now connected through a default public HazardWatch adapter, but it is not yet mature enough to count as a stable live operational warning feed in every run.
-- Core live-gauge ingestion can degrade to stale cache or fallback depending on source availability.
-- Historical storage is currently JSONL-based prototype storage, not PostgreSQL/PostGIS or production-grade event storage.
-- Spatial relevance uses configured station mapping and coordinate distance; it does not yet perform PostGIS polygon/catchment intersection.
-- Risk thresholds are heuristic and not yet calibrated against validated flood outcomes.
-- The ML layer remains shadow mode until stronger labels and broader validation exist.
-- Future deployment requires hydrologist, council, and emergency-management review before any operational safety use.
-
 ## Run locally
 
-### Requirements
-
-- Node.js 20.19+ or 22.12+
-- npm
-- Python 3.12 for the `floodguard-ml` workspace
-
-### Quick start for judges and reviewers
+### Fastest way to run FloodGuard
 
 ```bash
 cd floodguard-frontend
@@ -207,6 +194,12 @@ npm run demo
 Then open `http://127.0.0.1:4173/`.
 
 `npm run demo` is the easiest end-to-end command for manual review because it refreshes one ingestion snapshot, starts the Node API, and starts the frontend with the correct local API wiring. The commands below remain available if you want to run components manually.
+
+### Requirements
+
+- Node.js 20.19+ or 22.12+
+- npm
+- Python 3.12 only when running the separate `floodguard-ml` workflow
 
 ## How to use FloodGuard
 
