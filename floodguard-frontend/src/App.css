@@ -1665,7 +1665,7 @@ p {
   font: inherit;
   font-size: 0.66rem;
   font-weight: 700;
-  padding: 4px 6px;
+  padding: 3px 6px;
 }
 
 .map-layer-controls button.active {
@@ -1703,6 +1703,7 @@ p {
   gap: 8px;
   justify-content: flex-end;
   margin: 2px 0 4px;
+  transform: translateY(-9px);
 }
 
 .map-open-row a {
@@ -3934,9 +3935,12 @@ body {
 }
 
 .overview-sidebar-column .local-signals-card {
-  margin-bottom: 5px;
+  box-sizing: border-box;
+  margin-bottom: 3px;
+  max-height: min(630px, calc(100vh - 120px));
   min-height: 392px;
-  padding-bottom: calc(1.25rem + 6px) !important;
+  overflow: hidden;
+  padding-bottom: calc(1.25rem + 44px) !important;
 }
 
 .overview-top-grid .card,
@@ -3974,11 +3978,30 @@ body {
 }
 
 .overview-sidebar-column .location-card .map-panel {
-  height: 330px;
+  height: 338px;
+  min-height: 338px;
 }
 
 .overview-sidebar-column .local-signals-card .reports-list {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: rgba(108, 173, 244, 0.25) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.overview-sidebar-column .local-signals-card .reports-list::-webkit-scrollbar {
+  width: 2.5px;
+}
+
+.overview-sidebar-column .local-signals-card .reports-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overview-sidebar-column .local-signals-card .reports-list::-webkit-scrollbar-thumb {
+  background: rgba(108, 173, 244, 0.25);
+  border-radius: 999px;
 }
 
 .overview-sidebar-column .local-signals-card .report-card {
