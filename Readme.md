@@ -7,7 +7,7 @@ FloodGuard is not an official emergency-warning system. Official warnings are sh
 
 FloodGuard was accepted for showcase at Coding Fest 2026, a competition opened to all university students. FloodGuard's poster was selected for final judging and showcase presentation.
 
-![FloodGuard dashboard prototype](docs/images/floodguard-6-july-final.png)
+![FloodGuard dashboard prototype](docs/images/floodguard-1-8-readme.png)
 
 
 ## Technical highlights
