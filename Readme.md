@@ -1,5 +1,8 @@
 # FloodGuard ([Coding Fest](https://www.sydney.edu.au/engineering/industry-community/partner-with-us/coding-fest.html) Best UG senior project Award 2nd Place)
 
+[![CI](https://github.com/HaleyyT/FloodGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/HaleyyT/FloodGuard/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 
 FloodGuard is a reliability-aware flood-awareness and decision-support prototype for the Parramatta pilot area set: Parramatta, North Parramatta, and Toongabbie. The system eliminates data fragmentation by translating rainfall, river, weather, warning-context, and public-signal evidence into an explainable local concern summary. Rather than leaving residents to compare multiple technical feeds manually, it empowers communities to react swiftly to emergent situations by clearly communicating what is happening, why it matters, and what next steps to take.
 
@@ -26,7 +29,7 @@ FloodGuard won 2nd prize for Best Undergraduate Senior Project Award at Coding F
 | Data and replay | Append-only JSONL history, raw/parsed evidence snapshots, latest-valid source cache, replayable event windows and CSV/JSON feature export |
 | ML evaluation | Python 3.12 and scikit-learn shadow pipeline with four model families, leakage controls, imbalance-aware metrics, time/area/degraded-source evaluation and generated model cards |
 | Resident experience | React 19, Vite 8, Recharts and Leaflet deliver a responsive three-area dashboard with evidence status, maps, scenario labelling and plain-language explanations |
-| Engineering quality | 99 passing Node regression tests on current `main`, plus Python ML tests, Playwright browser flows, ESLint, production builds and separate submission/live readiness gates |
+| Engineering quality | 100 passing Node regression tests and 43 passing Python tests on current `main`, plus Playwright browser flows, ESLint, production builds and separate submission/live readiness gates |
 
 ```mermaid
 flowchart LR
