@@ -9,6 +9,32 @@ FloodGuard won 2nd prize for Best Undergraduate Senior Project Award at Coding F
 
 ![FloodGuard dashboard prototype](docs/images/floodguard-1-8-rm.png)
 
+## Engineering snapshot
+
+| Layer | What is implemented on `main` |
+|---|---|
+| Frontend | React 19, Vite 8, Recharts and Leaflet; responsive multi-area dashboard with live/fallback state, maps and explainable evidence panels |
+| Backend | Node.js HTTP API with source-specific adapters, validation, timeouts, retries, caching and stable JSON contracts |
+| Data | Append-only JSONL history, latest-valid source cache, evidence snapshots and CSV/JSON feature export |
+| Decision logic | Versioned rule engine combining rainfall, river movement, antecedent wetness, public signals and evidence reliability |
+| ML | Python 3.12 and scikit-learn shadow pipeline with four-model comparison, leakage controls, time-aware evaluation and generated model cards |
+| Quality | Node regression tests, Python ML tests, Playwright browser flows, ESLint, production builds and explicit degraded-source readiness checks |
+
+```mermaid
+flowchart LR
+    Sources["FloodSmart · BoM · HazardWatch"] --> Adapters["Fetch, parse, retry and cache adapters"]
+    Adapters --> Trust["Freshness, provenance and failure classification"]
+    Trust --> Mapping["Area and station relevance"]
+    Mapping --> Rules["Explainable rule engine"]
+    Rules --> API["Node REST API"]
+    API --> UI["React dashboard"]
+    Rules --> History["Append-only JSONL history"]
+    History --> ML["Python shadow ML evaluation"]
+    ML --> API
+```
+
+> **Storage status:** `main` has **not** migrated to PostgreSQL/PostGIS. It uses JSONL history and coordinate-distance/configured-station relevance. PostgreSQL/PostGIS remains a documented future migration target, not a current capability.
+
 
 ## Technical highlights
 
@@ -67,6 +93,17 @@ That matters because high-stakes software should not only produce a status label
 7. A scenario stress-test mode can demonstrate stronger synthetic flood pressure without confusing it with the live area state.
 8. ML results are shown in shadow mode only and do not control live alerts.
 
+## External API and map integrations
+
+| Integration | How FloodGuard uses it | Failure-aware behaviour |
+|---|---|---|
+| City of Parramatta FloodSmart API | Rainfall and river/creek gauge stations plus time-series observations | Applies configured station mapping, timeouts and retries; reuses labelled cache/fallback evidence instead of silently claiming it is live |
+| Bureau of Meteorology JSON | Parramatta weather and supporting rainfall context | Tracks its observation timestamp independently and allows supporting context to be stale without disguising it as current |
+| NSW SES / HazardWatch | Parses official warning context from the public HazardWatch application payload | Keeps official warnings separate from FloodGuard concern and exposes no-match, stale, parser-error and unavailable states |
+| OpenStreetMap + Leaflet | Area map, local gauges, approximate community observations and warning context | Rounds contributed map locations to approximately 100 metres and clearly distinguishes unverified reports |
+
+The Node API exposes source health, ingestion observability, decision audit, warning status, spatial relevance, history, notification previews and ML shadow reports as separate contracts. This separation makes it possible to diagnose whether the application is healthy even when an upstream source is not.
+
 ## Why the reliability layer matters
 
 FloodGuard is designed to avoid a common prototype failure mode: looking “live” even when sources are stale, missing, or fallback-only.
@@ -80,22 +117,37 @@ The app checks:
 
 This means the dashboard can say “blocked”, “partial”, or “fallback” instead of silently pretending the data is current.
 
-## ML status
+## Machine learning: evaluated in shadow mode
 
-FloodGuard includes a Python-based prototype ML pipeline that:
+FloodGuard exports rainfall, river, wetness, lag and reliability features into a Python 3.12/scikit-learn pipeline. The pipeline compares simple and ensemble models, generates model cards and feature-importance reports, and blocks leakage-prone fields such as risk scores, rule labels, event labels and provenance metadata from predictors.
 
-- loads exported FloodGuard feature rows
-- runs baseline models such as majority baseline, logistic regression, and random forest
-- produces metrics and model-card reporting
-- compares ML outputs against rule-derived labels in shadow mode
+The current real-export experiment contains **3,000 rows**: 2,982 lower-concern rows and **18 rule-derived elevated rows (0.6%)**. Because there are currently no independently reviewed elevated event windows, these results measure agreement with prototype rule-derived supervision—not real flood-prediction performance.
 
-Current ML limitations:
+### Current real-export results
 
-- current historical labels are rule-derived rather than independent flood outcomes
-- the real export is severely imbalanced
-- there are no real `High` examples in the current dataset
-- thresholds remain prototype-calibration pending and still need reviewed event evidence plus domain review
-- ML is implemented for plumbing, safeguards, and comparison, not validated operational prediction
+| Model | Purpose | Accuracy | Balanced accuracy | Precision | Recall | F1 | PR-AUC |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Majority baseline | Class-imbalance reference | 0.992 | 0.500 | 0.000 | 0.000 | 0.000 | 0.008 |
+| Logistic regression | Interpretable linear baseline | 0.994 | 0.625 | 1.000 | 0.250 | 0.400 | 0.261 |
+| Random forest | Non-linear tree ensemble | 0.613 | **0.805** | 0.020 | **1.000** | 0.040 | 0.265 |
+| Extra Trees | Randomised tree ensemble | 0.994 | 0.625 | 1.000 | 0.250 | 0.400 | **0.265** |
+
+Random forest is the current prototype leader by balanced accuracy and recalls all eight elevated examples in its evaluated split, but its 2% precision means it produces many false escalations. Logistic regression and Extra Trees are much more selective but each detects only two of eight elevated examples. The 99% plain-accuracy scores are not treated as success because the dataset is extremely imbalanced.
+
+The pipeline also includes a deliberately synthetic scenario stress test. Perfect scores on that dataset show that the end-to-end modelling pipeline can separate constructed scenarios; they are not evidence of real-world forecasting accuracy.
+
+### ML engineering safeguards
+
+- majority baseline before comparing trained models
+- chronological and area-based validation plus degraded-source slices
+- event holdout that fails closed until reviewed positive and negative events exist
+- explicit feature leakage audit
+- balanced accuracy, precision, recall, F1, ROC-AUC, PR-AUC and Brier score reporting
+- deterministic reports, model cards, calibration summaries and feature-importance artifacts
+- no ML control over resident concern levels or notifications
+- rule engine remains the live decision authority
+
+See the generated [model comparison](floodguard-ml/reports/model_comparison.md), [model card](floodguard-ml/reports/model_card.md) and [label audit](floodguard-ml/reports/label_audit.md) for reproducible detail.
 
 ## Safety and domain expert oversight
 
@@ -117,21 +169,21 @@ FloodGuard therefore keeps:
 
 ## Verification
 
-FloodGuard includes checks for:
+FloodGuard verifies:
 
-- backend ingestion behaviour and source-health contracts
-- stale/cache/fallback honesty under degraded-source conditions
-- frontend production build correctness
-- dashboard smoke testing across core views and area switching
-- ML report and API contract stability
-- replay summary and event-window review contract stability
-- strict live-source readiness when genuinely current data is available
+- backend ingestion, source-health, API and decision-presentation contracts
+- timeout, parser, stale-cache, fallback and unavailable-source behaviour
+- dashboard flows across all three pilot locations and simulated/live modes
+- ML leakage controls, label gates, replay logic and report stability
+- ESLint and the production Vite build
+- submission readiness separately from strict live-source readiness
 
 ## Limitations
 
 - Official NSW SES / HazardWatch integration is now connected through a default public HazardWatch adapter, but it is not yet mature enough to count as a stable live operational warning feed in every run.
 - Core live-gauge ingestion can degrade to stale cache or fallback depending on source availability.
-- Historical storage is currently JSONL-based prototype storage, not production-grade event storage.
+- Historical storage is currently JSONL-based prototype storage, not PostgreSQL/PostGIS or production-grade event storage.
+- Spatial relevance uses configured station mapping and coordinate distance; it does not yet perform PostGIS polygon/catchment intersection.
 - Risk thresholds are heuristic and not yet calibrated against validated flood outcomes.
 - The ML layer remains shadow mode until stronger labels and broader validation exist.
 - Future deployment requires hydrologist, council, and emergency-management review before any operational safety use.
@@ -142,7 +194,7 @@ FloodGuard includes checks for:
 
 - Node.js 20.19+ or 22.12+
 - npm
-- Python 3.11+ for the `floodguard-ml` workspace
+- Python 3.12 for the `floodguard-ml` workspace
 
 ### Quick start for judges and reviewers
 
@@ -155,6 +207,19 @@ npm run demo
 Then open `http://127.0.0.1:4173/`.
 
 `npm run demo` is the easiest end-to-end command for manual review because it refreshes one ingestion snapshot, starts the Node API, and starts the frontend with the correct local API wiring. The commands below remain available if you want to run components manually.
+
+## How to use FloodGuard
+
+***Please wait for FloodGuard to refresh before using the dashboard.*** Check the status near the area selector: it should show **Live feed**, **Fallback mode** or another explicit reliability state. If all sources display **Unknown**, the frontend is open but the Node API is probably not running; use `npm run demo` or start both components manually.
+
+1. Select **Parramatta**, **North Parramatta** or **Toongabbie** near the top of the page. Wait for the chosen location to finish loading before interpreting its values.
+2. Open **Overview** to see the concern level, evidence confidence, recommended actions, rainfall/river summaries, local map and source-status cards.
+3. Open **Signals** for detailed source diagnostics, the separate **NSW SES / HazardWatch** status, station relevance and the rule engine’s decision audit.
+4. Open **Community** to inspect local reports or submit an approximate observation. These reports are supplementary and remain clearly unverified.
+5. Open **Notices** to inspect notification candidates and the reasons that stronger notices were emitted or suppressed.
+6. Open **Model** to inspect the shadow comparison, dataset quality and limitations. ML does not change the live concern level.
+7. Open **Architecture** for a plain-language view of the system flow.
+8. Use **Refresh now** to request new API data. The **Scenario stress-test** is a labelled simulation; switch back to **Current source state** for real source status.
 
 ### Start the dashboard manually
 
@@ -240,6 +305,8 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 ## Key API routes
 
 - `GET /api/health`
+- `GET /api/ingestion-health`
+- `GET /api/ingestion-observability`
 - `GET /api/areas`
 - `GET /api/signals?area=parramatta`
 - `GET /api/source-registry?area=parramatta`
@@ -256,8 +323,21 @@ See [floodguard-ml/README.md](./floodguard-ml/README.md).
 - `GET /api/model-experiment?area=parramatta`
 - `GET /api/model-card?area=parramatta`
 - `GET /api/ml/report`
+- `GET /api/ml/prediction-preview?area=parramatta`
+- `GET /api/ml/readiness?area=parramatta`
+- `GET /api/ml/dataset?area=parramatta`
 - `GET /api/notifications?area=parramatta`
+- `GET /api/notifications/preview?area=parramatta`
+- `GET /api/warnings?area=parramatta`
 - `GET /api/spatial-relevance?area=parramatta`
+
+Example:
+
+```bash
+curl "http://127.0.0.1:5174/api/signals?area=parramatta"
+curl "http://127.0.0.1:5174/api/decision-audit?area=parramatta"
+curl "http://127.0.0.1:5174/api/warnings?area=parramatta"
+```
 
 ## Submission notes
 
