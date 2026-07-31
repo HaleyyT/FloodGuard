@@ -3378,6 +3378,17 @@ function MapPanel({ map, reports = [] }) {
           <p className="section-label">Live location</p>
           <h3>{isTracking ? "Your live position" : "Area map"}</h3>
         </div>
+        <button
+          className="map-location-button"
+          onClick={isTracking ? liveLocation.stop : liveLocation.start}
+          type="button"
+        >
+          {liveLocation.status === "locating"
+            ? "Finding you…"
+            : isTracking
+              ? "Stop sharing"
+              : "Use my location"}
+        </button>
       </div>
 
       <div className="map-panel live-map-panel">
