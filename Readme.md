@@ -17,7 +17,7 @@ FloodGuard won 2nd prize for Best Undergraduate Senior Project Award at Coding F
 
 ## Technical strengths
 
-| Strength | What FloodGuard demonstrates on `main` |
+| Strength | What FloodGuard currently demonstrates |
 |---|---|
 | Reliability-aware ingestion | Source-specific FloodSmart, BoM and HazardWatch adapters with timeouts, retries, latest-valid caching, freshness windows and explicit live/stale/fallback/parser-error/unavailable states |
 | API design and integration | Node.js REST API with separate contracts for signals, warnings, health, observability, spatial relevance, decision audit, history, notifications and ML reports; upstream failure is separated from application health |
