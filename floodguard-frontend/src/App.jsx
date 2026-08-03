@@ -1,19 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import {
-  ResponsiveContainer,
-  BarChart,
-  LineChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Bar,
-  Line,
-  ReferenceLine,
-} from "recharts";
 
 import { buildPublicSignalCards } from "./data/parramattaSignals";
 import {
@@ -33,6 +20,10 @@ import {
   submitCommunityReport,
 } from "./data/apiSignals";
 import {
+  readSignalSnapshot,
+  writeSignalSnapshot,
+} from "./data/signalSnapshotCache";
+import {
   buildDataEvidenceRows,
   buildNotificationBannerModel,
   buildOverviewModeState,
@@ -42,6 +33,13 @@ import {
   humanizeSourceMode,
   humanizeTrainingTarget,
 } from "./dashboardPresentation";
+
+const RainfallChartVisual = lazy(() =>
+  import("./SignalCharts").then((module) => ({ default: module.RainfallChartVisual })),
+);
+const SignalBreakdownVisual = lazy(() =>
+  import("./SignalCharts").then((module) => ({ default: module.SignalBreakdownVisual })),
+);
 
 const fallbackAreas = [
   {
@@ -1070,7 +1068,9 @@ function buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory =
 
 function useParramattaSignals(selectedAreaId) {
   const latestRequestRef = useRef(0);
-  const hasStartedLoadingRef = useRef(false);
+  const activeRequestRef = useRef(null);
+  const requestInFlightRef = useRef(false);
+  const lastLoadedAreaRef = useRef(null);
   const [signals, setSignals] = useState(localParramattaSignals);
   const [sourceStatus, setSourceStatus] = useState("local");
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -1079,17 +1079,32 @@ function useParramattaSignals(selectedAreaId) {
   const [refreshKind, setRefreshKind] = useState("initial");
 
   const loadAreaSignals = useCallback(
-    async ({ forceRefresh = false, signal, refreshKind } = {}) => {
+    async ({ forceRefresh = false, refreshKind, skipIfBusy = false } = {}) => {
+      if (skipIfBusy && requestInFlightRef.current) return null;
+
       const requestId = latestRequestRef.current + 1;
       latestRequestRef.current = requestId;
+      activeRequestRef.current?.abort();
+      const controller = new AbortController();
+      activeRequestRef.current = controller;
+      requestInFlightRef.current = true;
       const nextRefreshKind =
         refreshKind ??
         (forceRefresh
           ? "manual"
-          : hasStartedLoadingRef.current
-          ? "location"
-          : "initial");
-      hasStartedLoadingRef.current = true;
+          : lastLoadedAreaRef.current && lastLoadedAreaRef.current !== selectedAreaId
+            ? "location"
+            : "initial");
+
+      const cachedSnapshot = readSignalSnapshot(selectedAreaId);
+      if (!forceRefresh && cachedSnapshot) {
+        lastLoadedAreaRef.current = selectedAreaId;
+        setSignals(cachedSnapshot.signals);
+        setSourceStatus("api");
+        setLastUpdated(cachedSnapshot.signals.ingestedAt || cachedSnapshot.cachedAt);
+        setErrorMessage(null);
+      }
+
       setIsRefreshing(true);
       setRefreshKind(nextRefreshKind);
 
@@ -1097,10 +1112,12 @@ function useParramattaSignals(selectedAreaId) {
         const apiSignals = await fetchParramattaSignals({
           areaId: selectedAreaId,
           refresh: forceRefresh,
-          signal,
+          signal: controller.signal,
         });
 
         if (requestId === latestRequestRef.current) {
+          writeSignalSnapshot(selectedAreaId, apiSignals);
+          lastLoadedAreaRef.current = selectedAreaId;
           setSignals(apiSignals);
           setSourceStatus("api");
           setLastUpdated(apiSignals.ingestedAt || new Date().toISOString());
@@ -1108,29 +1125,39 @@ function useParramattaSignals(selectedAreaId) {
         }
       } catch (error) {
         if (error.name !== "AbortError" && requestId === latestRequestRef.current) {
-          setSourceStatus("local");
+          if (!readSignalSnapshot(selectedAreaId)) {
+            setSourceStatus("local");
+          }
           setErrorMessage(error.message);
         }
       } finally {
         if (requestId === latestRequestRef.current) {
+          requestInFlightRef.current = false;
+          activeRequestRef.current = null;
           setIsRefreshing(false);
         }
       }
+
+      return null;
     },
     [selectedAreaId]
   );
 
   useEffect(() => {
-    const controller = new AbortController();
     let intervalId;
 
-    loadAreaSignals({ signal: controller.signal });
+    loadAreaSignals();
     intervalId = window.setInterval(() => {
-      loadAreaSignals({ forceRefresh: true, refreshKind: "automatic" });
+      loadAreaSignals({
+        forceRefresh: true,
+        refreshKind: "automatic",
+        skipIfBusy: true,
+      });
     }, liveRefreshIntervalMs);
 
     return () => {
-      controller.abort();
+      activeRequestRef.current?.abort();
+      requestInFlightRef.current = false;
       window.clearInterval(intervalId);
     };
   }, [loadAreaSignals]);
@@ -1146,6 +1173,50 @@ function useParramattaSignals(selectedAreaId) {
       refresh: () => loadAreaSignals({ forceRefresh: true, refreshKind: "manual" }),
     },
   };
+}
+
+function useSignalPrefetch(areas, selectedAreaId, lastUpdated) {
+  useEffect(() => {
+    if (!lastUpdated || navigator.connection?.saveData) return undefined;
+
+    const pendingAreas = areas.filter(
+      (area) => area.id !== selectedAreaId && !readSignalSnapshot(area.id),
+    );
+    if (pendingAreas.length === 0) return undefined;
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let idleId = null;
+    let timerId = null;
+
+    const prefetch = async () => {
+      for (const area of pendingAreas) {
+        if (cancelled) break;
+        try {
+          const prefetchedSignals = await fetchParramattaSignals({
+            areaId: area.id,
+            signal: controller.signal,
+          });
+          if (!cancelled) writeSignalSnapshot(area.id, prefetchedSignals);
+        } catch (error) {
+          if (error.name === "AbortError") break;
+        }
+      }
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(prefetch, { timeout: 1_500 });
+    } else {
+      timerId = window.setTimeout(prefetch, 250);
+    }
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (idleId !== null) window.cancelIdleCallback(idleId);
+      if (timerId !== null) window.clearTimeout(timerId);
+    };
+  }, [areas, lastUpdated, selectedAreaId]);
 }
 
 function useFloodguardAreas() {
@@ -1168,10 +1239,11 @@ function useFloodguardAreas() {
   return areas;
 }
 
-function useAreaHistory(selectedAreaId, lastUpdated) {
+function useAreaHistory(selectedAreaId, lastUpdated, enabled = true) {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchAreaHistory({
@@ -1187,15 +1259,16 @@ function useAreaHistory(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return history;
 }
 
-function useRainfallHistory(selectedAreaId, lastUpdated) {
+function useRainfallHistory(selectedAreaId, lastUpdated, enabled = true) {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchAreaHistory({
@@ -1212,17 +1285,18 @@ function useRainfallHistory(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return history;
 }
 
-function useCommunityReports(selectedAreaId, lastUpdated) {
+function useCommunityReports(selectedAreaId, lastUpdated, enabled = true) {
   const [reports, setReports] = useState([]);
   const [status, setStatus] = useState("idle");
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchCommunityReports({
@@ -1243,7 +1317,7 @@ function useCommunityReports(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   const submitReport = useCallback(
     async (report) => {
@@ -1275,7 +1349,7 @@ function useCommunityReports(selectedAreaId, lastUpdated) {
   };
 }
 
-function useEvidenceReviewQueue(selectedAreaId, lastUpdated) {
+function useEvidenceReviewQueue(selectedAreaId, lastUpdated, enabled = true) {
   const [queue, setQueue] = useState({
     itemCount: 0,
     urgentCount: 0,
@@ -1286,6 +1360,7 @@ function useEvidenceReviewQueue(selectedAreaId, lastUpdated) {
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchEvidenceReviewQueue({
@@ -1308,12 +1383,12 @@ function useEvidenceReviewQueue(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return queue;
 }
 
-function useAreaFeatures(selectedAreaId, lastUpdated) {
+function useAreaFeatures(selectedAreaId, lastUpdated, enabled = true) {
   const [featureDataset, setFeatureDataset] = useState({
     rows: [],
     summary: {
@@ -1325,6 +1400,7 @@ function useAreaFeatures(selectedAreaId, lastUpdated) {
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchAreaFeatures({
@@ -1348,15 +1424,16 @@ function useAreaFeatures(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return featureDataset;
 }
 
-function useAreaNotifications(selectedAreaId, lastUpdated) {
+function useAreaNotifications(selectedAreaId, lastUpdated, enabled = true) {
   const [notifications, setNotifications] = useState({ candidates: [], suppressed: [] });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchAreaNotifications({
@@ -1371,12 +1448,12 @@ function useAreaNotifications(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return notifications;
 }
 
-function useDatasetQuality(selectedAreaId, lastUpdated) {
+function useDatasetQuality(selectedAreaId, lastUpdated, enabled = true) {
   const [quality, setQuality] = useState({
     rowCount: 0,
     elevatedCount: 0,
@@ -1389,6 +1466,7 @@ function useDatasetQuality(selectedAreaId, lastUpdated) {
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchDatasetQuality({
@@ -1413,12 +1491,12 @@ function useDatasetQuality(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return quality;
 }
 
-function useBaselinePrediction(selectedAreaId, lastUpdated) {
+function useBaselinePrediction(selectedAreaId, lastUpdated, enabled = true) {
   const [baselinePrediction, setBaselinePrediction] = useState({
     modelName: "transparent feature baseline",
     status: "unavailable",
@@ -1440,6 +1518,7 @@ function useBaselinePrediction(selectedAreaId, lastUpdated) {
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchBaselinePrediction({
@@ -1462,12 +1541,12 @@ function useBaselinePrediction(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return baselinePrediction;
 }
 
-function useModelExperiment(selectedAreaId, lastUpdated) {
+function useModelExperiment(selectedAreaId, lastUpdated, enabled = true) {
   const [modelExperiment, setModelExperiment] = useState({
     modelFamily: "tabular flood-signal baseline",
     status: "unavailable",
@@ -1486,6 +1565,7 @@ function useModelExperiment(selectedAreaId, lastUpdated) {
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchModelExperiment({
@@ -1508,12 +1588,12 @@ function useModelExperiment(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return modelExperiment;
 }
 
-function useModelCard(selectedAreaId, lastUpdated) {
+function useModelCard(selectedAreaId, lastUpdated, enabled = true) {
   const [modelCard, setModelCard] = useState({
     modelName: "transparent feature baseline",
     modelType: "rule-weighted tabular baseline",
@@ -1531,6 +1611,7 @@ function useModelCard(selectedAreaId, lastUpdated) {
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchModelCard({
@@ -1553,12 +1634,12 @@ function useModelCard(selectedAreaId, lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [selectedAreaId, lastUpdated]);
+  }, [enabled, selectedAreaId, lastUpdated]);
 
   return modelCard;
 }
 
-function useMlReport(lastUpdated) {
+function useMlReport(lastUpdated, enabled = true) {
   const [mlReport, setMlReport] = useState({
     mode: "shadow",
     liveScoringEnabled: false,
@@ -1586,6 +1667,7 @@ function useMlReport(lastUpdated) {
   });
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const controller = new AbortController();
 
     fetchMlReport({ signal: controller.signal })
@@ -1600,7 +1682,7 @@ function useMlReport(lastUpdated) {
       });
 
     return () => controller.abort();
-  }, [lastUpdated]);
+  }, [enabled, lastUpdated]);
 
   return mlReport;
 }
@@ -1664,62 +1746,14 @@ function RainfallChart({ rainfallTrend }) {
         <InfoTile label="Observed total" value={`${totalRainfall.toFixed(1)} mm`} />
       </div>
       <div className="chart-box">
-        <ResponsiveContainer width="100%" height={255}>
-          <LineChart
-            data={rainfallTrend}
-            margin={{ top: 12, right: 16, left: 6, bottom: 18 }}
-          >
-            <defs>
-              <linearGradient id="rainfallLineGlow" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2d8cf0" stopOpacity={0.22} />
-                <stop offset="100%" stopColor="#2d8cf0" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="time"
-              tickLine={false}
-              axisLine={false}
-              interval="preserveStartEnd"
-              tickMargin={12}
-              minTickGap={28}
-              padding={{ left: 10, right: 10 }}
-              tick={{ fontSize: 11, fill: "#5b6c84" }}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              domain={[-0.2, yAxisMax]}
-              ticks={yAxisTicks}
-              width={44}
-              tickFormatter={(value) => (value < 0 ? "" : `${value} mm`)}
-              tick={{ fontSize: 11, fill: "#5b6c84" }}
-            />
-            <Tooltip
-              cursor={{ fill: "rgba(45, 140, 240, 0.08)" }}
-              formatter={(value) => [`${value} mm`, "Rainfall"]}
-              labelFormatter={(_, payload) =>
-                payload?.[0]?.payload?.timestamp ?? "Rainfall reading"
-              }
-            />
-            <ReferenceLine y={0} stroke="#b8cde5" />
-            <ReferenceLine
-              y={peakRainfall}
-              stroke="#0f6dcb"
-              strokeDasharray="4 4"
-              ifOverflow="extendDomain"
-            />
-            <Line
-              dataKey="rainfall"
-              type="monotone"
-              stroke="#2d8cf0"
-              strokeWidth={3}
-              connectNulls
-              dot={{ r: 4, strokeWidth: 2, stroke: "#ffffff", fill: "#2d8cf0" }}
-              activeDot={{ r: 5, strokeWidth: 2, stroke: "#ffffff", fill: "#0f6dcb" }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <Suspense fallback={<div aria-label="Loading rainfall chart" className="chart-loading" />}>
+          <RainfallChartVisual
+            peakRainfall={peakRainfall}
+            rainfallTrend={rainfallTrend}
+            yAxisMax={yAxisMax}
+            yAxisTicks={yAxisTicks}
+          />
+        </Suspense>
       </div>
       <p className="chart-note">
         The line traces rainfall day by day in millimetres, with the dashed marker showing the local peak and the summary tiles showing the latest and cumulative rain observed across the displayed days.
@@ -1769,16 +1803,6 @@ function WarningStatusPanel({ warning }) {
 
 // #decision evidence risk chart
 function SignalBreakdownChart({ riskSignals }) {
-  const chartLabelMap = {
-    Rainfall: "Rainfall",
-    Weather: "Weather",
-    River: "River",
-    Wetness: "Wetness",
-    Public: "Public",
-    Confidence: "Confidence",
-    "Input Coverage": "Coverage",
-  };
-
   return (
     <section className="card signal-chart-card">
       <div className="section-header compact">
@@ -1788,34 +1812,9 @@ function SignalBreakdownChart({ riskSignals }) {
         </div>
       </div>
       <div className="chart-box">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={riskSignals}
-            barCategoryGap="18%"
-            margin={{ top: 8, right: 10, left: 6, bottom: 14 }}
-          >
-            <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              height={42}
-              tickMargin={10}
-              interval={0}
-              padding={{ left: 8, right: 8 }}
-              tickFormatter={(value) => chartLabelMap[value] ?? value}
-              tick={{ fontSize: 11, fill: "#5b6c84" }}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              width={36}
-              tick={{ fontSize: 11, fill: "#5b6c84" }}
-            />
-            <Tooltip />
-            <Bar dataKey="value" fill="var(--signal-chart)" radius={[8, 8, 0, 0]} maxBarSize={48} />
-          </BarChart>
-        </ResponsiveContainer>
+        <Suspense fallback={<div aria-label="Loading risk chart" className="chart-loading" />}>
+          <SignalBreakdownVisual riskSignals={riskSignals} />
+        </Suspense>
       </div>
     </section>
   );
@@ -3100,17 +3099,58 @@ export default function App() {
   const selectedArea = areas.find((area) => area.id === selectedAreaId);
   const signalsAreaId = signals.area?.id ?? "parramatta";
   const hasSelectedAreaSignals = signalsAreaId === selectedAreaId;
-  const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated);
-  const rainfallHistory = useRainfallHistory(selectedAreaId, liveStatus.lastUpdated);
-  const communityReportState = useCommunityReports(selectedAreaId, liveStatus.lastUpdated);
-  const evidenceReviewQueue = useEvidenceReviewQueue(selectedAreaId, liveStatus.lastUpdated);
-  const featureDataset = useAreaFeatures(selectedAreaId, liveStatus.lastUpdated);
-  const datasetQuality = useDatasetQuality(selectedAreaId, liveStatus.lastUpdated);
-  const baselinePrediction = useBaselinePrediction(selectedAreaId, liveStatus.lastUpdated);
-  const modelExperiment = useModelExperiment(selectedAreaId, liveStatus.lastUpdated);
-  const modelCard = useModelCard(selectedAreaId, liveStatus.lastUpdated);
-  const mlReport = useMlReport(liveStatus.lastUpdated);
-  const notifications = useAreaNotifications(selectedAreaId, liveStatus.lastUpdated);
+  const areaDataReady = hasSelectedAreaSignals && Boolean(liveStatus.lastUpdated);
+  const overviewDataEnabled = areaDataReady && activeView === "overview";
+  const signalsDataEnabled = areaDataReady && activeView === "signals";
+  const communityDataEnabled = areaDataReady && activeView === "community";
+  const modelDataEnabled = areaDataReady && activeView === "model";
+  useSignalPrefetch(areas, selectedAreaId, liveStatus.lastUpdated);
+  const history = useAreaHistory(selectedAreaId, liveStatus.lastUpdated, modelDataEnabled);
+  const rainfallHistory = useRainfallHistory(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    overviewDataEnabled || signalsDataEnabled,
+  );
+  const communityReportState = useCommunityReports(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    overviewDataEnabled || signalsDataEnabled || communityDataEnabled,
+  );
+  const evidenceReviewQueue = useEvidenceReviewQueue(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    communityDataEnabled,
+  );
+  const featureDataset = useAreaFeatures(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    modelDataEnabled,
+  );
+  const datasetQuality = useDatasetQuality(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    modelDataEnabled,
+  );
+  const baselinePrediction = useBaselinePrediction(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    modelDataEnabled,
+  );
+  const modelExperiment = useModelExperiment(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    overviewDataEnabled || modelDataEnabled,
+  );
+  const modelCard = useModelCard(selectedAreaId, liveStatus.lastUpdated, modelDataEnabled);
+  const mlReport = useMlReport(
+    liveStatus.lastUpdated,
+    overviewDataEnabled || modelDataEnabled,
+  );
+  const notifications = useAreaNotifications(
+    selectedAreaId,
+    liveStatus.lastUpdated,
+    signalsDataEnabled,
+  );
   const dashboardData = hasSelectedAreaSignals
     ? buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory)
     : null;
@@ -3314,8 +3354,8 @@ function useLiveLocation() {
   return { errorMessage, location, start, status, stop };
 }
 
-function markerIcon(kind, label = "") {
-  return L.divIcon({
+function markerIcon(leaflet, kind, label = "") {
+  return leaflet.divIcon({
     className: "",
     html: `<span class="flood-map-marker ${kind}">${label}</span>`,
     iconAnchor: [15, 30],
@@ -3354,39 +3394,66 @@ function buildMapPopup(title, lines, reviewedImageUrl = null) {
 function OperationalMap({ center, followLocation, gauges, reports, warnings, layers, userLocation }) {
   const elementRef = useRef(null);
   const initialCenterRef = useRef(center);
+  const leafletRef = useRef(null);
   const leafletMapRef = useRef(null);
   const layerGroupsRef = useRef(null);
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
-    const initialCenter = initialCenterRef.current;
-    const leafletMap = L.map(elementRef.current, { attributionControl: false, scrollWheelZoom: true }).setView([initialCenter.lat, initialCenter.lon], 14);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-    }).addTo(leafletMap);
-    leafletMapRef.current = leafletMap;
-    layerGroupsRef.current = {
-      gauges: L.layerGroup().addTo(leafletMap),
-      reports: L.layerGroup().addTo(leafletMap),
-      user: L.layerGroup().addTo(leafletMap),
-      warnings: L.layerGroup().addTo(leafletMap),
+    let disposed = false;
+    let leafletMap = null;
+
+    const initialiseMap = async () => {
+      const { default: leaflet } = await import("leaflet");
+      if (disposed || !elementRef.current) return;
+
+      const initialCenter = initialCenterRef.current;
+      leafletMap = leaflet
+        .map(elementRef.current, { attributionControl: false, scrollWheelZoom: true })
+        .setView([initialCenter.lat, initialCenter.lon], 14);
+      leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(leafletMap);
+      leafletRef.current = leaflet;
+      leafletMapRef.current = leafletMap;
+      layerGroupsRef.current = {
+        gauges: leaflet.layerGroup().addTo(leafletMap),
+        reports: leaflet.layerGroup().addTo(leafletMap),
+        user: leaflet.layerGroup().addTo(leafletMap),
+        warnings: leaflet.layerGroup().addTo(leafletMap),
+      };
+      setMapReady(true);
+      window.requestAnimationFrame(() => leafletMap?.invalidateSize());
     };
 
-    window.requestAnimationFrame(() => leafletMap.invalidateSize());
-    return () => leafletMap.remove();
+    initialiseMap().catch(() => {
+      if (!disposed) setMapLoadFailed(true);
+    });
+    return () => {
+      disposed = true;
+      leafletMap?.remove();
+      leafletRef.current = null;
+      leafletMapRef.current = null;
+      layerGroupsRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
-    if (followLocation) leafletMapRef.current?.flyTo([center.lat, center.lon], 15, { animate: true });
-  }, [center.lat, center.lon, followLocation]);
+    if (mapReady && followLocation) {
+      leafletMapRef.current?.flyTo([center.lat, center.lon], 15, { animate: true });
+    }
+  }, [center.lat, center.lon, followLocation, mapReady]);
 
   useEffect(() => {
+    const leaflet = leafletRef.current;
     const groups = layerGroupsRef.current;
-    if (!groups) return;
+    if (!leaflet || !groups || !mapReady) return;
 
     Object.values(groups).forEach((group) => group.clearLayers());
     if (layers.gauges) {
       gauges.forEach((gauge) => {
-        L.marker([gauge.lat, gauge.lon], { icon: markerIcon(`gauge ${gauge.tendency}`) })
+        leaflet.marker([gauge.lat, gauge.lon], { icon: markerIcon(leaflet, `gauge ${gauge.tendency}`) })
           .bindPopup(buildMapPopup(gauge.stationName, [
             gauge.heightM === null || gauge.heightM === undefined ? "Height unavailable" : `${gauge.heightM} m · ${gauge.tendency}`,
             formatMapTime(gauge.observedAt),
@@ -3396,7 +3463,7 @@ function OperationalMap({ center, followLocation, gauges, reports, warnings, lay
     }
     if (layers.reports) {
       reports.forEach((report) => {
-        L.marker([report.location.lat, report.location.lon], { icon: markerIcon(`report ${report.severity}`, "!") })
+        leaflet.marker([report.location.lat, report.location.lon], { icon: markerIcon(leaflet, `report ${report.severity}`, "!") })
           .bindPopup(
             buildMapPopup(
               report.title,
@@ -3413,7 +3480,7 @@ function OperationalMap({ center, followLocation, gauges, reports, warnings, lay
     }
     if (layers.warnings) {
       warnings.forEach((warning) => {
-        L.circle([center.lat, center.lon], {
+        leaflet.circle([center.lat, center.lon], {
           color: "#6d28d9",
           fillColor: "#8b5cf6",
           fillOpacity: 0.1,
@@ -3428,13 +3495,20 @@ function OperationalMap({ center, followLocation, gauges, reports, warnings, lay
       });
     }
     if (userLocation) {
-      L.marker([userLocation.lat, userLocation.lon], { icon: markerIcon("user") })
+      leaflet.marker([userLocation.lat, userLocation.lon], { icon: markerIcon(leaflet, "user") })
         .bindPopup(buildMapPopup("Your live location", ["This stays in your browser and is not saved."]))
         .addTo(groups.user);
     }
-  }, [center.lat, center.lon, gauges, layers, reports, userLocation, warnings]);
+  }, [center.lat, center.lon, gauges, layers, mapReady, reports, userLocation, warnings]);
 
-  return <div className="flood-map" ref={elementRef} />;
+  return (
+    <>
+      <div className="flood-map" ref={elementRef} />
+      {mapLoadFailed ? (
+        <p className="map-load-error">Interactive map unavailable. Other FloodGuard data remains available.</p>
+      ) : null}
+    </>
+  );
 }
 
 // #location context map card
