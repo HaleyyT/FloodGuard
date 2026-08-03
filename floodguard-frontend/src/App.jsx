@@ -563,6 +563,31 @@ function buildHeaderSourceState(sourceStatus, liveStatus) {
   return { label: "Sync pending", tone: "neutral" };
 }
 
+function getRefreshCopy(refreshKind, areaName, hasAreaData) {
+  if (refreshKind === "location") {
+    return {
+      title: `Switching to ${areaName}`,
+      detail: hasAreaData
+        ? "Showing the latest available area snapshot while live sources update."
+        : "Loading rainfall, river, weather, and warning signals for this area.",
+    };
+  }
+
+  if (refreshKind === "initial") {
+    return {
+      title: "Loading FloodGuard live signals",
+      detail: "Checking the latest rainfall, river, weather, and warning sources.",
+    };
+  }
+
+  return {
+    title: "Refreshing live signals",
+    detail: hasAreaData
+      ? "Your current view stays visible while FloodGuard checks for updates."
+      : "Checking the latest available source data.",
+  };
+}
+
 function formatSourceAge(ageHours) {
   if (ageHours === null || ageHours === undefined) return "age unknown";
   if (ageHours < 1) return "under 1h old";
@@ -1045,17 +1070,28 @@ function buildDashboardData(signals, sourceStatus, liveStatus, rainfallHistory =
 
 function useParramattaSignals(selectedAreaId) {
   const latestRequestRef = useRef(0);
+  const hasStartedLoadingRef = useRef(false);
   const [signals, setSignals] = useState(localParramattaSignals);
   const [sourceStatus, setSourceStatus] = useState("local");
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [refreshKind, setRefreshKind] = useState("initial");
 
   const loadAreaSignals = useCallback(
-    async ({ forceRefresh = false, signal } = {}) => {
+    async ({ forceRefresh = false, signal, refreshKind } = {}) => {
       const requestId = latestRequestRef.current + 1;
       latestRequestRef.current = requestId;
+      const nextRefreshKind =
+        refreshKind ??
+        (forceRefresh
+          ? "manual"
+          : hasStartedLoadingRef.current
+          ? "location"
+          : "initial");
+      hasStartedLoadingRef.current = true;
       setIsRefreshing(true);
+      setRefreshKind(nextRefreshKind);
 
       try {
         const apiSignals = await fetchParramattaSignals({
@@ -1090,7 +1126,7 @@ function useParramattaSignals(selectedAreaId) {
 
     loadAreaSignals({ signal: controller.signal });
     intervalId = window.setInterval(() => {
-      loadAreaSignals({ forceRefresh: true });
+      loadAreaSignals({ forceRefresh: true, refreshKind: "automatic" });
     }, liveRefreshIntervalMs);
 
     return () => {
@@ -1106,7 +1142,8 @@ function useParramattaSignals(selectedAreaId) {
       errorMessage,
       isRefreshing,
       lastUpdated,
-      refresh: () => loadAreaSignals({ forceRefresh: true }),
+      refreshKind,
+      refresh: () => loadAreaSignals({ forceRefresh: true, refreshKind: "manual" }),
     },
   };
 }
@@ -1901,7 +1938,9 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange, sourceS
         <p className="section-label">Regional pilot area</p>
         <h3>{selectedArea?.catchment || "Parramatta River"}</h3>
         <p className="live-status">
-          {liveStatus.lastUpdated
+          {liveStatus.isRefreshing
+            ? getRefreshCopy(liveStatus.refreshKind, selectedArea?.name ?? "this area", true).title
+            : liveStatus.lastUpdated
             ? `Updated ${new Date(liveStatus.lastUpdated).toLocaleTimeString("en-AU")}`
             : "Waiting for latest reading"}
         </p>
@@ -2006,11 +2045,33 @@ function AreaDataGuard({ areaName, liveStatus }) {
           <h2>{areaName}</h2>
         </div>
       </div>
+      {liveStatus.isRefreshing ? (
+        <div className="area-loading-inline" role="status">
+          <span aria-hidden="true" className="refresh-spinner" />
+          <span>{getRefreshCopy(liveStatus.refreshKind, areaName, false).title}</span>
+        </div>
+      ) : null}
       <p className="overview-summary">
         {liveStatus.errorMessage
           ? `Could not load current signals for this area: ${liveStatus.errorMessage}`
           : `Loading current rainfall, river, weather, and warning signals for ${areaName}.`}
       </p>
+    </section>
+  );
+}
+
+function RefreshStatusBanner({ areaName, hasAreaData, liveStatus }) {
+  if (!liveStatus.isRefreshing) return null;
+
+  const copy = getRefreshCopy(liveStatus.refreshKind, areaName, hasAreaData);
+
+  return (
+    <section aria-live="polite" className="refresh-status-banner" role="status">
+      <span aria-hidden="true" className="refresh-spinner" />
+      <div>
+        <strong>{copy.title}</strong>
+        <span>{copy.detail}</span>
+      </div>
     </section>
   );
 }
@@ -3080,6 +3141,12 @@ export default function App() {
               }
             : null
         }
+      />
+
+      <RefreshStatusBanner
+        areaName={selectedAreaName}
+        hasAreaData={hasSelectedAreaSignals}
+        liveStatus={liveStatus}
       />
 
       {!hasSelectedAreaSignals && (
