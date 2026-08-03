@@ -1,4 +1,5 @@
 import { parramattaSignals as localParramattaSignals } from "./parramattaSignals";
+import { fetchJsonWithTimeout } from "./requestPolicy";
 
 const defaultApiBaseUrl = "http://127.0.0.1:5174";
 const defaultApiUrl = `${defaultApiBaseUrl}/api/signals/parramatta`;
@@ -54,23 +55,17 @@ function buildSignalsUrl(areaId, refresh = false) {
 }
 
 export async function fetchParramattaSignals({ areaId, refresh = false, signal } = {}) {
-  const response = await fetch(buildSignalsUrl(areaId, refresh), { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(buildSignalsUrl(areaId, refresh), {
+    errorLabel: "FloodGuard signals API",
+    signal,
+  });
 }
 
 export async function fetchFloodguardAreas({ signal } = {}) {
-  const response = await fetch(floodguardAreasApiUrl, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard areas API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(floodguardAreasApiUrl, {
+    errorLabel: "FloodGuard areas API",
+    signal,
+  });
 }
 
 export async function fetchAreaHistory({ areaId, limit = 12, sinceHours, startTime, endTime, signal } = {}) {
@@ -81,13 +76,7 @@ export async function fetchAreaHistory({ areaId, limit = 12, sinceHours, startTi
   if (startTime) url.searchParams.set("start", startTime);
   if (endTime) url.searchParams.set("end", endTime);
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard history API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard history API", signal });
 }
 
 export async function fetchCommunityReports({ areaId, limit = 10, signal } = {}) {
@@ -95,31 +84,28 @@ export async function fetchCommunityReports({ areaId, limit = 10, signal } = {})
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard community reports API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, {
+    errorLabel: "FloodGuard community reports API",
+    signal,
+  });
 }
 
 export async function submitCommunityReport(report, { signal } = {}) {
-  const response = await fetch(floodguardCommunityReportsApiUrl, {
-    body: JSON.stringify(report),
-    headers: {
-      "content-type": "application/json",
+  return fetchJsonWithTimeout(floodguardCommunityReportsApiUrl, {
+    errorLabel: "FloodGuard community reports API",
+    init: {
+      body: JSON.stringify(report),
+      headers: {
+        "content-type": "application/json",
+      },
+      method: "POST",
     },
-    method: "POST",
+    parseError: async (response) => {
+      const body = await response.json().catch(() => ({}));
+      return body.error;
+    },
     signal,
   });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `FloodGuard community reports API returned ${response.status}`);
-  }
-
-  return response.json();
 }
 
 export async function fetchEvidenceReviewQueue({ areaId, limit = 8, signal } = {}) {
@@ -127,13 +113,7 @@ export async function fetchEvidenceReviewQueue({ areaId, limit = 8, signal } = {
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard evidence review API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard evidence review API", signal });
 }
 
 export async function fetchAreaFeatures({ areaId, limit = 100, signal } = {}) {
@@ -141,13 +121,7 @@ export async function fetchAreaFeatures({ areaId, limit = 100, signal } = {}) {
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard features API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard features API", signal });
 }
 
 export async function fetchDatasetQuality({ areaId, limit = 100, signal } = {}) {
@@ -155,13 +129,7 @@ export async function fetchDatasetQuality({ areaId, limit = 100, signal } = {}) 
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard dataset quality API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard dataset quality API", signal });
 }
 
 export async function fetchBaselinePrediction({ areaId, limit = 100, signal } = {}) {
@@ -169,13 +137,7 @@ export async function fetchBaselinePrediction({ areaId, limit = 100, signal } = 
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard baseline API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard baseline API", signal });
 }
 
 export async function fetchModelExperiment({ areaId, limit = 100, signal } = {}) {
@@ -183,13 +145,7 @@ export async function fetchModelExperiment({ areaId, limit = 100, signal } = {})
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard model experiment API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard model experiment API", signal });
 }
 
 export async function fetchModelCard({ areaId, limit = 100, signal } = {}) {
@@ -197,36 +153,21 @@ export async function fetchModelCard({ areaId, limit = 100, signal } = {}) {
   if (areaId) url.searchParams.set("area", areaId);
   url.searchParams.set("limit", String(limit));
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard model card API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard model card API", signal });
 }
 
 export async function fetchMlReport({ signal } = {}) {
-  const response = await fetch(floodguardMlReportApiUrl, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard ML report API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(floodguardMlReportApiUrl, {
+    errorLabel: "FloodGuard ML report API",
+    signal,
+  });
 }
 
 export async function fetchAreaNotifications({ areaId, signal } = {}) {
   const url = new URL(floodguardNotificationsApiUrl);
   if (areaId) url.searchParams.set("area", areaId);
 
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`FloodGuard notifications API returned ${response.status}`);
-  }
-
-  return response.json();
+  return fetchJsonWithTimeout(url, { errorLabel: "FloodGuard notifications API", signal });
 }
 
 export { localParramattaSignals };

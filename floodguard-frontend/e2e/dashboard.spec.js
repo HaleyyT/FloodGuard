@@ -361,7 +361,14 @@ async function fulfillJson(route, body) {
 
 async function installMockFloodguardApi(
   page,
-  { degradedAreaIds = [], warningUnavailableAreaIds = [], mlReportUnavailable = false } = {},
+  {
+    degradedAreaIds = [],
+    failedAreaIds = [],
+    mlReportUnavailable = false,
+    refreshDelayByArea = {},
+    signalDelayByArea = {},
+    warningUnavailableAreaIds = [],
+  } = {},
 ) {
   await page.route(`${apiBaseUrl}/api/**`, async (route) => {
     const url = new URL(route.request().url());
@@ -379,6 +386,20 @@ async function installMockFloodguardApi(
     }
 
     if (url.pathname === "/api/signals" || pathAreaId) {
+      const delayMs = url.searchParams.get("refresh") === "true"
+        ? refreshDelayByArea[areaId] ?? signalDelayByArea[areaId] ?? 0
+        : signalDelayByArea[areaId] ?? 0;
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      if (failedAreaIds.includes(areaId)) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "Signals temporarily unavailable" }),
+        });
+        return;
+      }
       await fulfillJson(route, buildSignalFixture(areaId, { degraded: isDegraded, warningUnavailable }));
       return;
     }
@@ -564,6 +585,8 @@ test("resident-facing overview renders key FloodGuard cards", async ({ page }) =
   await expect(page.getByRole("heading", { name: "Recent public signals" })).toBeVisible();
   await expect(page.getByText("ML prototype layer")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Source status at a glance" })).toBeVisible();
+  await expect(page.locator(".leaflet-container")).toBeVisible();
+  await expect(page.locator(".recharts-responsive-container svg")).toHaveCount(2);
 });
 
 test("area switcher updates the monitored region content for each pilot suburb", async ({ page }) => {
@@ -578,6 +601,50 @@ test("area switcher updates the monitored region content for each pilot suburb",
 
   await page.getByRole("button", { name: "Toongabbie" }).click();
   await expect(page.getByRole("heading", { name: "Toongabbie, NSW", exact: true })).toBeVisible();
+});
+
+test("rapid area switching ignores a slower superseded response", async ({ page }) => {
+  await installMockFloodguardApi(page, {
+    signalDelayByArea: { "north-parramatta": 700, toongabbie: 80 },
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Parramatta, NSW", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "North Parramatta" }).click();
+  await page.getByRole("button", { name: "Toongabbie" }).click();
+
+  await expect(page.getByRole("heading", { name: "Toongabbie, NSW", exact: true })).toBeVisible();
+  await page.waitForTimeout(800);
+  await expect(page.getByRole("heading", { name: "Toongabbie, NSW", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "North Parramatta, NSW", exact: true })).toHaveCount(0);
+});
+
+test("manual refresh keeps current content visible and explains the update", async ({ page }) => {
+  await installMockFloodguardApi(page, {
+    refreshDelayByArea: { parramatta: 700 },
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Parramatta, NSW", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Refresh now" }).click();
+
+  const refreshBanner = page.locator(".refresh-status-banner");
+  await expect(refreshBanner.getByText("Refreshing live signals", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Parramatta, NSW", exact: true })).toBeVisible();
+  await expect(refreshBanner.getByText("Your current view stays visible while FloodGuard checks for updates.")).toBeVisible();
+  await expect(refreshBanner).toHaveCount(0);
+});
+
+test("failed area switch stops loading and reports the unavailable source", async ({ page }) => {
+  await installMockFloodguardApi(page, { failedAreaIds: ["north-parramatta"] });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Parramatta, NSW", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "North Parramatta" }).click();
+
+  await expect(page.getByRole("heading", { name: "North Parramatta, NSW", exact: true })).toBeVisible();
+  await expect(page.getByText("Could not load current signals for this area: FloodGuard signals API returned 503")).toBeVisible();
+  await expect(page.getByText("Switching to North Parramatta, NSW", { exact: true })).toHaveCount(0);
 });
 
 test("degraded source fixture keeps stale evidence visible without presenting it as live", async ({
