@@ -1,5 +1,9 @@
 import { parramattaSignals as localParramattaSignals } from "./parramattaSignals";
-import { fetchJsonWithTimeout } from "./requestPolicy";
+import {
+  fetchJsonWithTimeout,
+  liveDataRequestTimeoutMs,
+  serviceWakeRequestTimeoutMs,
+} from "./requestPolicy";
 
 const defaultApiBaseUrl = "http://127.0.0.1:5174";
 const defaultApiUrl = `${defaultApiBaseUrl}/api/signals/parramatta`;
@@ -58,6 +62,7 @@ export async function fetchParramattaSignals({ areaId, refresh = false, signal }
   return fetchJsonWithTimeout(buildSignalsUrl(areaId, refresh), {
     errorLabel: "FloodGuard signals API",
     signal,
+    timeoutMs: liveDataRequestTimeoutMs,
   });
 }
 
@@ -65,6 +70,7 @@ export async function fetchFloodguardAreas({ signal } = {}) {
   return fetchJsonWithTimeout(floodguardAreasApiUrl, {
     errorLabel: "FloodGuard areas API",
     signal,
+    timeoutMs: serviceWakeRequestTimeoutMs,
   });
 }
 
