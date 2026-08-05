@@ -364,6 +364,7 @@ async function installMockFloodguardApi(
   {
     degradedAreaIds = [],
     failedAreaIds = [],
+    failedRefreshAreaIds = [],
     mlReportUnavailable = false,
     refreshDelayByArea = {},
     signalDelayByArea = {},
@@ -392,7 +393,8 @@ async function installMockFloodguardApi(
       if (delayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
-      if (failedAreaIds.includes(areaId)) {
+      const isRefresh = url.searchParams.get("refresh") === "true";
+      if (failedAreaIds.includes(areaId) || (isRefresh && failedRefreshAreaIds.includes(areaId))) {
         await route.fulfill({
           status: 503,
           contentType: "application/json",
@@ -589,6 +591,27 @@ test("resident-facing overview renders key FloodGuard cards", async ({ page }) =
   await expect(page.locator(".recharts-responsive-container svg")).toHaveCount(2);
 });
 
+test("slow live startup keeps waiting and explains that the service is taking longer", async ({
+  page,
+}) => {
+  await installMockFloodguardApi(page, {
+    signalDelayByArea: { parramatta: 8_200 },
+  });
+
+  await page.goto("/");
+
+  const refreshBanner = page.locator(".refresh-status-banner");
+  await expect(refreshBanner.getByText("Still checking live signals", { exact: true })).toBeVisible({
+    timeout: 9_000,
+  });
+  await expect(
+    refreshBanner.getByText(
+      "The live service is taking longer than usual. FloodGuard is still waiting safely and will not mark fallback data as live.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Live feed", { exact: true })).toBeVisible();
+});
+
 test("area switcher updates the monitored region content for each pilot suburb", async ({ page }) => {
   await installMockFloodguardApi(page);
 
@@ -633,6 +656,23 @@ test("manual refresh keeps current content visible and explains the update", asy
   await expect(page.getByRole("heading", { name: "Parramatta, NSW", exact: true })).toBeVisible();
   await expect(refreshBanner.getByText("Your current view stays visible while FloodGuard checks for updates.")).toBeVisible();
   await expect(refreshBanner).toHaveCount(0);
+});
+
+test("failed refresh keeps the latest successful API snapshot without calling it fallback", async ({
+  page,
+}) => {
+  await installMockFloodguardApi(page, {
+    failedRefreshAreaIds: ["parramatta"],
+    refreshDelayByArea: { parramatta: 100 },
+  });
+  await page.goto("/");
+  await expect(page.getByText("Live feed", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Refresh now" }).click();
+
+  await expect(page.getByText("Latest snapshot kept", { exact: true })).toBeVisible();
+  await expect(page.getByText("Fallback mode", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Parramatta, NSW", exact: true })).toBeVisible();
 });
 
 test("failed area switch stops loading and reports the unavailable source", async ({ page }) => {

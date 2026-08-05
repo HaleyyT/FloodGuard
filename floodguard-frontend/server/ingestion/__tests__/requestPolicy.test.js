@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  defaultRequestTimeoutMs,
   fetchJsonWithTimeout,
   FloodguardTimeoutError,
+  liveDataRequestTimeoutMs,
+  serviceWakeRequestTimeoutMs,
 } from "../../../src/data/requestPolicy.js";
 import {
   clearSignalSnapshots,
@@ -18,6 +21,14 @@ function abortablePendingFetch(_input, { signal }) {
     else signal.addEventListener("abort", rejectAsAborted, { once: true });
   });
 }
+
+test("live requests allow a managed service to wake without slowing ordinary APIs", () => {
+  assert.equal(defaultRequestTimeoutMs, 10_000);
+  assert.equal(serviceWakeRequestTimeoutMs, 30_000);
+  assert.equal(liveDataRequestTimeoutMs, 60_000);
+  assert.ok(defaultRequestTimeoutMs < serviceWakeRequestTimeoutMs);
+  assert.ok(serviceWakeRequestTimeoutMs < liveDataRequestTimeoutMs);
+});
 
 test("request policy returns parsed JSON for a successful response", async (context) => {
   const originalFetch = globalThis.fetch;

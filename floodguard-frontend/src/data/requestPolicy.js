@@ -1,4 +1,6 @@
 export const defaultRequestTimeoutMs = 10_000;
+export const liveDataRequestTimeoutMs = 60_000;
+export const serviceWakeRequestTimeoutMs = 30_000;
 
 export class FloodguardTimeoutError extends Error {
   constructor(label, timeoutMs) {

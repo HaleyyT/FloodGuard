@@ -62,6 +62,7 @@ const fallbackAreas = [
 const liveRefreshIntervalMs = Number(
   import.meta.env.VITE_FLOODGUARD_REFRESH_MS || 60000
 );
+const slowLiveRequestThresholdMs = 8_000;
 const appSections = [
   { id: "overview", label: "Overview" },
   { id: "signals", label: "Signals" },
@@ -553,15 +554,31 @@ function formatRefreshNote(refreshMetadata) {
 }
 
 function buildHeaderSourceState(sourceStatus, liveStatus) {
-  if (liveStatus?.isRefreshing) return { label: "Refreshing", tone: "neutral" };
-  if (liveStatus?.errorMessage || sourceStatus !== "api") {
+  if (liveStatus?.isRefreshing) {
+    return {
+      label: liveStatus.isTakingLonger ? "Still refreshing" : "Refreshing",
+      tone: "neutral",
+    };
+  }
+  if (sourceStatus !== "api") {
     return { label: "Fallback mode", tone: "warn" };
+  }
+  if (liveStatus?.errorMessage && liveStatus?.lastUpdated) {
+    return { label: "Latest snapshot kept", tone: "warn" };
   }
   if (liveStatus?.lastUpdated) return { label: "Live feed", tone: "live" };
   return { label: "Sync pending", tone: "neutral" };
 }
 
-function getRefreshCopy(refreshKind, areaName, hasAreaData) {
+function getRefreshCopy(refreshKind, areaName, hasAreaData, isTakingLonger = false) {
+  if (isTakingLonger) {
+    return {
+      title: "Still checking live signals",
+      detail:
+        "The live service is taking longer than usual. FloodGuard is still waiting safely and will not mark fallback data as live.",
+    };
+  }
+
   if (refreshKind === "location") {
     return {
       title: `Switching to ${areaName}`,
@@ -1070,11 +1087,13 @@ function useParramattaSignals(selectedAreaId) {
   const latestRequestRef = useRef(0);
   const activeRequestRef = useRef(null);
   const requestInFlightRef = useRef(false);
+  const slowRequestTimerRef = useRef(null);
   const lastLoadedAreaRef = useRef(null);
   const [signals, setSignals] = useState(localParramattaSignals);
   const [sourceStatus, setSourceStatus] = useState("local");
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isTakingLonger, setIsTakingLonger] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [refreshKind, setRefreshKind] = useState("initial");
 
@@ -1085,6 +1104,7 @@ function useParramattaSignals(selectedAreaId) {
       const requestId = latestRequestRef.current + 1;
       latestRequestRef.current = requestId;
       activeRequestRef.current?.abort();
+      window.clearTimeout(slowRequestTimerRef.current);
       const controller = new AbortController();
       activeRequestRef.current = controller;
       requestInFlightRef.current = true;
@@ -1106,7 +1126,13 @@ function useParramattaSignals(selectedAreaId) {
       }
 
       setIsRefreshing(true);
+      setIsTakingLonger(false);
       setRefreshKind(nextRefreshKind);
+      slowRequestTimerRef.current = window.setTimeout(() => {
+        if (requestId === latestRequestRef.current) {
+          setIsTakingLonger(true);
+        }
+      }, slowLiveRequestThresholdMs);
 
       try {
         const apiSignals = await fetchParramattaSignals({
@@ -1132,9 +1158,12 @@ function useParramattaSignals(selectedAreaId) {
         }
       } finally {
         if (requestId === latestRequestRef.current) {
+          window.clearTimeout(slowRequestTimerRef.current);
+          slowRequestTimerRef.current = null;
           requestInFlightRef.current = false;
           activeRequestRef.current = null;
           setIsRefreshing(false);
+          setIsTakingLonger(false);
         }
       }
 
@@ -1157,6 +1186,8 @@ function useParramattaSignals(selectedAreaId) {
 
     return () => {
       activeRequestRef.current?.abort();
+      window.clearTimeout(slowRequestTimerRef.current);
+      slowRequestTimerRef.current = null;
       requestInFlightRef.current = false;
       window.clearInterval(intervalId);
     };
@@ -1168,6 +1199,7 @@ function useParramattaSignals(selectedAreaId) {
     liveStatus: {
       errorMessage,
       isRefreshing,
+      isTakingLonger,
       lastUpdated,
       refreshKind,
       refresh: () => loadAreaSignals({ forceRefresh: true, refreshKind: "manual" }),
@@ -1938,7 +1970,12 @@ function AreaSelector({ areas, selectedAreaId, liveStatus, onAreaChange, sourceS
         <h3>{selectedArea?.catchment || "Parramatta River"}</h3>
         <p className="live-status">
           {liveStatus.isRefreshing
-            ? getRefreshCopy(liveStatus.refreshKind, selectedArea?.name ?? "this area", true).title
+            ? getRefreshCopy(
+                liveStatus.refreshKind,
+                selectedArea?.name ?? "this area",
+                true,
+                liveStatus.isTakingLonger,
+              ).title
             : liveStatus.lastUpdated
             ? `Updated ${new Date(liveStatus.lastUpdated).toLocaleTimeString("en-AU")}`
             : "Waiting for latest reading"}
@@ -2047,7 +2084,14 @@ function AreaDataGuard({ areaName, liveStatus }) {
       {liveStatus.isRefreshing ? (
         <div className="area-loading-inline" role="status">
           <span aria-hidden="true" className="refresh-spinner" />
-          <span>{getRefreshCopy(liveStatus.refreshKind, areaName, false).title}</span>
+          <span>
+            {getRefreshCopy(
+              liveStatus.refreshKind,
+              areaName,
+              false,
+              liveStatus.isTakingLonger,
+            ).title}
+          </span>
         </div>
       ) : null}
       <p className="overview-summary">
@@ -2062,7 +2106,12 @@ function AreaDataGuard({ areaName, liveStatus }) {
 function RefreshStatusBanner({ areaName, hasAreaData, liveStatus }) {
   if (!liveStatus.isRefreshing) return null;
 
-  const copy = getRefreshCopy(liveStatus.refreshKind, areaName, hasAreaData);
+  const copy = getRefreshCopy(
+    liveStatus.refreshKind,
+    areaName,
+    hasAreaData,
+    liveStatus.isTakingLonger,
+  );
 
   return (
     <section aria-live="polite" className="refresh-status-banner" role="status">
